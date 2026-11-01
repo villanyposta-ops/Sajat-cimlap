@@ -1,0 +1,42 @@
+name: Hírportál frissítése
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"    # félóránként (a GitHub néha késik néhány percet)
+  workflow_dispatch:           # kézi indítás az Actions fülön
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hirportal
+  cancel-in-progress: false
+
+jobs:
+  frissit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Előző állapot betöltése
+        run: |
+          mkdir -p kimenet
+          git fetch --depth=1 origin gh-pages || true
+          git show origin/gh-pages:hirek_allapot.json > kimenet/hirek_allapot.json 2>/dev/null || rm -f kimenet/hirek_allapot.json
+
+      - name: Oldal generálása
+        run: python3 hirportal.py -o kimenet/index.html --allapot kimenet/hirek_allapot.json
+
+      - name: Közzététel a gh-pages ágon (mindig egyetlen mentés, így a tároló nem hízik)
+        run: |
+          cd kimenet
+          touch .nojekyll
+          git init -q -b gh-pages
+          git config user.name "hirportal-bot"
+          git config user.email "hirportal-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Frissítés $(date -u +'%Y-%m-%d %H:%M') UTC"
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
