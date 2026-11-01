@@ -55,7 +55,19 @@ FORRASOK = [
      "hely": "Pécs"},
     {"id": "hirbalaton", "nev": "HírBalaton", "szin": "#0284c7", "feeds": ["https://www.hirbalaton.hu/feed/"],
      "hely": "Balaton"},
+
+    # Az oldal alján, az időjárás-előrejelzés mellett jelenik meg
+    {"id": "idokep", "nev": "Időkép", "szin": "#0284c7", "feeds": ["https://adat.idokep.hu/rss/news.xml"],
+     "panel": "idojaras"},
 ]
+
+# Időjárás-előrejelzés (Open-Meteo, ingyenes, regisztráció nélkül). Helyszín: név + koordináták.
+IDOJARAS_HELYEK = [
+    {"nev": "Budapest", "lat": 47.4979, "lon": 19.0402},
+    {"nev": "Pécs",     "lat": 46.0727, "lon": 18.2323},
+    {"nev": "Balaton (Siófok)", "lat": 46.9041, "lon": 18.0580},
+]
+IDOJARAS_NAPOK = 5
 
 FO_HIREK_SZAMA = 9        # ennyi kerül a lap tetejére
 FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában jelenik meg
@@ -107,6 +119,7 @@ ROVATOK = [
 ]
 HELYI_UTAN = "kulfold"    # a Helyi rovat ez után jön (None = rögtön a fő hírek után)
 HELYI_SZIN = "#9f1239"
+IDOJARAS_SZIN = "#0369a1"
 
 # ════════════════════════════════════════════════════════════════════
 
@@ -253,6 +266,8 @@ def ekezet_nelkul(s):
 
 def rovat(h):
     forras = FN[h["forras"]]
+    if forras.get("panel"):
+        return forras["panel"]
     if forras.get("hely"):
         return "helyi"
     szakaszok = [ekezet_nelkul(s.lower()) for s in urlparse(h["link"]).path.split("/") if s]
@@ -311,6 +326,104 @@ def osszevon(hirek):
         cs["pont"] = 3 * len(cs["forrasok"]) + 0.5 * len(hk) + max(0, 3 - kor_ora / 4)
         cs["kor_ora"] = kor_ora
     return csoportok
+
+
+# ── Időjárás ───────────────────────────────────────────────────────
+
+WMO = {  # WMO időjáráskódok → (leírás, ikon)
+    0: ("Derült", "nap"), 1: ("Többnyire derült", "napfelho"), 2: ("Részben felhős", "napfelho"),
+    3: ("Borult", "felho"), 45: ("Köd", "kod"), 48: ("Zúzmarás köd", "kod"),
+    51: ("Gyenge szitálás", "eso"), 53: ("Szitálás", "eso"), 55: ("Erős szitálás", "eso"),
+    56: ("Ónos szitálás", "eso"), 57: ("Ónos szitálás", "eso"),
+    61: ("Gyenge eső", "eso"), 63: ("Eső", "eso"), 65: ("Erős eső", "eso"),
+    66: ("Ónos eső", "eso"), 67: ("Ónos eső", "eso"),
+    71: ("Gyenge havazás", "ho"), 73: ("Havazás", "ho"), 75: ("Erős havazás", "ho"), 77: ("Hószemcse", "ho"),
+    80: ("Gyenge zápor", "eso"), 81: ("Zápor", "eso"), 82: ("Heves zápor", "eso"),
+    85: ("Gyenge hózápor", "ho"), 86: ("Hózápor", "ho"),
+    95: ("Zivatar", "zivatar"), 96: ("Zivatar jégesővel", "zivatar"), 99: ("Zivatar jégesővel", "zivatar"),
+}
+
+_FELHO = '<path class="i-felho" d="M10 25h13.5a5 5 0 0 0 .4-9.98A7 7 0 0 0 10.4 16.1 4.5 4.5 0 0 0 10 25z"/>'
+_FELHO_FENT = '<path class="i-felho" d="M10 20h13.5a5 5 0 0 0 .4-9.98A7 7 0 0 0 10.4 11.1 4.5 4.5 0 0 0 10 20z"/>'
+IKONOK = {
+    "nap": ('<circle class="i-nap" cx="16" cy="16" r="6"/><path class="i-nap" d="M16 3v3M16 26v3M3 16h3M26 16h3'
+            'M6.8 6.8l2.1 2.1M23.1 23.1l2.1 2.1M6.8 25.2l2.1-2.1M23.1 8.9l2.1-2.1"/>'),
+    "napfelho": ('<circle class="i-nap" cx="12" cy="11" r="4.5"/><path class="i-nap" d="M12 2.5v2M3.5 11h2'
+                 'M6 5l1.4 1.4M18 5l-1.4 1.4"/>' + _FELHO),
+    "felho": _FELHO,
+    "kod": '<path class="i-felho" d="M5 12h22M8 17h18M5 22h20M9 27h14"/>',
+    "eso": _FELHO_FENT + '<path class="i-csepp" d="M11 24l-1.5 4M17 24l-1.5 4M23 24l-1.5 4"/>',
+    "ho": _FELHO_FENT + '<path class="i-ho" d="M11 25v.1M16 27v.1M21 25v.1M13.5 29.5v.1M18.5 29.5v.1"/>',
+    "zivatar": _FELHO_FENT + '<path class="i-villam" d="M17 21l-3.5 5h4l-2.5 5"/>',
+}
+
+
+def ikon(kod, meret=32):
+    nev = WMO.get(kod, ("", "felho"))[1]
+    return (f'<svg class="ido-ikon" width="{meret}" height="{meret}" viewBox="0 0 32 32" aria-hidden="true">'
+            f'{IKONOK[nev]}</svg>')
+
+
+def idojaras_letolt():
+    eredmeny = []
+    for hely in IDOJARAS_HELYEK:
+        url = ("https://api.open-meteo.com/v1/forecast?"
+               f"latitude={hely['lat']}&longitude={hely['lon']}"
+               "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m"
+               "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+               f"&timezone=Europe%2FBudapest&forecast_days={IDOJARAS_NAPOK}")
+        try:
+            adat = json.loads(letolt(hely.get("teszt_fajl") or url))
+            eredmeny.append({"nev": hely["nev"], "adat": adat})
+        except Exception as ex:
+            print(f"  időjárás – {hely['nev']}: {ex}")
+            eredmeny.append({"nev": hely["nev"], "adat": None})
+    return eredmeny
+
+
+def ido_nap(d, i):
+    dt = datetime.fromisoformat(d["time"][i])
+    cimke = "Ma" if i == 0 else ("Holnap" if i == 1 else ["H", "K", "Sze", "Cs", "P", "Szo", "V"][dt.weekday()])
+    kod = d["weather_code"][i]
+    esely = (d.get("precipitation_probability_max") or [None] * 16)[i]
+    csap = f"{esely}%" if esely is not None else ""
+    return (f'<li title="{e(WMO.get(kod, ("", ""))[0])}"><span class="ido-nap">{cimke}</span>'
+            f'{ikon(kod, 26)}'
+            f'<span class="ido-max">{round(d["temperature_2m_max"][i])}°</span>'
+            f'<span class="ido-min">{round(d["temperature_2m_min"][i])}°</span>'
+            f'<span class="ido-csap">{csap}</span></li>')
+
+
+def ido_kartya(h):
+    a = h["adat"]
+    if not a:
+        return (f'<div class="ido-hely"><h3>{e(h["nev"])}</h3>'
+                f'<p class="ido-nincs">Az előrejelzés most nem érhető el.</p></div>')
+    c, d = a["current"], a["daily"]
+    leiras = WMO.get(c["weather_code"], ("", ""))[0]
+    napok = "".join(ido_nap(d, i) for i in range(len(d["time"])))
+    return (f'<div class="ido-hely"><h3>{e(h["nev"])}</h3>'
+            f'<div class="ido-most">{ikon(c["weather_code"], 52)}'
+            f'<span class="ido-fok">{round(c["temperature_2m"])}°</span>'
+            f'<span class="ido-leiras">{e(leiras)}<br><small>hőérzet {round(c["apparent_temperature"])}°, '
+            f'szél {round(c["wind_speed_10m"])} km/h</small></span></div>'
+            f'<ul class="ido-napok">{napok}</ul></div>')
+
+
+def idojaras_panel(helyek, idokep_hirek):
+    if not helyek and not idokep_hirek:
+        return ""
+    kartyak = "".join(ido_kartya(h) for h in helyek)
+    hirek = sorted(idokep_hirek, key=lambda x: x["ido"], reverse=True)[:8]
+    hirek_html = "".join(
+        f'<li><time>{ido_szoveg(x["ido"])}</time>'
+        f'<a href="{e(x["link"])}" target="_blank" rel="noopener">{e(x["cim"])}</a></li>' for x in hirek)
+    oldalsav = (f'<aside class="ido-hirek"><h3>Az Időkép hírei</h3><ul>{hirek_html}</ul></aside>'
+                if hirek else "")
+    return (f'<section class="rovat idojaras" id="idojaras" style="--r:{IDOJARAS_SZIN}">'
+            f'{rovatfej("idojaras", "Időjárás", IDOJARAS_SZIN, 0)}'
+            f'<div class="tartalom ido-racs"><div class="ido-helyek">{kartyak}</div>{oldalsav}</div>'
+            f'</section>')
 
 
 # ── HTML ───────────────────────────────────────────────────────────
@@ -411,8 +524,9 @@ def sor(cs):
 
 
 def rovatfej(rid, nev, szin, db):
+    szam = "" if rid == "idojaras" else f'<span class="db">{db} hír</span>'
     return (f'<h2 class="rovatfej" style="--r:{szin}"><button class="csuk" aria-expanded="true">'
-            f'{e(nev)}</button><span class="db">{db} hír</span></h2>')
+            f'{e(nev)}</button>{szam}</h2>')
 
 
 def korabban(lista, nyitva=False):
@@ -449,7 +563,7 @@ def helyi_rovat(helyi_cs):
     return html_, f'<a href="#helyi" style="--r:{HELYI_SZIN}">Helyi</a>'
 
 
-def oldal(orszagos, helyi_cs, hibak):
+def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
     friss = [c for c in orszagos if c["kor_ora"] < 18]
     fo = sorted(friss, key=lambda c: c["pont"], reverse=True)[:FO_HIREK_SZAMA]
     # a legnagyobb dobozba lehetőleg képes hír kerüljön
@@ -480,11 +594,16 @@ def oldal(orszagos, helyi_cs, hibak):
         if r["id"] == HELYI_UTAN:
             reszek.append(helyi_html); nav.append(helyi_nav)
 
+    ido_html = idojaras_panel(idojaras or [], idokep or [])
+    if ido_html:
+        reszek.append(ido_html)
+        nav.append(f'<a href="#idojaras" style="--r:{IDOJARAS_SZIN}">Időjárás</a>')
+
     most = bp(MOST)
     def szuro(f):
         return (f'<label class="szuro"><input type="checkbox" value="{f["id"]}" checked>'
                 f'<i style="--c:{f["szin"]}"></i>{e(f["nev"])}</label>')
-    orsz = "".join(szuro(f) for f in FORRASOK if not f.get("hely"))
+    orsz = "".join(szuro(f) for f in FORRASOK if not f.get("hely") and not f.get("panel"))
     helyi_sz = "".join(szuro(f) for f in FORRASOK if f.get("hely"))
     hiba_html = (f'<details class="hibak"><summary>{len(hibak)} forrás most nem volt elérhető</summary>'
                  f'<ul>{"".join(f"<li>{e(x)}</li>" for x in hibak)}</ul></details>') if hibak else ""
@@ -520,7 +639,8 @@ def oldal(orszagos, helyi_cs, hibak):
   <div class="fo-racs">{"".join(fo_doboz(c, i) for i, c in enumerate(fo))}</div></div>
 </section>
 <main>{"".join(reszek)}</main>
-<footer>A lap tetején azok a friss hírek állnak, amelyekről a legtöbb lap írt. Forrás: a lapok RSS-csatornái.</footer>
+<footer>A lap tetején azok a friss hírek állnak, amelyekről a legtöbb lap írt. Forrás: a lapok RSS-csatornái.
+Időjárásadatok: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0).</footer>
 <script>{JS}</script>
 </body></html>'''
 
@@ -633,6 +753,32 @@ summary:hover{color:var(--tinta)}
 .lista time{color:var(--halvany);font-size:.76rem;min-width:5.4rem;flex-shrink:0;font-variant-numeric:tabular-nums}
 .lista .forras{font-size:.76rem;margin-left:.25rem;white-space:nowrap}
 
+/* időjárás */
+.ido-racs{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr);gap:1.4rem;align-items:start}
+.ido-helyek{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:.9rem}
+.ido-hely{background:var(--felulet);border:1px solid var(--vonal);border-radius:12px;padding:1rem 1.1rem}
+.ido-hely h3{font-size:1.1rem;font-weight:700}
+.ido-most{display:flex;align-items:center;gap:.6rem;margin:.5rem 0 .8rem}
+.ido-fok{font:750 2.5rem/1 var(--cimbetu);letter-spacing:-.03em}
+.ido-leiras{font-size:.88rem;line-height:1.35}.ido-leiras small{color:var(--halvany);font-size:.78rem}
+.ido-napok{list-style:none;margin:0;padding:.7rem 0 0;border-top:1px solid var(--vonal);display:grid;grid-template-columns:repeat(5,1fr);gap:.2rem;text-align:center}
+.ido-napok li{display:flex;flex-direction:column;align-items:center;gap:.1rem;font-size:.82rem}
+.ido-nap{font-size:.74rem;font-weight:600;color:var(--halvany)}
+.ido-max{font-weight:700}.ido-min{color:var(--halvany);font-size:.76rem}
+.ido-csap{color:#2563eb;font-size:.7rem;min-height:1em}
+.ido-nincs{color:var(--halvany);font-size:.88rem}
+.ido-ikon{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.i-nap{stroke:#f59e0b}.i-felho{stroke:var(--halvany)}.i-csepp{stroke:#3b82f6}.i-ho{stroke:#38bdf8;stroke-width:2.6}.i-villam{stroke:#eab308}
+.ido-hirek{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:14px;padding:1rem 1.1rem}
+.ido-hirek h3{font-size:1.05rem;font-weight:700;color:var(--r);margin-bottom:.4rem}
+.ido-hirek ul{list-style:none;margin:0;padding:0}
+.ido-hirek li{padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.9rem;line-height:1.35}
+.ido-hirek li:last-child{border-bottom:0}
+.ido-hirek time{display:block;color:var(--halvany);font-size:.74rem}
+.ido-hirek a:hover{text-decoration:underline}
+@media (max-width:1000px){.ido-racs{grid-template-columns:1fr}}
+@media (prefers-color-scheme:dark){.ido-hirek h3,.helynev{color:color-mix(in srgb,var(--r) 45%,#fff)}}
+
 /* helyi rovat */
 .helyek{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1.4rem}
 .hely{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:14px;padding:1rem 1.1rem 1.1rem;display:flex;flex-direction:column;gap:.7rem}
@@ -729,10 +875,11 @@ def main():
         h["rovat"] = rovat(h)
 
     allapot_ut.write_text(json.dumps(ervenyes, ensure_ascii=False), "utf-8")
-    orszagos = osszevon([h for h in ervenyes if h["rovat"] != "helyi"])
+    orszagos = osszevon([h for h in ervenyes if h["rovat"] not in ("helyi", "idojaras")])
     helyi_cs = osszevon([h for h in ervenyes if h["rovat"] == "helyi"])
     Path(a.kimenet).parent.mkdir(parents=True, exist_ok=True)
-    Path(a.kimenet).write_text(oldal(orszagos, helyi_cs, hibak), "utf-8")
+    idokep = [h for h in ervenyes if h["rovat"] == "idojaras"]
+    Path(a.kimenet).write_text(oldal(orszagos, helyi_cs, hibak, idojaras_letolt(), idokep), "utf-8")
     print(f"{len(uj)} letöltött, {len(ervenyes)} megőrzött hír → {a.kimenet}")
     for x in hibak:
         print("  hiba:", x)
