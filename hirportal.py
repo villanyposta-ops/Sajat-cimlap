@@ -89,10 +89,10 @@ IDOJARAS_NAPOK = 5
 # Az első kártya a böngésző helye szerinti előrejelzés (engedélykérés gombnyomásra; a hely a böngészőben marad)
 IDOJARAS_SAJAT_HELY = True
 
-FO_HIREK_SZAMA = 9        # ennyi kerül a lap tetejére
+FO_HIREK_SZAMA = 11       # ennyi kerül a lap tetejére (1 nyitó + 4 képes + 6 kép nélküli)
 FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában jelenik meg
 MEGORZES_ORA = 72         # ennél régebbi hír kiesik
-DOBOZ_ROVATONKENT = 6     # rovatonként legfeljebb ennyi doboz, a többi listába megy
+DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemelt, dupla széles), a többi listába megy
 DOBOZ_HELYENKENT = 3      # a helyi rovatban oszloponként ennyi kiemelt hír
 
 # Országos rovatok a megjelenés sorrendjében. A „Helyi” rovat helyét a HELYI_UTAN adja meg.
@@ -615,7 +615,7 @@ def kep_html(h, osztaly):
 
 def fo_doboz(cs, i):
     h = cs["fo"]
-    tipus = "nyito" if i == 0 else ("masod" if i < 3 else "kis")
+    tipus = "nyito" if i == 0 else ("masod" if i < 5 else "kis")
     kep = kep_html(h, "kep") if tipus != "kis" else ""
     lead = f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and tipus != "kis" else ""
     return f'''<article class="fo-hir {tipus}" data-srcs="{' '.join(cs['forrasok'])}">
@@ -626,15 +626,16 @@ def fo_doboz(cs, i):
 </article>'''
 
 
-def doboz(cs, lead=True):
+def doboz(cs, lead=True, kiemelt=False):
     h = cs["fo"]
-    return f'''<article class="doboz" data-srcs="{' '.join(cs['forrasok'])}">
+    kep = kep_html(h, "kiemelt-kep") if kiemelt else kep_html(h, "belyeg")
+    return f'''<article class="doboz{' kiemelt' if kiemelt else ''}" data-srcs="{' '.join(cs['forrasok'])}">
   <div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(cs["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
   {f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and lead else ''}
   {lefedettseg(cs)}{tovabbi(cs)}</div>
-  {kep_html(h, "belyeg")}
+  {kep}
 </article>'''
 
 
@@ -688,11 +689,9 @@ def helyi_rovat(helyi_cs):
 def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
     friss = [c for c in orszagos if c["kor_ora"] < 18]
     fo = sorted(friss, key=lambda c: c["pont"], reverse=True)[:FO_HIREK_SZAMA]
-    # a legnagyobb dobozba lehetőleg képes hír kerüljön
-    kepes = next((c for c in fo[:3] if c["fo"]["kep"]), None)
-    if kepes and fo[0] is not kepes:
-        fo.remove(kepes)
-        fo.insert(0, kepes)
+    # az első öt (képes) helyre a rangsor képes hírei kerülnek, a többi a kép nélküli dobozokba
+    kepes = [c for c in fo if c["fo"]["kep"]][:5]
+    fo = kepes + [c for c in fo if c not in kepes]
     fo_id = {id(c) for c in fo}
 
     helyi_html, helyi_nav = helyi_rovat(helyi_cs)
@@ -705,11 +704,15 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
         if cs:
             dobozok = [c for c in cs if c["kor_ora"] < FRISS_ORA][:DOBOZ_ROVATONKENT]
             lista = [c for c in cs if c not in dobozok]
+            if len(dobozok) >= 3:
+                # kiemelt: amelyikről a legtöbb lap írt; döntetlennél a képes, majd a pontszám (frissesség)
+                k = max(dobozok, key=lambda c: (len(c["forrasok"]), bool(c["fo"]["kep"]), c["pont"]))
+                dobozok = [k] + [c for c in dobozok if c is not k]
             nav.append(f'<a href="#{r["id"]}" style="--r:{r["szin"]}">{e(r["nev"])}</a>')
             reszek.append(f'''<section class="rovat" id="{r["id"]}" style="--r:{r["szin"]}">
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
-  {f'<div class="racs">{"".join(doboz(c) for c in dobozok)}</div>' if dobozok else ''}
+  {f'<div class="racs">{"".join(doboz(c, kiemelt=(i == 0 and len(dobozok) >= 3)) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
   {korabban(lista, nyitva=not dobozok)}
   </div>
 </section>''')
@@ -857,11 +860,12 @@ h1,h2,h3,h4{font-family:var(--cimbetu);margin:0}
 .fo-hir .lead{color:var(--sav-halvany)}
 .fo-hir .tovabbi{color:var(--sav-halvany)}
 .fo-hir .lefed{color:var(--sav-szoveg)}
-.nyito{grid-column:span 4;grid-row:span 2;flex-direction:row}
-.nyito .kep{flex:1.3;min-height:100%}
-.nyito .szoveg{flex:1;padding:1.5rem;display:flex;flex-direction:column;justify-content:flex-end}
-.nyito h3{font-size:clamp(1.5rem,2.4vw,2.15rem);line-height:1.12;letter-spacing:-.02em;font-weight:750}
-.nyito .lead{font-size:1rem;-webkit-line-clamp:5}
+.nyito{grid-column:span 4;flex-direction:row}
+.nyito .kep{flex:1.15;position:relative;min-height:15rem}
+.nyito .kep img{position:absolute;inset:0}
+.nyito .szoveg{flex:1;padding:1.3rem 1.4rem;display:flex;flex-direction:column;justify-content:center}
+.nyito h3{font-size:clamp(1.35rem,1.9vw,1.75rem);line-height:1.15;letter-spacing:-.02em;font-weight:750}
+.nyito .lead{font-size:.95rem;-webkit-line-clamp:3}
 .masod{grid-column:span 2}
 .masod .kep{aspect-ratio:2/1}
 .masod h3{font-size:1.15rem;line-height:1.22}
@@ -892,7 +896,12 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.csukva .csuk::after{transform:translateY(-.05rem) rotate(-45deg)}
 .rovat.csukva .tartalom{display:none}
 .db{font-size:.8rem;color:var(--halvany);order:4}
-.racs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.9rem}
+.racs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.9rem}
+.doboz.kiemelt{grid-column:span 2;padding:1rem;gap:1.1rem}
+.doboz.kiemelt h3{font-size:1.32rem;line-height:1.22;letter-spacing:-.015em}
+.doboz.kiemelt .lead{-webkit-line-clamp:4}
+.kiemelt-kep{order:-1;width:42%;aspect-ratio:16/10;flex-shrink:0;border-radius:8px;overflow:hidden;background:var(--vonal)}
+.kiemelt-kep img{width:100%;height:100%;object-fit:cover;display:block}
 .doboz{background:var(--felulet);border:1px solid var(--vonal);border-radius:10px;padding:.9rem 1rem;display:flex;gap:.9rem;align-items:flex-start}
 .doboz .szoveg{flex:1;min-width:0}
 .doboz h3{font-size:1.04rem;line-height:1.28}
@@ -952,8 +961,9 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
 @media (max-width:1000px){
   .fo-racs{grid-template-columns:repeat(2,1fr)}
   .nyito{grid-column:span 2;grid-row:auto;flex-direction:column}
-  .nyito .kep{aspect-ratio:16/9;min-height:0}
-  .masod,.kis{grid-column:span 1}}
+  .nyito .kep{aspect-ratio:2/1;min-height:0;flex:none}
+  .masod,.kis{grid-column:span 1}
+  .racs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){
   .fejsor{flex-wrap:wrap;gap:.6rem 1rem;padding:.9rem 1rem .7rem;align-items:center}
   .logo-link{width:100%}.logo{height:3.4rem}
@@ -964,6 +974,8 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
   .fo-racs{grid-template-columns:1fr}.nyito,.masod,.kis{grid-column:auto}
   .nyito .szoveg{padding:1.1rem}
   .belyeg{width:64px;height:64px}
+  .racs{grid-template-columns:1fr}.doboz.kiemelt{grid-column:auto;flex-direction:column}
+  .kiemelt-kep{width:100%}
   .lista time{min-width:4.6rem}
   .helyek{grid-template-columns:1fr}}
 """
