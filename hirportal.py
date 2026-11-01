@@ -45,9 +45,7 @@ FEJLEC_SZIN = None        # ha egy állandó színt szeretnél, pl. "#16202f"; N
 
 # Országos lapok. Az „alap” rovat akkor számít, ha a cikkről semmi más nem derül ki.
 FORRASOK = [
-    {"id": "telex",  "nev": "Telex",         "szin": "#2563eb", "feeds": ["https://telex.hu/rss"],
-     # ha a Telex nem engedi be a GitHub gépét, a Google Hírek Telexre szűrt csatornája a tartalék
-     "tartalek": "https://news.google.com/rss/search?q=site:telex.hu+when:2d&hl=hu&gl=HU&ceid=HU:hu"},
+    {"id": "telex",  "nev": "Telex",         "szin": "#2563eb", "feeds": ["https://telex.hu/rss"]},
     {"id": "444",    "nev": "444",           "szin": "#e11d48", "feeds": ["https://444.hu/feed"]},
     {"id": "24",     "nev": "24.hu",         "szin": "#ea580c", "feeds": ["https://24.hu/feed/"]},
     {"id": "hvg",    "nev": "HVG",           "szin": "#7c3aed", "feeds": ["https://hvg.hu/rss"]},
@@ -598,7 +596,12 @@ def lefedettseg(cs):
 
 
 def tovabbi(cs):
-    tobbi = [h for h in cs["hirek"] if h is not cs["fo"]]
+    # csak a többi lap: minden lapból egy link, a fő cikk lapja nem ismétlődik
+    latott, tobbi = {cs["fo"]["forras"]}, []
+    for h in cs["hirek"]:
+        if h["forras"] not in latott:
+            latott.add(h["forras"])
+            tobbi.append(h)
     if not tobbi:
         return ""
     linkek = ", ".join(f'<a href="{e(h["link"])}" target="_blank" rel="noopener" title="{e(h["cim"])}">'
@@ -1101,7 +1104,14 @@ def main():
             h["ido"] = min(h["ido"], tarolt[h["id"]]["ido"])
         tarolt[h["id"]] = h
     hatar = (MOST - timedelta(hours=MEGORZES_ORA)).isoformat()
-    ervenyes = [h for h in tarolt.values() if h["ido"] >= hatar and h["forras"] in FN]
+    ervenyes = [h for h in tarolt.values() if h["ido"] >= hatar and h["forras"] in FN
+                # a Google Hírek tartalékból mentett cikkek törlése, ha a lapnak már nincs tartaléka
+                and not ("news.google.com" in h["link"] and not FN[h["forras"]].get("tartalek"))]
+    # ugyanannak a lapnak azonos című cikkei közül csak egy maradjon (amelyiknek van képe/leadje)
+    egyedi = {}
+    for h in sorted(ervenyes, key=lambda h: (bool(h["kep"]), len(h["lead"])), reverse=True):
+        egyedi.setdefault((h["forras"], h["cim"].strip().lower()), h)
+    ervenyes = list(egyedi.values())
     for h in ervenyes:
         h["rovat"] = rovat(h)
 
