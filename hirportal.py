@@ -15,6 +15,7 @@ import hashlib
 import html
 import json
 import re
+import time
 import unicodedata
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -45,7 +46,10 @@ FEJLEC_SZIN = None        # ha egy állandó színt szeretnél, pl. "#16202f"; N
 
 # Országos lapok. Az „alap” rovat akkor számít, ha a cikkről semmi más nem derül ki.
 FORRASOK = [
-    {"id": "telex",  "nev": "Telex",         "szin": "#2563eb", "feeds": ["https://telex.hu/rss"]},
+    {"id": "telex",  "nev": "Telex",         "szin": "#2563eb", "feeds": ["https://telex.hu/rss"],
+     # a Telex időnként kitiltja a GitHub gépét (403); ilyenkor a Google Hírek Telexre szűrt csatornája
+     # pótolja a címeket, a következő sikeres futásnál pedig a teljes (képes) változat lép a helyükre
+     "tartalek": "https://news.google.com/rss/search?q=site:telex.hu+when:2d&hl=hu&gl=HU&ceid=HU:hu"},
     {"id": "444",    "nev": "444",           "szin": "#e11d48", "feeds": ["https://444.hu/feed"]},
     {"id": "24",     "nev": "24.hu",         "szin": "#ea580c", "feeds": ["https://24.hu/feed/"]},
     {"id": "hvg",    "nev": "HVG",           "szin": "#7c3aed", "feeds": ["https://hvg.hu/rss"]},
@@ -162,12 +166,20 @@ FN = {f["id"]: f for f in FORRASOK}
 
 # ── Letöltés és feldolgozás ────────────────────────────────────────
 
-def letolt(url):
+def letolt(url, probalkozas=3):
     if url.startswith(("/", "./")) or url.startswith("file:"):
         return Path(url.replace("file://", "")).read_bytes()
-    req = urllib.request.Request(url, headers=FEJLECEK)
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return r.read()
+    for i in range(probalkozas):
+        try:
+            req = urllib.request.Request(url, headers=FEJLECEK)
+            with urllib.request.urlopen(req, timeout=20) as r:
+                return r.read()
+        except Exception as ex:
+            # átmeneti hibánál (403, 429, 5xx, időtúllépés) rövid szünet után újra; a 404 végleges
+            vegleges = getattr(ex, "code", None) == 404
+            if vegleges or i == probalkozas - 1:
+                raise
+            time.sleep(4 * (i + 1))
 
 
 def helyi(tag):
