@@ -71,7 +71,9 @@ FORRASOK = [
 
     # Az oldal alján, az időjárás-előrejelzés mellett jelenik meg
     {"id": "idokep", "nev": "Időkép", "szin": "#0284c7", "feeds": ["https://adat.idokep.hu/rss/news.xml"],
-     "panel": "idojaras"},
+     "panel": "idojaras", "panel_cim": "Az Időkép hírei"},
+    {"id": "hungaromet", "nev": "HungaroMet", "szin": "#1e40af", "feeds": ["https://met.hu/methu/rss/rss.php"],
+     "panel": "idojaras", "panel_cim": "A HungaroMet hírei"},
 ]
 
 # Időjárás-előrejelzés (Open-Meteo, ingyenes, regisztráció nélkül). Helyszín: név + koordináták.
@@ -81,6 +83,8 @@ IDOJARAS_HELYEK = [
     {"nev": "Balaton (Siófok)", "lat": 46.9041, "lon": 18.0580},
 ]
 IDOJARAS_NAPOK = 5
+# Az első kártya a böngésző helye szerinti előrejelzés (engedélykérés gombnyomásra; a hely a böngészőben marad)
+IDOJARAS_SAJAT_HELY = True
 
 FO_HIREK_SZAMA = 9        # ennyi kerül a lap tetejére
 FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában jelenik meg
@@ -423,20 +427,122 @@ def ido_kartya(h):
             f'<ul class="ido-napok">{napok}</ul></div>')
 
 
-def idojaras_panel(helyek, idokep_hirek):
-    if not helyek and not idokep_hirek:
+def idojaras_panel(helyek, panel_hirek):
+    if not helyek and not panel_hirek:
         return ""
-    kartyak = "".join(ido_kartya(h) for h in helyek)
-    hirek = sorted(idokep_hirek, key=lambda x: x["ido"], reverse=True)[:8]
-    hirek_html = "".join(
-        f'<li><time>{ido_szoveg(x["ido"])}</time>'
-        f'<a href="{e(x["link"])}" target="_blank" rel="noopener">{e(x["cim"])}</a></li>' for x in hirek)
-    oldalsav = (f'<aside class="ido-hirek"><h3>Az Időkép hírei</h3><ul>{hirek_html}</ul></aside>'
-                if hirek else "")
+    sajat = ('<div class="ido-hely ido-itt" id="ido-itt" hidden></div>' if IDOJARAS_SAJAT_HELY else "")
+    kartyak = sajat + "".join(ido_kartya(h) for h in helyek)
+    hirdobozok = []
+    for f in FORRASOK:
+        if f.get("panel") != "idojaras":
+            continue
+        hirek = sorted([x for x in panel_hirek if x["forras"] == f["id"]], key=lambda x: x["ido"], reverse=True)[:8]
+        if not hirek:
+            continue
+        lista = "".join(
+            f'<li><time>{ido_szoveg(x["ido"])}</time>'
+            f'<a href="{e(x["link"])}" target="_blank" rel="noopener">{e(x["cim"])}</a></li>' for x in hirek)
+        hirdobozok.append(f'<aside class="ido-hirek"><h3>{e(f.get("panel_cim", f["nev"] + " hírei"))}</h3><ul>{lista}</ul></aside>')
+    js = ""
+    if IDOJARAS_SAJAT_HELY:
+        adat = {
+            "url": ("https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
+                    "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m"
+                    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+                    f"&timezone=Europe%2FBudapest&forecast_days={IDOJARAS_NAPOK}"),
+            "wmo": {str(k): v for k, v in WMO.items()}, "ikonok": IKONOK, "telepulesek": TELEPULESEK,
+            "napok": ["H", "K", "Sze", "Cs", "P", "Szo", "V"],
+        }
+        js = "<script>" + IDO_JS.replace("__IDO_ADAT__", json.dumps(adat, ensure_ascii=False).replace("</", "<\\/")) + "</script>"
     return (f'<section class="rovat idojaras" id="idojaras" style="--r:{IDOJARAS_SZIN}">'
             f'{rovatfej("idojaras", "Időjárás", IDOJARAS_SZIN, 0)}'
-            f'<div class="tartalom ido-racs"><div class="ido-helyek">{kartyak}</div>{oldalsav}</div>'
-            f'</section>')
+            f'<div class="tartalom ido-racs"><div class="ido-helyek">{kartyak}</div>'
+            f'{"<div class=" + chr(34) + "ido-hirsor" + chr(34) + ">" + "".join(hirdobozok) + "</div>" if hirdobozok else ""}'
+            f'</div></section>{js}')
+
+
+# A helymeghatározásos kártya ehhez a listához méri a legközelebbi települést (név, szélesség, hosszúság)
+TELEPULESEK = [
+    ["Budapest", 47.4979, 19.0402], ["Debrecen", 47.5316, 21.6273], ["Szeged", 46.2530, 20.1414],
+    ["Miskolc", 48.1035, 20.7784], ["Pécs", 46.0727, 18.2323], ["Győr", 47.6875, 17.6504],
+    ["Nyíregyháza", 47.9554, 21.7167], ["Kecskemét", 46.8964, 19.6897], ["Székesfehérvár", 47.1860, 18.4221],
+    ["Szombathely", 47.2307, 16.6218], ["Szolnok", 47.1621, 20.1825], ["Tatabánya", 47.5692, 18.4048],
+    ["Kaposvár", 46.3594, 17.7968], ["Érd", 47.3919, 18.9045], ["Veszprém", 47.0933, 17.9115],
+    ["Békéscsaba", 46.6736, 21.0877], ["Zalaegerszeg", 46.8417, 16.8416], ["Sopron", 47.6817, 16.5845],
+    ["Eger", 47.9025, 20.3772], ["Nagykanizsa", 46.4590, 16.9897], ["Dunaújváros", 46.9619, 18.9355],
+    ["Hódmezővásárhely", 46.4181, 20.3300], ["Salgótarján", 48.0935, 19.7999], ["Szekszárd", 46.3474, 18.7062],
+    ["Esztergom", 47.7928, 18.7400], ["Gödöllő", 47.5961, 19.3550], ["Vác", 47.7826, 19.1332],
+    ["Szentendre", 47.6694, 19.0756], ["Baja", 46.1803, 18.9551], ["Mohács", 45.9931, 18.6831],
+    ["Komló", 46.1928, 18.2617], ["Paks", 46.6219, 18.8558], ["Gyula", 46.6471, 21.2784],
+    ["Jászberény", 47.5000, 19.9167], ["Cegléd", 47.1736, 19.7997], ["Kiskunfélegyháza", 46.7117, 19.8503],
+    ["Ózd", 48.2192, 20.2869], ["Kazincbarcika", 48.2531, 20.6458], ["Mosonmagyaróvár", 47.8682, 17.2689],
+    ["Pápa", 47.3306, 17.4675], ["Ajka", 47.1019, 17.5583], ["Siófok", 46.9041, 18.0580],
+    ["Keszthely", 46.7681, 17.2432], ["Balatonfüred", 46.9617, 17.8711], ["Tapolca", 46.8828, 17.4400],
+    ["Fonyód", 46.7428, 17.5531], ["Balatonalmádi", 47.0353, 18.0136], ["Szigetvár", 46.0486, 17.8056],
+    ["Siklós", 45.8553, 18.2986], ["Tiszaújváros", 47.9286, 21.0428], ["Hatvan", 47.6667, 19.6833],
+    ["Gyöngyös", 47.7825, 19.9281], ["Orosháza", 46.5667, 20.6667], ["Makó", 46.2167, 20.4833],
+    ["Kiskunhalas", 46.4342, 19.4847], ["Monor", 47.3511, 19.4486], ["Budaörs", 47.4614, 18.9583],
+    ["Szigetszentmiklós", 47.3439, 19.0436], ["Dunakeszi", 47.6364, 19.1386], ["Kőszeg", 47.3892, 16.5411],
+]
+
+
+IDO_JS = r"""(function(){
+  var D = __IDO_ADAT__;
+  var doboz = document.getElementById('ido-itt'); if (!doboz || !navigator.geolocation) return;
+  doboz.hidden = false;
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function ikon(kod, m){ var w = D.wmo[kod] || ['', 'felho'];
+    return '<svg class="ido-ikon" width="'+m+'" height="'+m+'" viewBox="0 0 32 32" aria-hidden="true">'+D.ikonok[w[1]]+'</svg>'; }
+  function tav(a, b, c, d){ var r = Math.PI/180, x = (d-b)*r*Math.cos((a+c)/2*r), y = (c-a)*r; return Math.sqrt(x*x+y*y)*6371; }
+  function helynev(lat, lon){
+    var best = null, bt = 1e9;
+    D.telepulesek.forEach(function(t){ var k = tav(lat, lon, t[1], t[2]); if (k < bt) { bt = k; best = t[0]; } });
+    if (bt < 12) return best + ' környéke';
+    if (bt < 40) return best + ' közelében';
+    return 'A tartózkodási helyed';
+  }
+  function kartya(nev, a){
+    var c = a.current, d = a.daily, napok = '';
+    for (var i = 0; i < d.time.length; i++) {
+      var dt = new Date(d.time[i] + 'T12:00:00');
+      var cimke = i === 0 ? 'Ma' : (i === 1 ? 'Holnap' : D.napok[(dt.getDay()+6)%7]);
+      var p = (d.precipitation_probability_max || [])[i];
+      napok += '<li title="'+esc((D.wmo[d.weather_code[i]]||[''])[0])+'"><span class="ido-nap">'+cimke+'</span>'+ikon(d.weather_code[i],26)+
+        '<span class="ido-max">'+Math.round(d.temperature_2m_max[i])+'°</span><span class="ido-min">'+Math.round(d.temperature_2m_min[i])+'°</span>'+
+        '<span class="ido-csap">'+(p == null ? '' : p+'%')+'</span></li>';
+    }
+    return '<h3><span class="ido-itt-jel" aria-hidden="true">◉</span> '+esc(nev)+'</h3>'+
+      '<div class="ido-most">'+ikon(c.weather_code,52)+'<span class="ido-fok">'+Math.round(c.temperature_2m)+'°</span>'+
+      '<span class="ido-leiras">'+esc((D.wmo[c.weather_code]||[''])[0])+'<br><small>hőérzet '+Math.round(c.apparent_temperature)+
+      '°, szél '+Math.round(c.wind_speed_10m)+' km/h</small></span></div><ul class="ido-napok">'+napok+'</ul>';
+  }
+  function betolt(lat, lon){
+    lat = Math.round(lat*100)/100; lon = Math.round(lon*100)/100;   // kb. 1 km-re kerekítve
+    doboz.innerHTML = '<h3>Ahol most vagy</h3><p class="ido-nincs">Előrejelzés betöltése…</p>';
+    fetch(D.url.replace('{lat}', lat).replace('{lon}', lon))
+      .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(a){ doboz.innerHTML = kartya(helynev(lat, lon), a); doboz.classList.add('ido-itt-kesz'); })
+      .catch(function(){ doboz.innerHTML = '<h3>Ahol most vagy</h3><p class="ido-nincs">Az előrejelzés most nem érhető el.</p>'; });
+  }
+  function kerd(){
+    doboz.innerHTML = '<h3>Ahol most vagy</h3><p class="ido-nincs">Hely meghatározása…</p>';
+    navigator.geolocation.getCurrentPosition(
+      function(p){ betolt(p.coords.latitude, p.coords.longitude); },
+      function(){ doboz.innerHTML = '<h3>Ahol most vagy</h3><p class="ido-nincs">A böngésző nem adta meg a helyet. '+
+        'A címsor melletti lakat vagy beállítás ikonnál engedélyezheted.</p>'; },
+      { timeout: 15000, maximumAge: 30*60*1000 });
+  }
+  function gomb(){
+    doboz.innerHTML = '<h3>Ahol most vagy</h3><p class="ido-nincs">Engedélyezd a helymeghatározást, és itt a saját helyedre szóló előrejelzés jelenik meg.</p>'+
+      '<button type="button" class="ido-gomb">Időjárás a saját helyeden</button>';
+    doboz.querySelector('button').addEventListener('click', kerd);
+  }
+  // ha korábban már engedélyezted, magától betölt; különben gombbal kérjük
+  if (navigator.permissions && navigator.permissions.query) {
+    navigator.permissions.query({ name: 'geolocation' }).then(function(s){ s.state === 'granted' ? kerd() : gomb(); }, gomb);
+  } else { gomb(); }
+})();
+"""
 
 
 # ── HTML ───────────────────────────────────────────────────────────
@@ -798,7 +904,13 @@ summary:hover{color:var(--tinta)}
 .lista .forras{font-size:.76rem;margin-left:.25rem;white-space:nowrap}
 
 /* időjárás */
-.ido-racs{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr);gap:1.4rem;align-items:start}
+.ido-racs{display:grid;grid-template-columns:1fr;gap:1.2rem}
+.ido-hirsor{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.2rem;align-items:start}
+.ido-itt{border-color:color-mix(in srgb,var(--r) 45%,var(--vonal));box-shadow:inset 0 3px 0 var(--r)}
+.ido-itt[hidden]{display:none}
+.ido-itt-jel{color:var(--r);font-size:.8em}
+.ido-gomb{margin-top:.8rem;font:600 .88rem system-ui,sans-serif;color:#fff;background:var(--r);border:0;border-radius:8px;padding:.55rem .9rem;cursor:pointer}
+.ido-gomb:hover{filter:brightness(1.1)}
 .ido-helyek{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:.9rem}
 .ido-hely{background:var(--felulet);border:1px solid var(--vonal);border-radius:12px;padding:1rem 1.1rem}
 .ido-hely h3{font-size:1.1rem;font-weight:700}
@@ -820,7 +932,7 @@ summary:hover{color:var(--tinta)}
 .ido-hirek li:last-child{border-bottom:0}
 .ido-hirek time{display:block;color:var(--halvany);font-size:.74rem}
 .ido-hirek a:hover{text-decoration:underline}
-@media (max-width:1000px){.ido-racs{grid-template-columns:1fr}}
+
 @media (prefers-color-scheme:dark){.ido-hirek h3,.helynev{color:color-mix(in srgb,var(--r) 45%,#fff)}}
 
 /* helyi rovat */
