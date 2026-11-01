@@ -55,6 +55,9 @@ FORRASOK = [
     {"id": "atlatszo", "nev": "Átlátszó",    "szin": "#65a30d", "feeds": ["https://atlatszo.hu/feed/"],
      "alap": "belfold"},
     {"id": "valasz", "nev": "Válasz Online", "szin": "#a16207", "feeds": ["https://www.valaszonline.hu/feed/"]},
+    {"id": "infostart", "nev": "Infostart", "szin": "#4f46e5", "feeds": ["https://infostart.hu/24ora/rss/"]},
+    {"id": "portfolio", "nev": "Portfolio",  "szin": "#c026d3", "feeds": ["https://www.portfolio.hu/rss/all.xml"],
+     "alap": "gazdasag"},
     {"id": "euronews", "nev": "Euronews",    "szin": "#0369a1",
      "feeds": ["https://hu.euronews.com/rss?level=theme&name=news"], "alap": "kulfold"},
 
@@ -109,7 +112,7 @@ ROVATOK = [
                      "izrael", "gáza", "kína", "német", "nato", "szlovák", "román", "lengyel", "francia"]},
     {"id": "gazdasag", "nev": "Gazdaság", "szin": "#b45309",
      "utvonal": ["gazdasag", "fn", "kkv", "penz", "ingatlan", "fogyasztas", "uzlet", "befektetes", "ceg",
-                 "business"],
+                 "business", "bank", "deviza", "tozsde", "unios-forrasok", "krypto", "kriptopenz"],
      "kulcsszavak": ["infláció", "forint", "jegybank", "mnb", "kamat", "gdp", "költségvetés", "adó",
                      "árak", "tőzsde", "vállalat", "cég", "bér", "nyugdíj", "benzin", "beruházás"]},
     {"id": "tech", "nev": "Tudomány és tech", "szin": "#6d28d9",
