@@ -103,7 +103,7 @@ NYITO_MAX_ORA = 3         # a nyitóhír ennél frissebb legyen; ha nincs ilyen,
 FO_TARTALEK_ORA = 12      # ha (pl. hajnalban) nincs elég 8 óránál frissebb hír, legfeljebb eddig nyúl vissza
 FO_STILUS = "arnyalt"     # a kiemelt rész háttere: "arnyalt" (a fejléc színének halvány árnyalata), "vilagos", "sotet"
 FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában jelenik meg
-TOVABBI_MAX = 20          # a „További hírek” listában rovatonként legfeljebb ennyi (a legfrissebbek)
+HELYI_LISTA = 8           # a helyi oszlopokban a kiemeltek alatt ennyi friss hír látszik; a többi a napokra bontott listában
 MEGORZES_ORA = 72         # ennél régebbi hír kiesik
 DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemelt, dupla széles), a többi listába megy
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
@@ -690,9 +690,10 @@ def doboz(cs, lead=True, kiemelt=False, extra=""):
 </article>'''
 
 
-def sor(cs):
+def sor(cs, csak_ora=False):
     h = cs["fo"]
-    return (f'<li data-srcs="{" ".join(cs["forrasok"])}"><time>{ido_szoveg(cs["ido"])}</time>'
+    ido = bp(datetime.fromisoformat(cs["ido"])).strftime("%H:%M") if csak_ora else ido_szoveg(cs["ido"])
+    return (f'<li data-srcs="{" ".join(cs["forrasok"])}"><time>{ido}</time>'
             f'<span class="sor-cim"><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a> '
             f'{forras_nev(h["forras"])}</span></li>')
 
@@ -703,12 +704,32 @@ def rovatfej(rid, nev, szin, db):
             f'{e(nev)}</button>{szam}</h2>')
 
 
+def nap_cimke(nap):
+    ma = bp(MOST).date()
+    elteres = (ma - nap).days
+    if elteres == 0:
+        return "Ma"
+    if elteres == 1:
+        return "Tegnap"
+    if elteres == 2:
+        return "Tegnapelőtt"
+    return f"{HONAPOK[nap.month-1]} {nap.day}., {NAPOK[nap.weekday()]}"
+
+
 def korabban(lista, nyitva=False):
+    """A „További hírek” napokra bontva; minden nap külön lenyitható, a legfrissebb nap nyitva."""
     if not lista:
         return ""
-    lista = sorted(lista, key=lambda c: c["ido"], reverse=True)[:TOVABBI_MAX]
-    return (f'<details{" open" if nyitva else ""}><summary>További hírek ({len(lista)})</summary>'
-            f'<ul class="lista">{"".join(sor(c) for c in lista)}</ul></details>')
+    lista = sorted(lista, key=lambda c: c["ido"], reverse=True)
+    napok = {}
+    for c in lista:
+        napok.setdefault(bp(datetime.fromisoformat(c["ido"])).date(), []).append(c)
+    csoportok = "".join(
+        f'<details class="nap-csoport"{" open" if i == 0 else ""}><summary>{nap_cimke(nap)} ({len(cs)})</summary>'
+        f'<ul class="lista">{"".join(sor(c, csak_ora=True) for c in cs)}</ul></details>'
+        for i, (nap, cs) in enumerate(napok.items()))
+    return (f'<details class="tovabbi-hirek"{" open" if nyitva else ""}><summary>További hírek ({len(lista)})</summary>'
+            f'{csoportok}</details>')
 
 
 def helyi_rovat(helyi_cs):
@@ -723,8 +744,8 @@ def helyi_rovat(helyi_cs):
             continue
         kiemelt = [c for c in cs if c["kor_ora"] < FRISS_ORA][:DOBOZ_HELYENKENT]
         tobbi = [c for c in cs if c not in kiemelt]
-        friss_tobbi = [c for c in tobbi if c["kor_ora"] < FRISS_ORA][:TOVABBI_MAX]
-        regi = [c for c in tobbi if c["kor_ora"] >= FRISS_ORA][:max(0, TOVABBI_MAX - len(friss_tobbi))]
+        friss_tobbi = [c for c in tobbi if c["kor_ora"] < FRISS_ORA][:HELYI_LISTA]
+        regi = [c for c in tobbi if c not in friss_tobbi]
         oszlopok.append(f'''<div class="hely">
   <h3 class="helynev">{e(hely)}</h3>
   {"".join(doboz(c, lead=False) for c in kiemelt)}
@@ -1044,6 +1065,10 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .belyeg img{width:100%;height:100%;object-fit:cover;display:block}
 details{margin-top:.9rem}
 summary{cursor:pointer;color:var(--halvany);font-size:.88rem;font-weight:600;width:fit-content}
+.nap-csoport{margin:.55rem 0 0 1rem}
+.nap-csoport summary{font-size:.82rem;font-weight:600;color:var(--tinta);opacity:.8}
+.nap-csoport summary:hover{opacity:1}
+.nap-csoport .lista time{min-width:3rem}
 summary:hover{color:var(--tinta)}
 .lista{list-style:none;margin:.5rem 0 0;padding:0;columns:2 440px;column-gap:2.5rem}
 .lista li{break-inside:avoid;padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.93rem;display:flex;gap:.8rem;align-items:baseline;line-height:1.35}
