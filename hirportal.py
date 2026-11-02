@@ -841,9 +841,8 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
 </header>
 <script>{fej_js}</script>
 <nav class="rovatnav"><div class="nav-belso">{"".join(nav)}</div></nav>
-{hiba_html}
 <section class="elso elso-{e(FO_STILUS)}" aria-label="A legfontosabb hírek">
-  <div class="elso-belso">
+  <div class="elso-belso">{hiba_html}
   <div class="fo-racs">{"".join(fo_doboz(c, i) for i, c in enumerate(fo))}</div></div>
 </section>
 <main>{"".join(reszek)}</main>
@@ -1056,7 +1055,14 @@ summary:hover{color:var(--tinta)}
 .hely .lista{columns:1;margin:0}
 .hely details{margin-top:0}
 
-.hibak{max-width:1280px;margin:.8rem auto 0;padding:.6rem 1rem;font-size:.85rem;background:var(--felulet);border:1px solid var(--vonal);border-radius:6px}
+/* elérhetetlen forrás: halvány, kis sor a kiemelt hírek sávjának tetején */
+.elso .hibak{margin:-.7rem 0 .55rem;padding:0;background:none;border:0;font-size:.72rem;color:var(--halvany);text-align:right}
+.elso .hibak summary{font-size:inherit;font-weight:500;color:inherit;opacity:.85;width:auto;display:inline-block;list-style:none}
+.elso .hibak summary::-webkit-details-marker{display:none}
+.elso .hibak summary::before{content:"⚠ ";opacity:.8}
+.elso .hibak summary:hover{opacity:1;text-decoration:underline}
+.elso .hibak ul{margin:.3rem 0 0;padding:0;list-style:none;opacity:.9}
+.elso-sotet .hibak{color:var(--sav-halvany)}
 .rejtett{display:none!important}
 footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5rem 2.5rem;max-width:60ch;margin:0 auto}
 
