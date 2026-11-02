@@ -246,6 +246,20 @@ def kep_keres(el, nyers_leiras):
     return m.group(1) if m else ""
 
 
+def webcim_korlat(link, d):
+    """Ha a webcímben dátum van (/2026/11/01/), a cikk ideje nem lehet későbbi annál a napnál:
+    így egy frissített, újra kiadott tegnapi cikk nem „fiatalodik meg”."""
+    m = re.search(r"/(20\d\d)/?(\d\d)/?(\d\d)/", link)
+    if not m:
+        return d
+    try:
+        nap_vege = datetime(int(m[1]), int(m[2]), int(m[3]), 23, 59, tzinfo=timezone.utc)
+    except ValueError:
+        return d
+    nap_vege = nap_vege.replace(tzinfo=budapest_tz(nap_vege)).astimezone(timezone.utc)
+    return min(d, nap_vege)
+
+
 def feed_feldolgoz(forras, url):
     gyoker = ET.fromstring(letolt(url))
     elemek = [e for e in gyoker.iter() if helyi(e.tag) in ("item", "entry")]
@@ -261,7 +275,9 @@ def feed_feldolgoz(forras, url):
             continue
         nyers = szoveg(e, "encoded") or szoveg(e, "description", "summary", "content")
         kategoriak = [(c.text or c.get("term") or "").strip() for c in e if helyi(c.tag) == "category"]
-        d = datum(szoveg(e, "pubdate", "published", "updated", "date")) or MOST
+        d = (datum(szoveg(e, "pubdate")) or datum(szoveg(e, "published")) or datum(szoveg(e, "date"))
+             or datum(szoveg(e, "updated")) or MOST)
+        d = webcim_korlat(link, d)
         lead = html_tisztit(nyers)
         if lead.lower().startswith(cim.lower()[:40]):   # pl. a Google Hírek a címet ismétli
             lead = ""
@@ -388,8 +404,10 @@ def osszevon(hirek):
             szavazat.pop("egyeb", None)
         cs["rovat"] = max(szavazat, key=lambda r: (szavazat[r], max(h.get("rovat_suly", 1) for h in hk if h["rovat"] == r)))
         kor_ora = (MOST - datetime.fromisoformat(cs["ido"])).total_seconds() / 3600
+        # a sztori kora: az első róla szóló cikk óta eltelt idő (a kiemelt részhez ez számít)
+        cs["kezdet_ora"] = (MOST - min(datetime.fromisoformat(h["ido"]) for h in hk)).total_seconds() / 3600
         # fontosság: hány lap írt róla + frissesség
-        cs["pont"] = 3 * len(cs["forrasok"]) + 0.5 * len(hk) + 5 * max(0.0, 1 - kor_ora / FO_MAX_ORA)
+        cs["pont"] = 3 * len(cs["forrasok"]) + 0.5 * len(hk) + 5 * max(0.0, 1 - cs["kezdet_ora"] / FO_MAX_ORA)
         cs["kor_ora"] = kor_ora
     return csoportok
 
@@ -671,7 +689,7 @@ def fo_doboz(cs, i):
     lead = f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and tipus != "kis" else ""
     return f'''<article class="fo-hir {tipus}" data-srcs="{' '.join(cs['forrasok'])}">
   {kep}<div class="szoveg">
-  <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(cs["ido"])}</time></div>
+  <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
   {lead}{lefedettseg(cs)}{tovabbi(cs) if tipus != "kis" else ""}</div>
 </article>'''
@@ -682,7 +700,7 @@ def doboz(cs, lead=True, kiemelt=False, extra=""):
     kep = kep_html(h, "kiemelt-kep") if kiemelt else kep_html(h, "belyeg")
     return f'''<article class="doboz{' kiemelt' if kiemelt else ''}{extra}" data-srcs="{' '.join(cs['forrasok'])}">
   <div class="szoveg">
-  <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(cs["ido"])}</time></div>
+  <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
   {f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and lead else ''}
   {lefedettseg(cs)}{tovabbi(cs)}</div>
@@ -692,7 +710,7 @@ def doboz(cs, lead=True, kiemelt=False, extra=""):
 
 def sor(cs, csak_ora=False):
     h = cs["fo"]
-    ido = bp(datetime.fromisoformat(cs["ido"])).strftime("%H:%M") if csak_ora else ido_szoveg(cs["ido"])
+    ido = bp(datetime.fromisoformat(h["ido"])).strftime("%H:%M") if csak_ora else ido_szoveg(h["ido"])
     return (f'<li data-srcs="{" ".join(cs["forrasok"])}"><time>{ido}</time>'
             f'<span class="sor-cim"><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a> '
             f'{forras_nev(h["forras"])}</span></li>')
@@ -720,10 +738,10 @@ def korabban(lista, nyitva=False):
     """A „További hírek” napokra bontva; minden nap külön lenyitható, a legfrissebb nap nyitva."""
     if not lista:
         return ""
-    lista = sorted(lista, key=lambda c: c["ido"], reverse=True)
+    lista = sorted(lista, key=lambda c: c["fo"]["ido"], reverse=True)
     napok = {}
     for c in lista:
-        napok.setdefault(bp(datetime.fromisoformat(c["ido"])).date(), []).append(c)
+        napok.setdefault(bp(datetime.fromisoformat(c["fo"]["ido"])).date(), []).append(c)
     csoportok = "".join(
         f'<details class="nap-csoport"{" open" if i == 0 else ""}><summary>{nap_cimke(nap)} ({len(cs)})</summary>'
         f'<ul class="lista">{"".join(sor(c, csak_ora=True) for c in cs)}</ul></details>'
@@ -760,14 +778,14 @@ def helyi_rovat(helyi_cs):
 
 
 def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
-    friss = [c for c in orszagos if c["kor_ora"] < FO_MAX_ORA]
+    friss = [c for c in orszagos if c["kezdet_ora"] < FO_MAX_ORA]
     if len(friss) < FO_HIREK_SZAMA:           # hajnalban kevés a friss hír: legfeljebb 12 óráig visszanyúlunk
-        friss = [c for c in orszagos if c["kor_ora"] < FO_TARTALEK_ORA]
+        friss = [c for c in orszagos if c["kezdet_ora"] < FO_TARTALEK_ORA]
     rangsor = sorted(friss, key=lambda c: c["pont"], reverse=True)
     # nyitóhír: a legtöbb lap által megírt képes hír a legszűkebb időablakból, ahol ilyen van
     nyito = None
     for hatar in (NYITO_MAX_ORA, 5, FO_MAX_ORA, FO_TARTALEK_ORA):
-        jeloltek = [c for c in rangsor if c["kor_ora"] < hatar]
+        jeloltek = [c for c in rangsor if c["kezdet_ora"] < hatar]
         nyito = next((c for c in jeloltek if c["fo"]["kep"]), None)
         if nyito:
             break
@@ -1300,6 +1318,8 @@ def main():
         egyedi.setdefault((h["forras"], h["cim"].strip().lower()), h)
     ervenyes = list(egyedi.values())
     for h in ervenyes:
+        # a mentett hírekre is (pl. egy korábban tévesen frissnek látszó, újra kiadott cikkre)
+        h["ido"] = webcim_korlat(h["link"], datetime.fromisoformat(h["ido"])).isoformat()
         h["rovat"] = rovat(h)
 
     allapot_ut.write_text(json.dumps(ervenyes, ensure_ascii=False), "utf-8")
