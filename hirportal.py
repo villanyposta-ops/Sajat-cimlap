@@ -103,6 +103,7 @@ NYITO_MAX_ORA = 3         # a nyitóhír ennél frissebb legyen; ha nincs ilyen,
 FO_TARTALEK_ORA = 12      # ha (pl. hajnalban) nincs elég 8 óránál frissebb hír, legfeljebb eddig nyúl vissza
 FO_STILUS = "arnyalt"     # a kiemelt rész háttere: "arnyalt" (a fejléc színének halvány árnyalata), "vilagos", "sotet"
 FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában jelenik meg
+TOVABBI_MAX = 20          # a „További hírek” listában rovatonként legfeljebb ennyi (a legfrissebbek)
 MEGORZES_ORA = 72         # ennél régebbi hír kiesik
 DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemelt, dupla széles), a többi listába megy
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
@@ -705,6 +706,7 @@ def rovatfej(rid, nev, szin, db):
 def korabban(lista, nyitva=False):
     if not lista:
         return ""
+    lista = sorted(lista, key=lambda c: c["ido"], reverse=True)[:TOVABBI_MAX]
     return (f'<details{" open" if nyitva else ""}><summary>További hírek ({len(lista)})</summary>'
             f'<ul class="lista">{"".join(sor(c) for c in lista)}</ul></details>')
 
@@ -721,8 +723,8 @@ def helyi_rovat(helyi_cs):
             continue
         kiemelt = [c for c in cs if c["kor_ora"] < FRISS_ORA][:DOBOZ_HELYENKENT]
         tobbi = [c for c in cs if c not in kiemelt]
-        friss_tobbi = [c for c in tobbi if c["kor_ora"] < FRISS_ORA]
-        regi = [c for c in tobbi if c["kor_ora"] >= FRISS_ORA]
+        friss_tobbi = [c for c in tobbi if c["kor_ora"] < FRISS_ORA][:TOVABBI_MAX]
+        regi = [c for c in tobbi if c["kor_ora"] >= FRISS_ORA][:max(0, TOVABBI_MAX - len(friss_tobbi))]
         oszlopok.append(f'''<div class="hely">
   <h3 class="helynev">{e(hely)}</h3>
   {"".join(doboz(c, lead=False) for c in kiemelt)}
