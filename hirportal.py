@@ -849,7 +849,7 @@ h1,h2,h3,h4{font-family:var(--cimbetu);margin:0}
 .logo-link{display:block;color:#fff;line-height:0;grid-column:2;grid-row:1;justify-self:center}
 .fejsor .datum{grid-column:1;grid-row:1;align-items:flex-start;padding:0}
 .fejsor .fej-gombok{grid-column:3;grid-row:1;justify-self:end;display:flex;align-items:center;gap:.5rem}
-.fejsor .forrasmenu{padding:0}
+.fejsor .forrasmenu{padding:0;margin:0}
 .tema-gomb{width:2.1rem;height:2.1rem;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#fff;background:rgb(255 255 255/.12);border:1px solid rgb(255 255 255/.35);padding:0}
 .tema-gomb:hover{background:rgb(255 255 255/.2)}
 .tema-gomb svg{width:1.1rem;height:1.1rem;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:none}
