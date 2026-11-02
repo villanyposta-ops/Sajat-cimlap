@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import html
 import json
+import random
 import re
 import time
 import unicodedata
@@ -104,6 +105,8 @@ FO_STILUS = "arnyalt"     # a kiemelt rész háttere: "arnyalt" (a fejléc szín
 FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában jelenik meg
 MEGORZES_ORA = 72         # ennél régebbi hír kiesik
 DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemelt, dupla széles), a többi listába megy
+ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
+SZINES_ESELY = 0.35       # ekkora eséllyel színes (a rovat színében) a kiemelt kártya; 0 = soha
 DOBOZ_HELYENKENT = 3      # a helyi rovatban oszloponként ennyi kiemelt hír
 
 # Országos rovatok a megjelenés sorrendjében. A „Helyi” rovat helyét a HELYI_UTAN adja meg.
@@ -673,10 +676,10 @@ def fo_doboz(cs, i):
 </article>'''
 
 
-def doboz(cs, lead=True, kiemelt=False):
+def doboz(cs, lead=True, kiemelt=False, extra=""):
     h = cs["fo"]
     kep = kep_html(h, "kiemelt-kep") if kiemelt else kep_html(h, "belyeg")
-    return f'''<article class="doboz{' kiemelt' if kiemelt else ''}" data-srcs="{' '.join(cs['forrasok'])}">
+    return f'''<article class="doboz{' kiemelt' if kiemelt else ''}{extra}" data-srcs="{' '.join(cs['forrasok'])}">
   <div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(cs["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
@@ -702,7 +705,7 @@ def rovatfej(rid, nev, szin, db):
 def korabban(lista, nyitva=False):
     if not lista:
         return ""
-    return (f'<details{" open" if nyitva else ""}><summary>Korábbi hírek ({len(lista)})</summary>'
+    return (f'<details{" open" if nyitva else ""}><summary>További hírek ({len(lista)})</summary>'
             f'<ul class="lista">{"".join(sor(c) for c in lista)}</ul></details>')
 
 
@@ -760,21 +763,41 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
     reszek, nav = [], []
     if HELYI_UTAN is None:
         reszek.append(helyi_html); nav.append(helyi_nav)
+    # óránként új, de egy órán belül állandó sorsolás; két egymást követő rovat nem kap azonos
+    # elrendezést, és színes kiemelés sem jön kétszer egymás után
+    sors = random.Random(bp(MOST).strftime("%Y%m%d%H"))
+    elozo_elr, elozo_szines = None, False
     for r in ROVATOK:
         cs = sorted([c for c in orszagos if c["rovat"] == r["id"] and id(c) not in fo_id],
                     key=lambda c: c["ido"], reverse=True)
         if cs:
             dobozok = [c for c in cs if c["kor_ora"] < FRISS_ORA][:DOBOZ_ROVATONKENT]
             lista = [c for c in cs if c not in dobozok]
-            if len(dobozok) >= 3:
+            kiem = len(dobozok) >= 3          # van-e kiemelt (dupla) kártya
+            if kiem:
                 # kiemelt: amelyikről a legtöbb lap írt; döntetlennél a képes, majd a pontszám (frissesség)
                 k = max(dobozok, key=lambda c: (len(c["forrasok"]), bool(c["fo"]["kep"]), c["pont"]))
                 dobozok = [k] + [c for c in dobozok if c is not k]
+            elr, szines = "bal-szeles", False
+            if ROVAT_VALTOZATOS and kiem:
+                # annyi doboz, hogy a három oszlopos rács tele legyen (2, 5 vagy 8); a többi a listába kerül
+                teli = max(x for x in (2, 5, 8) if x <= len(dobozok))
+                lista = dobozok[teli:] + lista
+                dobozok = dobozok[:teli]
+                lista.sort(key=lambda c: c["ido"], reverse=True)
+                lehet = [x for x in ("bal-szeles", "jobb-szeles", "bal-magas", "jobb-magas") if x != elozo_elr]
+                # magas kártyához legalább 5 doboz kell, hogy kitöltse a két sort
+                if len(dobozok) < 5:
+                    lehet = [x for x in lehet if x.endswith("szeles")] or ["bal-szeles"]
+                elr = sors.choice(lehet)
+                szines = (not elozo_szines) and sors.random() < SZINES_ESELY
+            elozo_elr, elozo_szines = elr, szines
+            extra = (" kiemelt-magas" if elr.endswith("magas") else "") + (" szines" if szines else "")
             nav.append(f'<a href="#{r["id"]}" style="--r:{r["szin"]}">{e(r["nev"])}</a>')
             reszek.append(f'''<section class="rovat" id="{r["id"]}" style="--r:{r["szin"]}">
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
-  {f'<div class="racs">{"".join(doboz(c, kiemelt=(i == 0 and len(dobozok) >= 3)) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
+  {f'<div class="racs elr-{elr}">{"".join(doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else "")) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
   {korabban(lista, nyitva=not dobozok)}
   </div>
 </section>''')
@@ -993,8 +1016,21 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.csukva .csuk::after{transform:translateY(-.05rem) rotate(-45deg)}
 .rovat.csukva .tartalom{display:none}
 .db{font-size:.8rem;color:var(--halvany);order:4}
-.racs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.9rem}
+.racs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.9rem;grid-auto-flow:row dense}
 .doboz.kiemelt{grid-column:span 2;padding:1rem;gap:1.1rem}
+/* változatos elrendezés: széles (2×1) vagy magas (1×2) kiemelt kártya, balra vagy jobbra */
+.elr-jobb-szeles .doboz.kiemelt{grid-column:2/span 2;grid-row:1}
+.elr-bal-magas .doboz.kiemelt{grid-column:1;grid-row:1/span 2}
+.elr-jobb-magas .doboz.kiemelt{grid-column:3;grid-row:1/span 2}
+.doboz.kiemelt-magas{flex-direction:column}
+.doboz.kiemelt-magas .kiemelt-kep{width:100%;aspect-ratio:16/10}
+.doboz.kiemelt-magas .lead{-webkit-line-clamp:6}
+/* színes kiemelés: a rovat színe a háttér, fehér betűkkel */
+.doboz.szines{background:var(--r);border-color:var(--r);color:#fff}
+.doboz.szines .meta,.doboz.szines .lead,.doboz.szines .tovabbi{color:rgb(255 255 255/.82)}
+.doboz.szines .forras,.doboz.szines .lefed{color:#fff}
+.doboz.szines .lefed i{box-shadow:0 0 0 1.5px var(--r)}
+.doboz.szines .kiemelt-kep{background:rgb(0 0 0/.15)}
 .doboz.kiemelt h3{font-size:1.32rem;line-height:1.22;letter-spacing:-.015em}
 .doboz.kiemelt .lead{-webkit-line-clamp:4}
 .kiemelt-kep{order:-1;width:42%;aspect-ratio:16/10;flex-shrink:0;border-radius:4px;overflow:hidden;background:var(--vonal)}
@@ -1068,7 +1104,10 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
   .nyito{grid-column:span 2;grid-row:auto;flex-direction:column}
   .nyito .kep{aspect-ratio:2/1;min-height:0;flex:none}
   .masod,.kis{grid-column:span 1}
-  .racs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .racs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .elr-bal-szeles .doboz.kiemelt,.elr-jobb-szeles .doboz.kiemelt{grid-column:1/-1;grid-row:auto}
+  .elr-bal-magas .doboz.kiemelt{grid-column:1;grid-row:1/span 2}
+  .elr-jobb-magas .doboz.kiemelt{grid-column:2;grid-row:1/span 2}}
 @media (max-width:640px){
   .fejsor{padding:.9rem 1rem .8rem}
   .logo{height:3.4rem}
@@ -1079,7 +1118,7 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
   .fo-racs{grid-template-columns:1fr}.nyito,.masod,.kis{grid-column:auto}
   .nyito .szoveg{padding:1.1rem}
   .belyeg{width:64px;height:64px}
-  .racs{grid-template-columns:1fr}.doboz.kiemelt{grid-column:auto;flex-direction:column}
+  .racs{grid-template-columns:1fr}.racs .doboz.kiemelt{grid-column:auto;grid-row:auto;flex-direction:column}
   .kiemelt-kep{width:100%}
   .lista time{min-width:4.6rem}
   .helyek{grid-template-columns:1fr}}
