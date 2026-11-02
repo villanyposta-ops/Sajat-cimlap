@@ -134,6 +134,8 @@ ROVATOK = [
     {"id": "sport", "nev": "Sport", "szin": "#15803d",
      "utvonal": ["sport", "foci", "futball", "sportmenu", "forma-1", "f1"],
      "kulcsszavak": ["meccs", "bajnokság", "válogatott", "gól", "edző", "olimpi", "ferencváros",
+                     "labdarúg", "focist", "futball", "játékvezet", "tizenegyes", "premier league", "csapatkapitány",
+                     "forma-1", "teniszez", "kézilabd", "vízilabd", "úszó", "nb i.", "fradi",
                      "forma–1", "forma-1", "nb i", "bajnokok ligája"]},
     {"id": "eletmod", "nev": "Életmód", "szin": "#a16207",
      "utvonal": ["eletmod", "elet-stilus", "elet", "after", "egeszseg", "utazas", "gasztro", "otthon",
@@ -296,26 +298,45 @@ def ekezet_nelkul(s):
     return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
 
 
+BETU = "0-9a-záéíóöőúüű"
+
+
+def kulcsszo_talalat(szoveg, kulcsszo):
+    """A kulcsszó csak szó elején számít, utána toldalék állhat: az „adó” illik az „adóemelés” szóra,
+    de a „kiadó” szóra nem."""
+    return len(re.findall(rf"(?<![{BETU}]){re.escape(kulcsszo.strip())}", szoveg))
+
+
 def rovat(h):
+    """Rovat és a besorolás megbízhatósága (h["rovat_suly"]): webcím 3, a lap kategóriája 2,
+    kulcsszó 1, a lap alapértelmezett rovata 0.5, besorolatlan 0."""
     forras = FN[h["forras"]]
+
+    def ki(r, suly):
+        h["rovat_suly"] = suly
+        return r
     if forras.get("panel"):
-        return forras["panel"]
+        return ki(forras["panel"], 9)
     if forras.get("hely"):
-        return "helyi"
+        return ki("helyi", 9)
     szakaszok = [ekezet_nelkul(s.lower()) for s in urlparse(h["link"]).path.split("/") if s]
     for sz in szakaszok[:3]:
         for r in ROVATOK:
             if sz in r["utvonal"]:
-                return r["id"]
+                return ki(r["id"], 3)
     kat = ekezet_nelkul(" ".join(h["kategoriak"]).lower())
     for r in ROVATOK:
         if any(re.search(rf"\b{re.escape(u)}\b", kat) for u in r["utvonal"]) or \
                 ekezet_nelkul(r["nev"].lower()) in kat:
-            return r["id"]
-    szoveg_ = " " + (h["cim"] + " " + h["lead"]).lower() + " "
-    pontok = {r["id"]: sum(szoveg_.count(k) for k in r["kulcsszavak"]) for r in ROVATOK}
+            return ki(r["id"], 2)
+    szoveg_ = (h["cim"] + " " + h["lead"]).lower()
+    pontok = {r["id"]: sum(kulcsszo_talalat(szoveg_, k) for k in r["kulcsszavak"]) for r in ROVATOK}
     legjobb = max(pontok, key=pontok.get)
-    return legjobb if pontok[legjobb] > 0 else forras.get("alap", "egyeb")
+    if pontok[legjobb] > 0:
+        return ki(legjobb, 1)
+    if forras.get("alap"):
+        return ki(forras["alap"], 0.5)
+    return ki("egyeb", 0)
 
 
 # ── Ugyanarról szóló hírek összevonása, fő hírek pontozása ─────────
@@ -350,9 +371,14 @@ def osszevon(hirek):
         cs["fo"] = hk[0]
         cs["forrasok"] = sorted({h["forras"] for h in hk})
         cs["ido"] = max(h["ido"] for h in hk)
-        rovatok = [h["rovat"] for h in hk]
-        nem_egyeb = [r for r in rovatok if r != "egyeb"] or rovatok
-        cs["rovat"] = max(set(nem_egyeb), key=nem_egyeb.count)
+        # a doboz rovata súlyozott szavazással: a webcímből vagy a lap kategóriájából biztosan
+        # tudott rovat többet ér, mint a kulcsszavas tipp; döntetlennél a legbiztosabb besorolás nyer
+        szavazat = {}
+        for h in hk:
+            szavazat[h["rovat"]] = szavazat.get(h["rovat"], 0) + h.get("rovat_suly", 1)
+        if len(szavazat) > 1:
+            szavazat.pop("egyeb", None)
+        cs["rovat"] = max(szavazat, key=lambda r: (szavazat[r], max(h.get("rovat_suly", 1) for h in hk if h["rovat"] == r)))
         kor_ora = (MOST - datetime.fromisoformat(cs["ido"])).total_seconds() / 3600
         # fontosság: hány lap írt róla + frissesség
         cs["pont"] = 3 * len(cs["forrasok"]) + 0.5 * len(hk) + 5 * max(0.0, 1 - kor_ora / FO_MAX_ORA)
