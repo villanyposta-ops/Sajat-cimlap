@@ -58,8 +58,6 @@ FORRASOK = [
      "alap": "belfold"},
     {"id": "valasz", "nev": "Válasz Online", "szin": "#a16207", "feeds": ["https://www.valaszonline.hu/feed/"]},
     {"id": "infostart", "nev": "Infostart", "szin": "#4f46e5", "feeds": ["https://infostart.hu/24ora/rss/"]},
-    {"id": "portfolio", "nev": "Portfolio",  "szin": "#c026d3", "feeds": ["https://www.portfolio.hu/rss/all.xml"],
-     "alap": "gazdasag"},
     {"id": "euronews", "nev": "Euronews",    "szin": "#0369a1",
      "feeds": ["https://hu.euronews.com/rss?level=theme&name=news"], "alap": "kulfold"},
 
@@ -92,6 +90,10 @@ IDOJARAS_NAPOK = 5
 IDOJARAS_SAJAT_HELY = True
 
 FO_HIREK_SZAMA = 11       # ennyi kerül a lap tetejére (1 nyitó + 4 képes + 6 kép nélküli)
+FO_MAX_ORA = 8            # a kiemelt részbe ennél frissebb hír kerülhet (a hír legutóbbi cikke számít)
+NYITO_MAX_ORA = 3         # a nyitóhír ennél frissebb legyen; ha nincs ilyen, fokozatosan enged (5, 8, 12 óra)
+FO_TARTALEK_ORA = 12      # ha (pl. hajnalban) nincs elég 8 óránál frissebb hír, legfeljebb eddig nyúl vissza
+FO_STILUS = "arnyalt"     # a kiemelt rész háttere: "arnyalt" (a fejléc színének halvány árnyalata), "vilagos", "sotet"
 FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában jelenik meg
 MEGORZES_ORA = 72         # ennél régebbi hír kiesik
 DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemelt, dupla széles), a többi listába megy
@@ -353,7 +355,7 @@ def osszevon(hirek):
         cs["rovat"] = max(set(nem_egyeb), key=nem_egyeb.count)
         kor_ora = (MOST - datetime.fromisoformat(cs["ido"])).total_seconds() / 3600
         # fontosság: hány lap írt róla + frissesség
-        cs["pont"] = 3 * len(cs["forrasok"]) + 0.5 * len(hk) + max(0, 3 - kor_ora / 4)
+        cs["pont"] = 3 * len(cs["forrasok"]) + 0.5 * len(hk) + 5 * max(0.0, 1 - kor_ora / FO_MAX_ORA)
         cs["kor_ora"] = kor_ora
     return csoportok
 
@@ -702,11 +704,26 @@ def helyi_rovat(helyi_cs):
 
 
 def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
-    friss = [c for c in orszagos if c["kor_ora"] < 18]
-    fo = sorted(friss, key=lambda c: c["pont"], reverse=True)[:FO_HIREK_SZAMA]
+    friss = [c for c in orszagos if c["kor_ora"] < FO_MAX_ORA]
+    if len(friss) < FO_HIREK_SZAMA:           # hajnalban kevés a friss hír: legfeljebb 12 óráig visszanyúlunk
+        friss = [c for c in orszagos if c["kor_ora"] < FO_TARTALEK_ORA]
+    rangsor = sorted(friss, key=lambda c: c["pont"], reverse=True)
+    # nyitóhír: a legtöbb lap által megírt képes hír a legszűkebb időablakból, ahol ilyen van
+    nyito = None
+    for hatar in (NYITO_MAX_ORA, 5, FO_MAX_ORA, FO_TARTALEK_ORA):
+        jeloltek = [c for c in rangsor if c["kor_ora"] < hatar]
+        nyito = next((c for c in jeloltek if c["fo"]["kep"]), None)
+        if nyito:
+            break
+    if nyito is None and rangsor:
+        nyito = rangsor[0]
+    fo = ([nyito] if nyito else []) + [c for c in rangsor if c is not nyito][:FO_HIREK_SZAMA - 1]
     # az első öt (képes) helyre a rangsor képes hírei kerülnek, a többi a kép nélküli dobozokba
-    kepes = [c for c in fo if c["fo"]["kep"]][:5]
-    fo = kepes + [c for c in fo if c not in kepes]
+    # a 2–5. (képes) helyre a többi közül a képes hírek kerülnek, rangsor szerint
+    if fo:
+        maradek = fo[1:]
+        kepes = [c for c in maradek if c["fo"]["kep"]][:4]
+        fo = [fo[0]] + kepes + [c for c in maradek if c not in kepes]
     fo_id = {id(c) for c in fo}
 
     helyi_html, helyi_nav = helyi_rovat(helyi_cs)
@@ -784,7 +801,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
 <script>{fej_js}</script>
 <nav class="rovatnav"><div class="nav-belso">{"".join(nav)}</div></nav>
 {hiba_html}
-<section class="elso" aria-label="A legfontosabb hírek">
+<section class="elso elso-{e(FO_STILUS)}" aria-label="A legfontosabb hírek">
   <div class="elso-belso"><h2>Amiről most a legtöbben írnak</h2>
   <div class="fo-racs">{"".join(fo_doboz(c, i) for i, c in enumerate(fo))}</div></div>
 </section>
@@ -865,6 +882,20 @@ h1,h2,h3,h4{font-family:var(--cimbetu);margin:0}
 
 /* nyitó sáv */
 .elso{background:var(--sav);color:var(--sav-szoveg)}
+/* visszafogottabb kiemelés: világos kártyák a lap hátterén, illetve a fejlécszín halvány árnyalatán */
+.elso-arnyalt{background:color-mix(in srgb,var(--fejszin,#16202f) 9%,var(--lap));border-bottom:1px solid color-mix(in srgb,var(--fejszin,#16202f) 18%,var(--lap))}
+.elso-vilagos{background:transparent}
+.elso-arnyalt,.elso-vilagos{color:var(--tinta)}
+.elso.elso-arnyalt h2,.elso.elso-vilagos h2{color:var(--tinta);font-weight:700}
+.elso-arnyalt .fo-hir,.elso-vilagos .fo-hir{background:var(--felulet);border:1px solid var(--vonal)}
+.elso-arnyalt .fo-hir .meta,.elso-vilagos .fo-hir .meta,.elso-arnyalt .fo-hir .lead,.elso-vilagos .fo-hir .lead,
+.elso-arnyalt .fo-hir .tovabbi,.elso-vilagos .fo-hir .tovabbi{color:var(--halvany)}
+.elso-arnyalt .fo-hir .forras,.elso-vilagos .fo-hir .forras{color:var(--c)}
+.elso-arnyalt .fo-hir .lefed,.elso-vilagos .fo-hir .lefed{color:var(--tinta)}
+.elso-arnyalt .fo-hir .lefed i,.elso-vilagos .fo-hir .lefed i{box-shadow:0 0 0 1.5px var(--felulet)}
+.elso-arnyalt .kep,.elso-vilagos .kep{background:var(--vonal)}
+.elso-vilagos .elso-belso{padding-top:1.4rem;padding-bottom:.6rem}
+.elso-vilagos .nyito h3{font-size:clamp(1.45rem,2vw,1.9rem)}
 .elso-belso{max-width:1280px;margin:0 auto;padding:1.6rem 1.5rem 2rem}
 .elso h2{font-size:1.05rem;font-weight:600;color:var(--sav-halvany);margin-bottom:1rem}
 .fo-racs{display:grid;grid-template-columns:repeat(6,1fr);gap:1.1rem}
@@ -1064,7 +1095,7 @@ FEJ_JS = r"""(function(){
     var s = B.szinek[i]; if (ora >= s[0] && ora < s[1]) { szin = s[2]; break; }
   }
   if (B.fix_szin) szin = B.fix_szin;
-  fej.style.setProperty('--fejszin', szin);
+  document.documentElement.style.setProperty('--fejszin', szin);
   // fejlécstílus: fix, vagy megnyitásonként véletlenszerű (nyitott lapon újratöltéskor marad)
   var st = B.fix_stilus;
   if (!st) {
