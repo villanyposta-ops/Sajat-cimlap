@@ -777,6 +777,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
     return f'''<!DOCTYPE html>
 <html lang="hu"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{{var t=localStorage.getItem("hp_tema");if(t==="vilagos"||t==="sotet")document.documentElement.dataset.tema=t;}}catch(e){{}}</script>
 <meta http-equiv="refresh" content="600"><meta name="robots" content="noindex">
 <title>{e(OLDAL_CIM)}, {most.month}. {most.day}.</title>
 {IKON_LINKEK.get(kezdo, IKON_HIRLAP)}
@@ -789,6 +790,12 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
     <a class="logo-link" href="#" aria-label="{e(OLDAL_CIM)}">{logok if OLDAL_CIM == "Saját Címlap" else f'<span class="nev">{e(OLDAL_CIM)}</span>'}</a>
     <div class="datum"><span class="nap">{most.year}. {HONAPOK[most.month-1]} {most.day}., {NAPOK[most.weekday()]}</span>
       <span class="frissitve">frissítve {most:%H:%M}</span></div>
+    <div class="fej-gombok">
+    <button type="button" class="tema-gomb" id="tema-gomb" aria-label="Megjelenés: automatikus" title="Megjelenés: automatikus (a készülék beállítását követi)">
+      <svg class="t-auto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>
+      <svg class="t-vilagos" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+      <svg class="t-sotet" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+    </button>
     <details class="forrasmenu"><summary>Források</summary>
       <div class="panel">
         <p>A kikapcsolt lapok hírei elrejtődnek. A böngésző megjegyzi a beállítást.</p>
@@ -796,6 +803,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
         {f'<h4>Helyi</h4><div class="szurok">{helyi_sz}</div>' if helyi_sz else ''}
       </div>
     </details>
+    </div>
   </div>
 </header>
 <script>{fej_js}</script>
@@ -817,9 +825,14 @@ CSS = """
   --lap:#e9edf2;--felulet:#fff;--tinta:#16202f;--halvany:#5a6577;--vonal:#d3dae3;
   --sav:#16202f;--sav-szoveg:#f2f5f9;--sav-halvany:#a9b4c4;--sav-felulet:#212d3f;
   --cimbetu:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif}
-@media (prefers-color-scheme:dark){:root{
+/* sötét mód: a rendszer beállítása szerint (data-tema="auto"), vagy kézzel választva */
+@media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]){
   --lap:#0e141d;--felulet:#18212d;--tinta:#e6ebf2;--halvany:#97a3b5;--vonal:#2a3545;
-  --sav:#1c2636;--sav-felulet:#263347}}
+  --sav:#1c2636;--sav-felulet:#263347;color-scheme:dark}}
+:root[data-tema="sotet"]{
+  --lap:#0e141d;--felulet:#18212d;--tinta:#e6ebf2;--halvany:#97a3b5;--vonal:#2a3545;
+  --sav:#1c2636;--sav-felulet:#263347;color-scheme:dark}
+:root[data-tema="vilagos"]{color-scheme:light}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:3.5rem}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -835,7 +848,12 @@ h1,h2,h3,h4{font-family:var(--cimbetu);margin:0}
 .fejsor{max-width:1280px;margin:0 auto;padding:1.2rem 1.5rem 1.1rem;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1.5rem}
 .logo-link{display:block;color:#fff;line-height:0;grid-column:2;grid-row:1;justify-self:center}
 .fejsor .datum{grid-column:1;grid-row:1;align-items:flex-start;padding:0}
-.fejsor .forrasmenu{grid-column:3;grid-row:1;justify-self:end;padding:0}
+.fejsor .fej-gombok{grid-column:3;grid-row:1;justify-self:end;display:flex;align-items:center;gap:.5rem}
+.fejsor .forrasmenu{padding:0}
+.tema-gomb{width:2.1rem;height:2.1rem;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#fff;background:rgb(255 255 255/.12);border:1px solid rgb(255 255 255/.35);padding:0}
+.tema-gomb:hover{background:rgb(255 255 255/.2)}
+.tema-gomb svg{width:1.1rem;height:1.1rem;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:none}
+:root:not([data-tema]) .t-auto,:root[data-tema="vilagos"] .t-vilagos,:root[data-tema="sotet"] .t-sotet{display:block}
 .logo-v{display:block}.logo-v[hidden]{display:none}
 .logo{height:4.6rem;width:auto;display:block}
 .logo-hirlap{height:3.5rem}
@@ -854,7 +872,7 @@ h1,h2,h3,h4{font-family:var(--cimbetu);margin:0}
   .fejsor{grid-template-columns:1fr auto;gap:.8rem 1rem}
   .logo-link{grid-column:1/-1;grid-row:1}
   .fejsor .datum{grid-column:1;grid-row:2}
-  .fejsor .forrasmenu{grid-column:2;grid-row:2}
+  .fejsor .fej-gombok{grid-column:2;grid-row:2}
   .fej-got .logo-link{width:100%;max-width:17rem}
   .fej-got .logo{width:100%;height:auto}}
 .nev{font:800 2.6rem/1 var(--cimbetu);letter-spacing:-.03em}
@@ -995,7 +1013,8 @@ summary:hover{color:var(--tinta)}
 .ido-hirek time{display:block;color:var(--halvany);font-size:.74rem}
 .ido-hirek a:hover{text-decoration:underline}
 
-@media (prefers-color-scheme:dark){.ido-hirek h3,.helynev{color:color-mix(in srgb,var(--r) 45%,#fff)}}
+@media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .ido-hirek h3,:root:not([data-tema="vilagos"]) .helynev{color:color-mix(in srgb,var(--r) 45%,#fff)}}
+:root[data-tema="sotet"] .ido-hirek h3,:root[data-tema="sotet"] .helynev{color:color-mix(in srgb,var(--r) 45%,#fff)}
 
 /* helyi rovat */
 .helyek{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1.4rem}
@@ -1050,6 +1069,15 @@ document.querySelectorAll('.rovat').forEach(r=>{
   b.addEventListener('click',()=>{const cs=r.classList.toggle('csukva');b.setAttribute('aria-expanded',!cs);
     cs?csukott.add(r.id):csukott.delete(r.id);tarol.set('hp_csukott',[...csukott]);});
 });
+const temaGomb=document.getElementById('tema-gomb');
+const TEMAK=[[null,'automatikus (a készülék beállítását követi)'],['vilagos','világos'],['sotet','sötét']];
+function temaFelirat(){const t=document.documentElement.dataset.tema||null;const f=TEMAK.find(x=>x[0]===t)[1];
+  temaGomb.title='Megjelenés: '+f+' – kattints a váltáshoz';temaGomb.setAttribute('aria-label','Megjelenés: '+f);}
+if(temaGomb){temaFelirat();temaGomb.addEventListener('click',()=>{
+  const t=document.documentElement.dataset.tema||null;const kov=TEMAK[(TEMAK.findIndex(x=>x[0]===t)+1)%3][0];
+  if(kov)document.documentElement.dataset.tema=kov;else delete document.documentElement.dataset.tema;
+  try{kov?localStorage.setItem('hp_tema',kov):localStorage.removeItem('hp_tema');}catch(e){}
+  temaFelirat();});}
 const menu=document.querySelector('.forrasmenu');
 document.addEventListener('click',ev=>{if(menu.open&&!menu.contains(ev.target))menu.open=false;});
 szur();
