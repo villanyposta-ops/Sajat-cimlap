@@ -155,7 +155,8 @@ ROVATOK = [
      "utvonal": ["eletmod", "elet-stilus", "elet", "after", "egeszseg", "utazas", "gasztro", "otthon",
                  "eletstilus"],
      "kulcsszavak": ["recept", "egészség", "utazás", "étterem", "kert", "kutya", "macska"]},
-    {"id": "egyeb", "nev": "Egyéb", "szin": "#64748b", "utvonal": [], "kulcsszavak": []},
+    {"id": "egyeb", "nev": "Egyéb", "szin": "#64748b",
+     "utvonal": ["kozlemeny", "promo", "x-promo", "szponzoralt", "partner", "hirdetes", "pr"], "kulcsszavak": []},
 ]
 HELYI_UTAN = "kulfold"    # a Helyi rovat ez után jön (None = rögtön a fő hírek után)
 HELYI_SZIN = "#9f1239"
@@ -331,10 +332,27 @@ def ekezet_nelkul(s):
 BETU = "0-9a-záéíóöőúüű"
 
 
-def kulcsszo_talalat(szoveg, kulcsszo):
+# népnevek: ezek csak kisbetűvel (vagy mondat elején) számítanak, mert nagybetűvel többnyire vezetéknevek
+NEPNEVEK = {"orosz", "amerikai", "német", "szlovák", "román", "lengyel", "francia", "brit", "olasz",
+            "spanyol", "török", "osztrák", "szerb", "horvát"}
+
+
+def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
     """A kulcsszó csak szó elején számít, utána toldalék állhat: az „adó” illik az „adóemelés” szóra,
-    de a „kiadó” szóra nem."""
-    return len(re.findall(rf"(?<![{BETU}-]){re.escape(kulcsszo.strip())}", szoveg))
+    de a „kiadó” szóra nem. A népnevek (pl. „német”) nagy kezdőbetűvel csak mondat elején számítanak,
+    így a „Németh” vagy a „Horváth” vezetéknév nem ad külföldi találatot."""
+    k = kulcsszo.strip()
+    talalatok = list(re.finditer(rf"(?<![{BETU}-]){re.escape(k)}", szoveg))
+    if eredeti is None or k not in NEPNEVEK:
+        return len(talalatok)
+    db = 0
+    for m in talalatok:
+        i = m.start()
+        elotte = eredeti[:i].rstrip()
+        mondat_eleje = (not elotte) or elotte[-1] in ".:!?–—„\"'(«"
+        if eredeti[i].islower() or mondat_eleje:
+            db += 1
+    return db
 
 
 def rovat(h):
@@ -359,8 +377,9 @@ def rovat(h):
         if any(re.search(rf"\b{re.escape(u)}\b", kat) for u in r["utvonal"]) or \
                 ekezet_nelkul(r["nev"].lower()) in kat:
             return ki(r["id"], 2)
-    szoveg_ = (h["cim"] + " " + h["lead"]).lower()
-    pontok = {r["id"]: sum(kulcsszo_talalat(szoveg_, k) for k in r["kulcsszavak"]) for r in ROVATOK}
+    eredeti = h["cim"] + ". " + h["lead"]
+    szoveg_ = eredeti.lower()
+    pontok = {r["id"]: sum(kulcsszo_talalat(szoveg_, k, eredeti) for k in r["kulcsszavak"]) for r in ROVATOK}
     if sum(pontok.values()) > 0:
         # lapfüggő előny: pl. az Euronews cikkei a Külföld javára indulnak, hogy egy-egy belföldes szó
         # (pl. „választás”) ne vigye el őket; csak egyértelmű belpolitikai cikk kerül máshova
@@ -375,42 +394,48 @@ def rovat(h):
 
 # ── Ugyanarról szóló hírek összevonása, fő hírek pontozása ─────────
 
-def tokenek(h):
-    szavak = re.findall(r"[a-záéíóöőúüű0-9]+", h["cim"].lower())
+def tokenek(h, mezo="cim"):
+    szoveg_ = h[mezo] if mezo == "cim" else " ".join(h.get("lead", "").split()[:35])
+    szavak = re.findall(r"[a-záéíóöőúüű0-9]+", szoveg_.lower())
     return {ekezet_nelkul(w)[:6] for w in szavak if len(w) >= 4 and w not in STOP}
 
 
 def osszevon(hirek):
     """Csoportosítás: két hír ugyanaz a sztori, ha a címükben legalább két jellegzetes (nem gyakori)
-    szótő közös, és a közös rész a rövidebb cím szótöveinek legalább fele. Minden hír a legjobban
-    illeszkedő csoportba kerül, nem az elsőbe, amelyik épp megfelel."""
+    szótő közös, és vagy a közös rész a rövidebb cím szótöveinek legalább fele, vagy címmel és
+    bevezetővel együtt legalább négy jellegzetes szótő közös (így a hosszú címek is összeérnek).
+    Minden hír a legjobban illeszkedő csoportba kerül, nem az elsőbe, amelyik épp megfelel."""
     hirek = sorted(hirek, key=lambda h: h["ido"], reverse=True)
     tok = {id(h): tokenek(h) for h in hirek}
-    # gyakori szótövek: amelyek a címek jelentős részében előfordulnak (pl. orbán, viktor, kormány);
+    tel = {id(h): tok[id(h)] | tokenek(h, "lead") for h in hirek}
+    # gyakori szótövek: amelyek a cikkek jelentős részében előfordulnak (pl. orbán, viktor, kormány);
     # ezek önmagukban nem jelzik, hogy két cikk ugyanarról szól
     df = {}
-    for t in tok.values():
+    for t in tel.values():
         for w in t:
             df[w] = df.get(w, 0) + 1
     gyakori = {w for w, n in df.items() if n >= max(8, 0.03 * len(hirek))}
     csoportok = []
     for h in hirek:
-        t = tok[id(h)]
-        ritka = t - gyakori
+        t, tt = tok[id(h)], tel[id(h)]
         hova, legjobb = None, 0
         for cs in csoportok:
+            if abs((datetime.fromisoformat(h["ido"]) - cs["uj"]).total_seconds()) >= 36 * 3600:
+                continue
             kozos = t & cs["tok"]
             kozos_ritka = len(kozos - gyakori)
-            if kozos_ritka >= 2 and len(kozos) / max(1, min(len(t), len(cs["tok"]))) >= 0.5 and \
-                    abs((datetime.fromisoformat(h["ido"]) - cs["uj"]).total_seconds()) < 36 * 3600:
-                pont = kozos_ritka * 2 + len(kozos)
+            kozos_tel_ritka = len((tt & cs["tel"]) - gyakori)
+            arany = len(kozos) / max(1, min(len(t), len(cs["tok"])))
+            if kozos_ritka >= 2 and (arany >= 0.5 or kozos_tel_ritka >= 4):
+                pont = kozos_tel_ritka * 2 + len(kozos)
                 if pont > legjobb:
                     hova, legjobb = cs, pont
         if hova:
             hova["hirek"].append(h)
             hova["tok"] |= t
+            hova["tel"] |= tt
         else:
-            csoportok.append({"hirek": [h], "tok": set(t), "uj": datetime.fromisoformat(h["ido"])})
+            csoportok.append({"hirek": [h], "tok": set(t), "tel": set(tt), "uj": datetime.fromisoformat(h["ido"])})
     for cs in csoportok:
         hk = cs["hirek"]
         # a fő megjelenítendő változat: amelyiknek van képe és hosszabb leadje
