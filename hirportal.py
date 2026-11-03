@@ -381,18 +381,31 @@ def tokenek(h):
 
 
 def osszevon(hirek):
-    """Mohó csoportosítás: két hír ugyanaz a sztori, ha a címük szótövei erősen átfednek."""
+    """Csoportosítás: két hír ugyanaz a sztori, ha a címükben legalább két jellegzetes (nem gyakori)
+    szótő közös, és a közös rész a rövidebb cím szótöveinek legalább fele. Minden hír a legjobban
+    illeszkedő csoportba kerül, nem az elsőbe, amelyik épp megfelel."""
     hirek = sorted(hirek, key=lambda h: h["ido"], reverse=True)
+    tok = {id(h): tokenek(h) for h in hirek}
+    # gyakori szótövek: amelyek a címek jelentős részében előfordulnak (pl. orbán, viktor, kormány);
+    # ezek önmagukban nem jelzik, hogy két cikk ugyanarról szól
+    df = {}
+    for t in tok.values():
+        for w in t:
+            df[w] = df.get(w, 0) + 1
+    gyakori = {w for w, n in df.items() if n >= max(8, 0.03 * len(hirek))}
     csoportok = []
     for h in hirek:
-        t = tokenek(h)
-        hova = None
+        t = tok[id(h)]
+        ritka = t - gyakori
+        hova, legjobb = None, 0
         for cs in csoportok:
-            kozos = len(t & cs["tok"])
-            if kozos >= 2 and kozos / max(1, min(len(t), len(cs["tok"]))) >= 0.5 and \
+            kozos = t & cs["tok"]
+            kozos_ritka = len(kozos - gyakori)
+            if kozos_ritka >= 2 and len(kozos) / max(1, min(len(t), len(cs["tok"]))) >= 0.5 and \
                     abs((datetime.fromisoformat(h["ido"]) - cs["uj"]).total_seconds()) < 36 * 3600:
-                hova = cs
-                break
+                pont = kozos_ritka * 2 + len(kozos)
+                if pont > legjobb:
+                    hova, legjobb = cs, pont
         if hova:
             hova["hirek"].append(h)
             hova["tok"] |= t
