@@ -63,11 +63,12 @@ FORRASOK = [
     {"id": "hvg",    "nev": "HVG",           "szin": "#7c3aed", "feeds": ["https://hvg.hu/rss"]},
     {"id": "mhang",  "nev": "Magyar Hang",   "szin": "#0d9488", "feeds": ["https://hang.hu/rss/"]},
     {"id": "atlatszo", "nev": "Átlátszó",    "szin": "#65a30d", "feeds": ["https://atlatszo.hu/feed/"],
-     "alap": "belfold"},
+     "alap": "belfold", "alap_elony": 1},
     {"id": "valasz", "nev": "Válasz Online", "szin": "#a16207", "feeds": ["https://www.valaszonline.hu/feed/"]},
     {"id": "infostart", "nev": "Infostart", "szin": "#4f46e5", "feeds": ["https://infostart.hu/24ora/rss/"]},
     {"id": "euronews", "nev": "Euronews",    "szin": "#0369a1",
-     "feeds": ["https://hu.euronews.com/rss?level=theme&name=news"], "alap": "kulfold"},
+     "feeds": ["https://hu.euronews.com/rss?level=theme&name=news"], "alap": "kulfold",
+     "alap_elony": 2},   # a kulcsszavas pontozásban ennyi előnnyel indul az alapértelmezett rovat
 
     # Helyi lapok: ezek nem kerülnek a fő hírek és az országos rovatok közé,
     # hanem a „Helyi” rovatban jelennek meg, a „hely” szerinti oszlopokban.
@@ -124,7 +125,12 @@ ROVATOK = [
     {"id": "kulfold", "nev": "Külföld", "szin": "#0f766e",
      "utvonal": ["kulfold", "vilag", "nagyvilag", "europa", "eu", "kulpolitika", "my-europe", "world"],
      "kulcsszavak": ["ukrajn", "orosz", "putyin", "trump", "amerikai", "európai unió", "brüsszel",
-                     "izrael", "gáza", "kína", "német", "nato", "szlovák", "román", "lengyel", "francia"]},
+                     "izrael", "gáza", "kína", "német", "nato", "szlovák", "román", "lengyel", "francia",
+                     "egyesült államok", "washington", "fehér ház", "kongresszus", "szenátus", "republikánus",
+                     "demokrata párt", "kreml", "moszkva", "kijev", "zelenszkij", "irán", "brit", "olasz", "spanyol",
+                     "török", "osztrák", "szerb", "horvát", "ensz", "európai bizottság", "von der leyen",
+                     "pozsony", "bécs", "prága", "varsó", "bukarest", "belgrád", "zágráb", "berlin", "párizs", "london",
+                     "fico", "vučić", "vucic", "netanjahu", "macron", "merz", "meloni", "starmer", "erdoğan", "erdogan"]},
     {"id": "gazdasag", "nev": "Gazdaság", "szin": "#b45309",
      "utvonal": ["gazdasag", "fn", "kkv", "penz", "ingatlan", "fogyasztas", "uzlet", "befektetes", "ceg",
                  "business", "bank", "deviza", "tozsde", "unios-forrasok", "krypto", "kriptopenz"],
@@ -328,7 +334,7 @@ BETU = "0-9a-záéíóöőúüű"
 def kulcsszo_talalat(szoveg, kulcsszo):
     """A kulcsszó csak szó elején számít, utána toldalék állhat: az „adó” illik az „adóemelés” szóra,
     de a „kiadó” szóra nem."""
-    return len(re.findall(rf"(?<![{BETU}]){re.escape(kulcsszo.strip())}", szoveg))
+    return len(re.findall(rf"(?<![{BETU}-]){re.escape(kulcsszo.strip())}", szoveg))
 
 
 def rovat(h):
@@ -355,8 +361,12 @@ def rovat(h):
             return ki(r["id"], 2)
     szoveg_ = (h["cim"] + " " + h["lead"]).lower()
     pontok = {r["id"]: sum(kulcsszo_talalat(szoveg_, k) for k in r["kulcsszavak"]) for r in ROVATOK}
-    legjobb = max(pontok, key=pontok.get)
-    if pontok[legjobb] > 0:
+    if sum(pontok.values()) > 0:
+        # lapfüggő előny: pl. az Euronews cikkei a Külföld javára indulnak, hogy egy-egy belföldes szó
+        # (pl. „választás”) ne vigye el őket; csak egyértelmű belpolitikai cikk kerül máshova
+        if forras.get("alap") in pontok:
+            pontok[forras["alap"]] += forras.get("alap_elony", 0)
+        legjobb = max(pontok, key=pontok.get)
         return ki(legjobb, 1)
     if forras.get("alap"):
         return ki(forras["alap"], 0.5)
