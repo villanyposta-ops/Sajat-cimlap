@@ -1030,7 +1030,7 @@ h1,h2,h3,h4{font-family:var(--cimbetu);margin:0}
 .fejsor .datum{grid-column:1;grid-row:1;align-items:flex-start;padding:0}
 .fejsor .fej-gombok{grid-column:3;grid-row:1;justify-self:end;display:flex;align-items:center;gap:.5rem}
 .fejsor .forrasmenu{padding:0;margin:0}
-.tema-gomb{width:2.1rem;height:2.1rem;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#fff;background:rgb(255 255 255/.12);border:1px solid rgb(255 255 255/.35);padding:0}
+.tema-gomb{width:2.1rem;height:2.1rem;border-radius:5px;display:grid;place-items:center;cursor:pointer;color:#fff;background:rgb(255 255 255/.12);border:1px solid rgb(255 255 255/.35);padding:0}
 .tema-gomb:hover{background:rgb(255 255 255/.2)}
 .tema-gomb svg{width:1.1rem;height:1.1rem;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:none}
 :root:not([data-tema]) .t-auto,:root[data-tema="vilagos"] .t-vilagos,:root[data-tema="sotet"] .t-sotet{display:block}
@@ -1070,8 +1070,9 @@ h1,h2,h3,h4{font-family:var(--cimbetu);margin:0}
 .nav-logo .logo-got{height:1.75rem}
 .fej-elrejtve .nav-logo{max-width:14rem;opacity:1;margin-right:.7rem}
 @media (prefers-reduced-motion:reduce){.nav-logo{transition:none}}
-.nav-belso a:not(.nav-logo){flex-shrink:0;font-size:.86rem;font-weight:600;padding:.22rem .7rem;border-radius:99px;color:#fff;background:rgb(255 255 255/.1);border:1px solid rgb(255 255 255/.24);display:flex;align-items:center;gap:.45rem;transition:background .15s}
-.nav-belso a:not(.nav-logo)::before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:var(--r);box-shadow:0 0 0 1.5px rgb(255 255 255/.9)}
+/* rovatgombok: szögletes fülek, alul a rovat színének világosított csíkjával */
+.nav-belso a:not(.nav-logo){flex-shrink:0;font-size:.86rem;font-weight:600;padding:.22rem .7rem .3rem;border-radius:3px;color:#fff;background:rgb(255 255 255/.1);border:1px solid rgb(255 255 255/.24);display:flex;align-items:center;transition:background .15s;
+  box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--r) 62%,#fff)}
 .nav-belso a:not(.nav-logo):hover{background:rgb(255 255 255/.2);border-color:rgb(255 255 255/.45)}
 .nav-belso a:not(.nav-logo):focus-visible{outline-color:#fff}
 
