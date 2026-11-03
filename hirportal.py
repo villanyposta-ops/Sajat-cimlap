@@ -400,42 +400,77 @@ def tokenek(h, mezo="cim"):
     return {ekezet_nelkul(w)[:6] for w in szavak if len(w) >= 4 and w not in STOP}
 
 
+def nagybetus_szavak(h):
+    """A címben és a bevezetőben mondat közben nagybetűvel, illetve kisbetűvel előforduló szótövek."""
+    nagy, kis = set(), set()
+    for mezo in ("cim", "lead"):
+        szoveg_ = h.get(mezo, "") or ""
+        for m in re.finditer(r"[A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű0-9]+", szoveg_):
+            w = m.group(0)
+            if len(w) < 4:
+                continue
+            elotte = szoveg_[:m.start()].rstrip()
+            mondat_eleje = (not elotte) or elotte[-1] in ".:!?–—„\"'(«"
+            to = ekezet_nelkul(w.lower())[:6]
+            if w[0].isupper() and not mondat_eleje:
+                nagy.add(to)
+            elif w[0].islower():
+                kis.add(to)
+    return nagy, kis
+
+
 def osszevon(hirek):
-    """Csoportosítás: két hír ugyanaz a sztori, ha a címükben legalább két jellegzetes (nem gyakori)
-    szótő közös, és vagy a közös rész a rövidebb cím szótöveinek legalább fele, vagy címmel és
-    bevezetővel együtt legalább négy jellegzetes szótő közös (így a hosszú címek is összeérnek).
-    Minden hír a legjobban illeszkedő csoportba kerül, nem az elsőbe, amelyik épp megfelel."""
+    """Csoportosítás cikkpárok alapján. Két cikk ugyanaz a sztori, ha a címükben legalább két jellegzetes
+    (nem gyakori) szótő közös, és ezek közt van tartalmi szó is (nem csak tulajdonnév), továbbá
+    – a címek nagyon hasonlók (a közös rész a rövidebb cím legalább fele), vagy
+    – legalább két közös tartalmi szó van a címben, és címmel–bevezetővel együtt legalább három.
+    18 óránál távolabbi cikkeknél csak a nagyon hasonló címek számítanak.
+    Az új cikk a doboz egyes cikkeivel vetődik össze (nem a doboz összes szavával), így a doboz nem
+    „hízik” át más sztorikra; a legjobban illeszkedő doboz nyer."""
     hirek = sorted(hirek, key=lambda h: h["ido"], reverse=True)
     tok = {id(h): tokenek(h) for h in hirek}
     tel = {id(h): tok[id(h)] | tokenek(h, "lead") for h in hirek}
-    # gyakori szótövek: amelyek a cikkek jelentős részében előfordulnak (pl. orbán, viktor, kormány);
-    # ezek önmagukban nem jelzik, hogy két cikk ugyanarról szól
-    df = {}
-    for t in tel.values():
-        for w in t:
+    df, nagy, kis = {}, set(), set()
+    for h in hirek:
+        for w in tel[id(h)]:
             df[w] = df.get(w, 0) + 1
+        n, k = nagybetus_szavak(h)
+        nagy |= n
+        kis |= k
+    # gyakori szótövek (pl. orbán, viktor, kormány) és tulajdonnevek (mondat közben mindig nagybetűsek):
+    # ezek önmagukban nem jelzik, hogy két cikk ugyanarról szól
     gyakori = {w for w, n in df.items() if n >= max(8, 0.03 * len(hirek))}
+    nevek = nagy - kis
+
+    def illeszkedes(a, b):
+        kor = abs((datetime.fromisoformat(a["ido"]) - datetime.fromisoformat(b["ido"])).total_seconds()) / 3600
+        if kor >= 36:
+            return 0
+        ta, tb = tok[id(a)], tok[id(b)]
+        kozos = ta & tb
+        kc = kozos - gyakori
+        kct = kc - nevek
+        if len(kc) < 2 or not kct:
+            return 0
+        arany = len(kozos) / max(1, min(len(ta), len(tb)))
+        ktt = (tel[id(a)] & tel[id(b)]) - gyakori - nevek
+        if kor > 18:
+            jo = arany >= 0.5 and len(kct) >= 2
+        else:
+            jo = arany >= 0.5 or (len(kct) >= 2 and len(ktt) >= 3)
+        return (len(ktt) * 2 + len(kc)) if jo else 0
+
     csoportok = []
     for h in hirek:
-        t, tt = tok[id(h)], tel[id(h)]
         hova, legjobb = None, 0
         for cs in csoportok:
-            if abs((datetime.fromisoformat(h["ido"]) - cs["uj"]).total_seconds()) >= 36 * 3600:
-                continue
-            kozos = t & cs["tok"]
-            kozos_ritka = len(kozos - gyakori)
-            kozos_tel_ritka = len((tt & cs["tel"]) - gyakori)
-            arany = len(kozos) / max(1, min(len(t), len(cs["tok"])))
-            if kozos_ritka >= 2 and (arany >= 0.5 or kozos_tel_ritka >= 4):
-                pont = kozos_tel_ritka * 2 + len(kozos)
-                if pont > legjobb:
-                    hova, legjobb = cs, pont
+            pont = max(illeszkedes(h, x) for x in cs["hirek"])
+            if pont > legjobb:
+                hova, legjobb = cs, pont
         if hova:
             hova["hirek"].append(h)
-            hova["tok"] |= t
-            hova["tel"] |= tt
         else:
-            csoportok.append({"hirek": [h], "tok": set(t), "tel": set(tt), "uj": datetime.fromisoformat(h["ido"])})
+            csoportok.append({"hirek": [h], "uj": datetime.fromisoformat(h["ido"])})
     for cs in csoportok:
         hk = cs["hirek"]
         # a fő megjelenítendő változat: amelyiknek van képe és hosszabb leadje
