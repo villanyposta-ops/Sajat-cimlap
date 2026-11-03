@@ -960,7 +960,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <script>try{{var t=localStorage.getItem("hp_tema");if(t==="vilagos"||t==="sotet")document.documentElement.dataset.tema=t;}}catch(e){{}}</script>
 <meta http-equiv="refresh" content="600"><meta name="robots" content="noindex">
-<title>{e(OLDAL_CIM)}, {most.month}. {most.day}.</title>
+<title>{e(OLDAL_CIM)}, {most:%y-%m-%d}</title>
 {IKON_LINKEK.get(kezdo, IKON_HIRLAP)}
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
@@ -1070,9 +1070,9 @@ h1,h2,h3,h4{font-family:var(--cimbetu);margin:0}
 .nav-logo .logo-got{height:1.75rem}
 .fej-elrejtve .nav-logo{max-width:14rem;opacity:1;margin-right:.7rem}
 @media (prefers-reduced-motion:reduce){.nav-logo{transition:none}}
-/* rovatgombok: szögletes fülek, alul a rovat színének világosított csíkjával */
-.nav-belso a:not(.nav-logo){flex-shrink:0;font-size:.86rem;font-weight:600;padding:.22rem .7rem .3rem;border-radius:3px;color:#fff;background:rgb(255 255 255/.1);border:1px solid rgb(255 255 255/.24);display:flex;align-items:center;transition:background .15s;
-  box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--r) 62%,#fff)}
+/* rovatgombok: enyhén lekerekített sarok, mint a Források gombon, elöl a rovat színes pöttyével */
+.nav-belso a:not(.nav-logo){flex-shrink:0;font-size:.86rem;font-weight:600;padding:.22rem .7rem;border-radius:5px;color:#fff;background:rgb(255 255 255/.1);border:1px solid rgb(255 255 255/.24);display:flex;align-items:center;gap:.45rem;transition:background .15s}
+.nav-belso a:not(.nav-logo)::before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:var(--r);box-shadow:0 0 0 1.5px rgb(255 255 255/.9)}
 .nav-belso a:not(.nav-logo):hover{background:rgb(255 255 255/.2);border-color:rgb(255 255 255/.45)}
 .nav-belso a:not(.nav-logo):focus-visible{outline-color:#fff}
 
