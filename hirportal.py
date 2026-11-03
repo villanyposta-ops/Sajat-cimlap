@@ -107,6 +107,7 @@ FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában je
 HELYI_LISTA = 8           # a helyi oszlopokban a kiemeltek alatt ennyi friss hír látszik; a többi a napokra bontott listában
 MEGORZES_ORA = 72         # ennél régebbi hír kiesik
 DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemelt, dupla széles), a többi listába megy
+KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér egy lappal kevesebbet egy téma
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
 SZINES_ESELY = 0.35       # ekkora eséllyel színes (a rovat színében) a kiemelt kártya; 0 = soha
 DOBOZ_HELYENKENT = 3      # a helyi rovatban oszloponként ennyi kiemelt hír
@@ -892,15 +893,18 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None):
     sors = random.Random(bp(MOST).strftime("%Y%m%d%H"))
     elozo_elr, elozo_szines = None, False
     for r in ROVATOK:
+        # sorrend a dobozon látható cikk ideje szerint, hogy a kiírt időpontok is sorban legyenek
         cs = sorted([c for c in orszagos if c["rovat"] == r["id"] and id(c) not in fo_id],
-                    key=lambda c: c["ido"], reverse=True)
+                    key=lambda c: c["fo"]["ido"], reverse=True)
         if cs:
             dobozok = [c for c in cs if c["kor_ora"] < FRISS_ORA][:DOBOZ_ROVATONKENT]
             lista = [c for c in cs if c not in dobozok]
             kiem = len(dobozok) >= 3          # van-e kiemelt (dupla) kártya
             if kiem:
-                # kiemelt: amelyikről a legtöbb lap írt; döntetlennél a képes, majd a pontszám (frissesség)
-                k = max(dobozok, key=lambda c: (len(c["forrasok"]), bool(c["fo"]["kep"]), c["pont"]))
+                # kiemelt: amelyikről a legtöbb lap írt, de a sztori korával csökkenő súllyal
+                # (KIEMELT_ORA óránként egy lappal kevesebbet ér), hogy a reggeli téma este már ne vezessen
+                k = max(dobozok, key=lambda c: (round(len(c["forrasok"]) - c["kezdet_ora"] / KIEMELT_ORA, 1),
+                                                bool(c["fo"]["kep"]), c["pont"]))
                 dobozok = [k] + [c for c in dobozok if c is not k]
             elr, szines = "bal-szeles", False
             if ROVAT_VALTOZATOS and kiem:
