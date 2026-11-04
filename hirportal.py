@@ -107,7 +107,10 @@ FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában je
 HELYI_LISTA = 8           # a helyi oszlopokban a kiemeltek alatt ennyi friss hír látszik; a többi a napokra bontott listában
 MEGORZES_ORA = 72         # ennél régebbi hír kiesik
 DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemelt, dupla széles), a többi listába megy
-FORRO_ABLAK_ORA = 12      # ha egy gyakori szó előfordulásainak legalább 60%-a ennyi órán belül van, a nap sztorijának kulcsszava
+# Ugyanarról szóló cikkek összevonása (betű-n-gramos hasonlóság, 0–1 között)
+OSSZEVON_ABLAK_ORA = 12   # csak az ennyi órán belül megjelent cikkek vethetők össze
+OSSZEVON_EROS = 0.30      # legalább egy csoporttaghoz ennyi hasonlóság kell (kisebb: többet von össze)
+OSSZEVON_ATLAG = 0.18     # és a csoport közeli tagjaihoz átlagosan ennyi (a láncolódás ellen)
 KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér egy lappal kevesebbet egy téma
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
 SZINES_ESELY = 0.35       # ekkora eséllyel színes (a rovat színében) a kiemelt kártya; 0 = soha
@@ -396,109 +399,79 @@ def rovat(h):
 
 # ── Ugyanarról szóló hírek összevonása, fő hírek pontozása ─────────
 
-def tokenek(h, mezo="cim"):
-    szoveg_ = h[mezo] if mezo == "cim" else " ".join(h.get("lead", "").split()[:35])
-    szavak = re.findall(r"[a-záéíóöőúüű0-9]+", szoveg_.lower())
-    return {ekezet_nelkul(w)[:6] for w in szavak if len(w) >= 4 and w not in STOP}
+def szavak(szoveg_):
+    return re.findall(r"[a-záéíóöőúüű0-9]+", (szoveg_ or "").lower())
 
 
-def nagybetus_szavak(h):
-    """A címben és a bevezetőben mondat közben nagybetűvel, illetve kisbetűvel előforduló szótövek."""
-    nagy, kis = set(), set()
-    for mezo in ("cim", "lead"):
-        szoveg_ = h.get(mezo, "") or ""
-        for m in re.finditer(r"[A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű0-9]+", szoveg_):
-            w = m.group(0)
-            if len(w) < 4:
+# napi összefoglalók (pl. „A nap legfontosabb hírei”, „Reggeli pakk”): sok témát érintenek, ezért nem vonjuk össze őket
+OSSZEFOGLALO = re.compile(r"nap (legfontosabb )?hírei|friss hírek|reggeli pakk|hírösszefoglaló", re.I)
+
+
+def ngramok(h, n=4):
+    """A cím (kétszeres súllyal) és a bevezető első 35 szavának 4 betűs darabjai, ékezet nélkül.
+    A darabolás miatt a toldalékolt és összetett alakok is közös darabokat kapnak (ügynökakták – akták)."""
+    v = {}
+    for suly, szoveg_ in ((2.0, h["cim"]), (1.0, " ".join((h.get("lead") or "").split()[:35]))):
+        for w in szavak(szoveg_):
+            if w in STOP or len(w) < 3:
                 continue
-            elotte = szoveg_[:m.start()].rstrip()
-            mondat_eleje = (not elotte) or elotte[-1] in ".:!?–—„\"'(«"
-            to = ekezet_nelkul(w.lower())[:6]
-            if w[0].isupper() and not mondat_eleje:
-                nagy.add(to)
-            elif w[0].islower():
-                kis.add(to)
-    return nagy, kis
+            w = f"_{ekezet_nelkul(w)}_"
+            for i in range(len(w) - n + 1):
+                v[w[i:i + n]] = v.get(w[i:i + n], 0) + suly
+    return v
 
 
 def osszevon(hirek):
-    """Csoportosítás cikkpárok alapján. Két cikk ugyanaz a sztori, ha a címükben legalább két jellegzetes
-    (nem gyakori) szótő közös, és ezek közt van tartalmi szó is (nem csak tulajdonnév), továbbá
-    – a címek nagyon hasonlók (a közös rész a rövidebb cím legalább fele), vagy
-    – legalább két közös tartalmi szó van a címben, és címmel–bevezetővel együtt legalább három.
-    18 óránál távolabbi cikkeknél csak a nagyon hasonló címek számítanak.
-    Az új cikk a doboz egyes cikkeivel vetődik össze (nem a doboz összes szavával), így a doboz nem
-    „hízik” át más sztorikra; a legjobban illeszkedő doboz nyer."""
-    hirek = sorted(hirek, key=lambda h: h["ido"], reverse=True)
-    tok = {id(h): tokenek(h) for h in hirek}
-    tel = {id(h): tok[id(h)] | tokenek(h, "lead") for h in hirek}
-    df, nagy, kis = {}, set(), set()
-    for h in hirek:
-        for w in tel[id(h)]:
-            df[w] = df.get(w, 0) + 1
-        n, k = nagybetus_szavak(h)
-        nagy |= n
-        kis |= k
-    # gyakori szótövek (pl. orbán, viktor, kormány) és tulajdonnevek (mondat közben mindig nagybetűsek):
-    # ezek önmagukban nem jelzik, hogy két cikk ugyanarról szól
-    gyakori = {w for w, n in df.items() if n >= max(8, 0.03 * len(hirek))}
-    # kivétel: ha egy gyakori szó előfordulásai nagyrészt néhány órába sűrűsödnek (pl. az ügynökakták
-    # megnyitásakor az „ügynök”), az nem általános szó, hanem éppen a nap nagy sztorijának kulcsszava
-    # (legalább 5 cikkben szerepel, és ezek legalább 60%-a FORRO_ABLAK_ORA órán belül jelent meg)
-    idok = {}
-    for h in hirek:
-        t = datetime.fromisoformat(h["ido"]).timestamp()
-        for w in tel[id(h)]:
-            if df[w] >= 5 and w not in STOP:
-                idok.setdefault(w, []).append(t)
-    forro = set()
-    for w, ts in idok.items():
-        ts.sort()
-        j, legtobb = 0, 0
-        for i in range(len(ts)):
-            while ts[i] - ts[j] > FORRO_ABLAK_ORA * 3600:
-                j += 1
-            legtobb = max(legtobb, i - j + 1)
-        if legtobb >= 5 and legtobb >= 0.6 * len(ts):
-            forro.add(w)
-    gyakori -= forro
-    nevek = nagy - kis
-
-    def illeszkedes(a, b):
-        kor = abs((datetime.fromisoformat(a["ido"]) - datetime.fromisoformat(b["ido"])).total_seconds()) / 3600
-        if kor >= 36:
-            return 0
-        ta, tb = tok[id(a)], tok[id(b)]
-        kozos = ta & tb
-        kc = kozos - gyakori
-        kct = kc - nevek
-        ktt = (tel[id(a)] & tel[id(b)]) - gyakori - nevek
-        # nagy, sokak által megírt sztori (12 órán belül): a forró kulcsszó (pl. „ügynök”) mindkét címben
-        # szerepel, és van még egy közös tartalmi szó; vagy címben–bevezetőben két forró szó és még egy közös
-        if kor <= 12:
-            kf = ktt & forro
-            if (kct & forro and len(ktt) >= 2) or (len(kf) >= 2 and len(ktt) >= 3):
-                return len(ktt) * 2 + len(kc)
-        if len(kc) < 2 or not kct:
-            return 0
-        arany = len(kozos) / max(1, min(len(ta), len(tb)))
-        if kor > 18:
-            jo = arany >= 0.5 and len(kct) >= 2
+    """Ugyanarról szóló cikkek csoportosítása betű-n-gramos TF-IDF hasonlósággal.
+    Minden cikkből súlyozott vektor készül a cím és a bevezető 4 betűs darabjaiból; a ritka darabok többet
+    érnek (IDF), a nagyon gyakoriak (a cikkek >10%-ában) kimaradnak. Időrendben haladva egy cikk akkor kerül
+    egy meglévő csoportba, ha
+    – legalább egy, OSSZEVON_ABLAK_ORA órán belüli tagjához OSSZEVON_EROS feletti a hasonlósága, és
+    – az ablakon belüli tagokhoz mért átlagos hasonlósága is eléri az OSSZEVON_ATLAG értéket
+      (ez akadályozza meg, hogy a csoport láncszerűen átcsússzon más témákra);
+    több jelölt közül az átlagosan leghasonlóbb csoport nyer."""
+    import math
+    hirek = sorted(hirek, key=lambda h: h["ido"])
+    N = len(hirek)
+    nyers = [ngramok(h) if not OSSZEFOGLALO.search(h["cim"]) else {} for h in hirek]
+    df = {}
+    for v in nyers:
+        for g in v:
+            df[g] = df.get(g, 0) + 1
+    V = []
+    for v in nyers:
+        w = {g: (1 + math.log(tf)) * math.log(N / df[g]) for g, tf in v.items() if 2 <= df[g] < 0.1 * N}
+        nrm = math.sqrt(sum(x * x for x in w.values())) or 1
+        V.append({g: x / nrm for g, x in w.items()})
+    T = [datetime.fromisoformat(h["ido"]).timestamp() for h in hirek]
+    ablak = OSSZEVON_ABLAK_ORA * 3600
+    # hasonlóságok a fordított indexszel: csak a közös darabot tartalmazó, időben közeli párokat számoljuk
+    index, hason = {}, {}
+    for i, v in enumerate(V):
+        acc = {}
+        for g, x in v.items():
+            for j in index.get(g, ()):
+                if T[i] - T[j] <= ablak:
+                    acc[j] = acc.get(j, 0) + x * V[j][g]
+            index.setdefault(g, []).append(i)
+        hason[i] = acc
+    csoportok, hova = [], {}
+    for i in range(N):
+        acc = hason[i]
+        jeloltek = {hova[j] for j, s in acc.items() if s >= OSSZEVON_EROS}
+        legjobb, legjobb_atl = None, 0
+        for k in jeloltek:
+            kozeli = [j for j in csoportok[k]["idx"] if T[i] - T[j] <= ablak]
+            atl = sum(acc.get(j, 0) for j in kozeli) / len(kozeli)
+            if atl >= OSSZEVON_ATLAG and atl > legjobb_atl:
+                legjobb, legjobb_atl = k, atl
+        if legjobb is None:
+            hova[i] = len(csoportok)
+            csoportok.append({"idx": [i], "hirek": [hirek[i]]})
         else:
-            jo = arany >= 0.5 or (len(kct) >= 2 and len(ktt) >= 3)
-        return (len(ktt) * 2 + len(kc)) if jo else 0
-
-    csoportok = []
-    for h in hirek:
-        hova, legjobb = None, 0
-        for cs in csoportok:
-            pont = max(illeszkedes(h, x) for x in cs["hirek"])
-            if pont > legjobb:
-                hova, legjobb = cs, pont
-        if hova:
-            hova["hirek"].append(h)
-        else:
-            csoportok.append({"hirek": [h], "uj": datetime.fromisoformat(h["ido"])})
+            hova[i] = legjobb
+            csoportok[legjobb]["idx"].append(i)
+            csoportok[legjobb]["hirek"].append(hirek[i])
     for cs in csoportok:
         hk = cs["hirek"]
         # a fő megjelenítendő változat: amelyiknek van képe és hosszabb leadje
