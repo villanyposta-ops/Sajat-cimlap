@@ -107,6 +107,7 @@ FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában je
 HELYI_LISTA = 8           # a helyi oszlopokban a kiemeltek alatt ennyi friss hír látszik; a többi a napokra bontott listában
 MEGORZES_ORA = 72         # ennél régebbi hír kiesik
 DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemelt, dupla széles), a többi listába megy
+FORRO_ABLAK_ORA = 12      # ha egy gyakori szó előfordulásainak legalább 60%-a ennyi órán belül van, a nap sztorijának kulcsszava
 KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér egy lappal kevesebbet egy téma
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
 SZINES_ESELY = 0.35       # ekkora eséllyel színes (a rovat színében) a kiemelt kártya; 0 = soha
@@ -441,6 +442,26 @@ def osszevon(hirek):
     # gyakori szótövek (pl. orbán, viktor, kormány) és tulajdonnevek (mondat közben mindig nagybetűsek):
     # ezek önmagukban nem jelzik, hogy két cikk ugyanarról szól
     gyakori = {w for w, n in df.items() if n >= max(8, 0.03 * len(hirek))}
+    # kivétel: ha egy gyakori szó előfordulásai nagyrészt néhány órába sűrűsödnek (pl. az ügynökakták
+    # megnyitásakor az „ügynök”), az nem általános szó, hanem éppen a nap nagy sztorijának kulcsszava
+    # (legalább 5 cikkben szerepel, és ezek legalább 60%-a FORRO_ABLAK_ORA órán belül jelent meg)
+    idok = {}
+    for h in hirek:
+        t = datetime.fromisoformat(h["ido"]).timestamp()
+        for w in tel[id(h)]:
+            if df[w] >= 5 and w not in STOP:
+                idok.setdefault(w, []).append(t)
+    forro = set()
+    for w, ts in idok.items():
+        ts.sort()
+        j, legtobb = 0, 0
+        for i in range(len(ts)):
+            while ts[i] - ts[j] > FORRO_ABLAK_ORA * 3600:
+                j += 1
+            legtobb = max(legtobb, i - j + 1)
+        if legtobb >= 5 and legtobb >= 0.6 * len(ts):
+            forro.add(w)
+    gyakori -= forro
     nevek = nagy - kis
 
     def illeszkedes(a, b):
@@ -451,10 +472,16 @@ def osszevon(hirek):
         kozos = ta & tb
         kc = kozos - gyakori
         kct = kc - nevek
+        ktt = (tel[id(a)] & tel[id(b)]) - gyakori - nevek
+        # nagy, sokak által megírt sztori (12 órán belül): a forró kulcsszó (pl. „ügynök”) mindkét címben
+        # szerepel, és van még egy közös tartalmi szó; vagy címben–bevezetőben két forró szó és még egy közös
+        if kor <= 12:
+            kf = ktt & forro
+            if (kct & forro and len(ktt) >= 2) or (len(kf) >= 2 and len(ktt) >= 3):
+                return len(ktt) * 2 + len(kc)
         if len(kc) < 2 or not kct:
             return 0
         arany = len(kozos) / max(1, min(len(ta), len(tb)))
-        ktt = (tel[id(a)] & tel[id(b)]) - gyakori - nevek
         if kor > 18:
             jo = arany >= 0.5 and len(kct) >= 2
         else:
