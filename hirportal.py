@@ -775,7 +775,7 @@ def fo_doboz(cs, i):
   {kep}<div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
-  {lead}{lefedettseg(cs)}{tovabbi(cs) if tipus != "kis" else ""}</div>
+  {lead}{lefedettseg(cs)}{tovabbi(cs)}</div>
 </article>'''
 
 
