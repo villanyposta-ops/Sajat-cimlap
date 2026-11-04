@@ -1471,6 +1471,31 @@ APP_JS = r"""(function(){
       .then(function(d){ if (d && d.ido && d.ido !== sajat) dont(regota); })
       .catch(function(){});
   }
+  // asztali gépen appként futtatva a cikkek az app ablakában nyílnak meg (Androidon a rendszer
+  // amúgy is beágyazott olvasóablakot használ, böngészőben pedig marad az új fül);
+  // visszalépéskor a lap ugyanoda görget, ahol a cikkre kattintottál
+  var app = window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: minimal-ui)').matches);
+  if (app && !/Android/i.test(navigator.userAgent)) {
+    document.addEventListener('click', function(ev){
+      var a = ev.target.closest && ev.target.closest('a[target="_blank"]');
+      if (!a || ev.ctrlKey || ev.shiftKey || ev.metaKey || ev.button !== 0) return;
+      ev.preventDefault();
+      try { sessionStorage.setItem('hp_gorgetes', String(window.scrollY)); } catch (e) {}
+      location.href = a.href;
+    });
+    try {
+      var g = sessionStorage.getItem('hp_gorgetes');
+      if (g !== null) {
+        sessionStorage.removeItem('hp_gorgetes');
+        if (history.scrollRestoration) history.scrollRestoration = 'manual';
+        window.addEventListener('load', function(){ window.scrollTo(0, +g); });
+      }
+    } catch (e) {}
+    // ha a böngésző a memóriából hozza vissza a lapot (ott a görgetés amúgy is megmarad)
+    window.addEventListener('pageshow', function(ev){
+      if (ev.persisted) { try { sessionStorage.removeItem('hp_gorgetes'); } catch (e) {} }
+    });
+  }
   setInterval(function(){ if (!document.hidden) ellenoriz(false); }, 5 * 60000);
   document.addEventListener('visibilitychange', function(){
     if (document.hidden) { elrejtve = Date.now(); return; }
