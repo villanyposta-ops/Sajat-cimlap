@@ -760,6 +760,27 @@ def tovabbi(cs):
     return f'<p class="tovabbi">Erről írt még: {linkek}</p>'
 
 
+def alt_adat(cs, csak_ora=False, lead=True, kep=True):
+    """Többlapos dobozoknál lapnként egy cikk adatai (a fő cikk elöl), hogy ha a forrásszűrőben a fő cikk
+    lapját kikapcsolod, a böngésző egy másik lap cikkét mutassa helyette."""
+    if len(cs["forrasok"]) < 2:
+        return ""
+    latott, lista = set(), []
+    for h in [cs["fo"]] + sorted(cs["hirek"], key=lambda h: (bool(h["kep"]), len(h["lead"])), reverse=True):
+        if h["forras"] in latott:
+            continue
+        latott.add(h["forras"])
+        f = FN.get(h["forras"], {"nev": h["forras"], "szin": "#666"})
+        ido = bp(datetime.fromisoformat(h["ido"])).strftime("%H:%M") if csak_ora else ido_szoveg(h["ido"])
+        a = {"f": h["forras"], "n": f["nev"], "s": f["szin"], "c": h["cim"], "l": h["link"], "t": ido}
+        if lead and h["lead"]:
+            a["d"] = h["lead"]
+        if kep and h["kep"]:
+            a["k"] = h["kep"]
+        lista.append(a)
+    return f' data-alt="{e(json.dumps(lista, ensure_ascii=False))}"'
+
+
 def kep_html(h, osztaly):
     if not h["kep"]:
         return ""
@@ -772,7 +793,7 @@ def fo_doboz(cs, i):
     tipus = "nyito" if i == 0 else ("masod" if i < 5 else "kis")
     kep = kep_html(h, "kep") if tipus != "kis" else ""
     lead = f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and tipus != "kis" else ""
-    return f'''<article class="fo-hir {tipus}" data-srcs="{' '.join(cs['forrasok'])}">
+    return f'''<article class="fo-hir {tipus}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=tipus != "kis", kep=tipus != "kis")}>
   {kep}<div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
@@ -783,7 +804,7 @@ def fo_doboz(cs, i):
 def doboz(cs, lead=True, kiemelt=False, extra=""):
     h = cs["fo"]
     kep = kep_html(h, "kiemelt-kep") if kiemelt else kep_html(h, "belyeg")
-    return f'''<article class="doboz{' kiemelt' if kiemelt else ''}{extra}" data-srcs="{' '.join(cs['forrasok'])}">
+    return f'''<article class="doboz{' kiemelt' if kiemelt else ''}{extra}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=lead)}>
   <div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
@@ -796,7 +817,7 @@ def doboz(cs, lead=True, kiemelt=False, extra=""):
 def sor(cs, csak_ora=False):
     h = cs["fo"]
     ido = bp(datetime.fromisoformat(h["ido"])).strftime("%H:%M") if csak_ora else ido_szoveg(h["ido"])
-    return (f'<li data-srcs="{" ".join(cs["forrasok"])}"><time>{ido}</time>'
+    return (f'<li data-srcs="{" ".join(cs["forrasok"])}"{alt_adat(cs, csak_ora, lead=False, kep=False)}><time>{ido}</time>'
             f'<span class="sor-cim"><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a> '
             f'{forras_nev(h["forras"])}</span></li>')
 
@@ -1278,9 +1299,33 @@ const tarol={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e)
              set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const rejtettForras=new Set(tarol.get('hp_rejtett',[]));
 const csukott=new Set(tarol.get('hp_csukott',[]));
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+const lat=(el,v)=>{if(el)el.style.display=v?'':'none';};
+// ha egy többlapos doboz fő cikkének lapja ki van kapcsolva, egy másik lap cikke kerül a helyére,
+// a pöttyök és az „Erről írt még” sor pedig csak a bekapcsolt lapokat mutatja
+function csere(el){
+  const alt=JSON.parse(el.dataset.alt), l=alt.filter(a=>!rejtettForras.has(a.f));
+  if(!l.length) return;
+  const u=l[0];
+  const fs=el.querySelector('.meta .forras, .sor-cim .forras'); if(fs){fs.textContent=u.n;fs.style.setProperty('--c',u.s);}
+  const t=el.querySelector('time'); if(t) t.textContent=u.t;
+  const a=el.querySelector('h3 a, .sor-cim a'); if(a){a.textContent=u.c;a.href=u.l;}
+  const ld=el.querySelector('.lead'); if(ld){ld.textContent=u.d||'';lat(ld,u.d);}
+  const img=el.querySelector('.kep img, .belyeg img, .kiemelt-kep img');
+  if(img){if(u.k&&img.getAttribute('src')!==u.k)img.src=u.k;lat(img.parentNode,u.k);}
+  const lf=el.querySelector('.lefed');
+  if(lf){lat(lf,l.length>1);lf.title=l.map(x=>x.n).join(', ');
+    lf.innerHTML=l.map(x=>'<i style="--c:'+esc(x.s)+'"></i>').join('')+l.length+' lap írt róla';}
+  const tv=el.querySelector('.tovabbi');
+  if(tv){const m=l.slice(1);lat(tv,m.length);
+    tv.innerHTML='Erről írt még: '+m.map(x=>'<a href="'+esc(x.l)+'" target="_blank" rel="noopener" title="'+esc(x.c)+'">'+esc(x.n)+'</a>').join(', ');}
+}
 function szur(){
   document.querySelectorAll('[data-srcs]').forEach(el=>{
-    const s=el.dataset.srcs.split(' ');el.classList.toggle('rejtett',s.every(x=>rejtettForras.has(x)));});
+    const s=el.dataset.srcs.split(' ');const rejt=s.every(x=>rejtettForras.has(x));
+    el.classList.toggle('rejtett',rejt);
+    if(!rejt&&el.dataset.alt&&(el.dataset.csere||s.some(x=>rejtettForras.has(x)))){csere(el);el.dataset.csere='1';}
+  });
 }
 document.querySelectorAll('.szuro input').forEach(i=>{
   i.checked=!rejtettForras.has(i.value);
