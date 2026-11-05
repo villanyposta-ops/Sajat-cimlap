@@ -143,22 +143,24 @@ ROVATOK = [
      "kulcsszavak": ["infláció", "forint", "jegybank", "mnb", "kamat", "gdp", "költségvetés", "adó",
                      "árak", "tőzsde", "vállalat", "cég", "bér", "nyugdíj", "benzin", "beruházás"]},
     {"id": "tech", "nev": "Tudomány és tech", "szin": "#6d28d9",
-     "utvonal": ["tech", "techtud", "tudomany", "tudomany-technika", "kornyezet", "zold", "mobil", "next"],
+     "utvonal": ["tech", "techtud", "tudomany", "tudomany-technika", "kornyezet", "zold", "mobil", "next",
+                 "cegauto", "auto", "autos"],
      "kulcsszavak": ["kutató", "tudós", "mesterséges intelligencia", "űrszonda", "klíma", "apple",
                      "google", "okostelefon", "szoftver", "energia"]},
     {"id": "kultura", "nev": "Kultúra", "szin": "#be185d",
      "utvonal": ["kultura", "kult", "kulturalis", "zene", "film", "konyv", "szinhaz", "mediapiac", "media",
-                 "culture"],
+                 "culture", "after", "karakter"],
      "kulcsszavak": ["film", "színház", "koncert", "album", "regény", "író", "kiállítás", "múzeum",
                      "rendező", "színész", "fesztivál", "könyv"]},
     {"id": "sport", "nev": "Sport", "szin": "#15803d",
      "utvonal": ["sport", "foci", "futball", "sportmenu", "forma-1", "f1"],
-     "kulcsszavak": ["meccs", "bajnokság", "válogatott", "gól", "edző", "olimpi", "ferencváros",
+     "kulcsszavak": ["meccs", "bajnokság", "válogatott", "gól", "edző", "olimpi",
                      "labdarúg", "focist", "futball", "játékvezet", "tizenegyes", "premier league", "csapatkapitány",
                      "forma-1", "teniszez", "kézilabd", "vízilabd", "úszó", "nb i.", "fradi",
-                     "forma–1", "forma-1", "nb i", "bajnokok ligája"]},
+                     "forma–1", "forma-1", "nb i", "bajnokok ligája",
+                     "ftc", "európa-liga", "európa liga", "konferencialiga", "ultrá", "szurkol"]},
     {"id": "eletmod", "nev": "Életmód", "szin": "#a16207",
-     "utvonal": ["eletmod", "elet-stilus", "elet", "after", "egeszseg", "utazas", "gasztro", "otthon",
+     "utvonal": ["eletmod", "elet-stilus", "elet", "egeszseg", "utazas", "gasztro", "otthon",
                  "eletstilus"],
      "kulcsszavak": ["recept", "egészség", "utazás", "étterem", "kert", "kutya", "macska"]},
     {"id": "egyeb", "nev": "Egyéb", "szin": "#64748b",
@@ -378,14 +380,21 @@ def rovat(h):
         for r in ROVATOK:
             if sz in r["utvonal"]:
                 return ki(r["id"], 3)
-    kat = ekezet_nelkul(" ".join(h["kategoriak"]).lower())
-    for r in ROVATOK:
-        if any(re.search(rf"\b{re.escape(u)}\b", kat) for u in r["utvonal"]) or \
-                ekezet_nelkul(r["nev"].lower()) in kat:
-            return ki(r["id"], 2)
+    # a lap címkéi: címkénként megnézzük, melyik rovathoz illik, és a legtöbb címkét kapó rovat nyer
+    # (pl. a 444 „foci”, „magyar foci”, „külföld” címkéinél a Sport, nem a Külföld)
+    kat_pont = {}
+    for k in h["kategoriak"]:
+        k = ekezet_nelkul(k.lower())
+        for r in ROVATOK:
+            if any(re.search(rf"\b{re.escape(u)}\b", k) for u in r["utvonal"]) or ekezet_nelkul(r["nev"].lower()) in k:
+                kat_pont[r["id"]] = kat_pont.get(r["id"], 0) + 1
     eredeti = h["cim"] + ". " + h["lead"]
     szoveg_ = eredeti.lower()
     pontok = {r["id"]: sum(kulcsszo_talalat(szoveg_, k, eredeti) for k in r["kulcsszavak"]) for r in ROVATOK}
+    if kat_pont:
+        # döntetlennél a cím és a bevezető kulcsszavai döntenek, utána a rovatok sorrendje
+        sorrend = [r["id"] for r in ROVATOK]
+        return ki(max(kat_pont, key=lambda r: (kat_pont[r], pontok[r], -sorrend.index(r))), 2)
     if sum(pontok.values()) > 0:
         # lapfüggő előny: pl. az Euronews cikkei a Külföld javára indulnak, hogy egy-egy belföldes szó
         # (pl. „választás”) ne vigye el őket; csak egyértelmű belpolitikai cikk kerül máshova
