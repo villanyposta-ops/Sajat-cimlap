@@ -134,6 +134,8 @@ DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemel
 OSSZEVON_ABLAK_ORA = 12   # csak az ennyi órán belül megjelent cikkek vethetők össze
 OSSZEVON_EROS = 0.30      # legalább egy csoporttaghoz ennyi hasonlóság kell (kisebb: többet von össze)
 OSSZEVON_ATLAG = 0.18     # és a csoport közeli tagjaihoz átlagosan ennyi (a láncolódás ellen)
+OSSZEVON_NEV = 0.15       # ha a címekben közös egy ritka tulajdonnév (pl. „Republikon”), ennyi hasonlóság is elég
+RITKA_NEV_MAX = 5         # ritkának számít a (legalább 6 betűs) név, ha legfeljebb ennyi cikk címében szerepel
 KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér egy lappal kevesebbet egy téma
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
 SZINES_ESELY = 0.35       # ekkora eséllyel színes (a rovat színében) a kiemelt kártya; 0 = soha
@@ -483,6 +485,18 @@ def osszevon(hirek):
         nrm = math.sqrt(sum(x * x for x in w.values())) or 1
         V.append({g: x / nrm for g, x in w.items()})
     T = [datetime.fromisoformat(h["ido"]).timestamp() for h in hirek]
+    # ritka tulajdonnevek a címekben (pl. „Republikon”): nagybetűs, a mondat belsejében álló szavak, amelyek
+    # legfeljebb RITKA_NEV_MAX cikkben fordulnak elő; ha két cikk címe ilyenen osztozik, gyengébb hasonlóság is elég
+    nevek, nev_df = [], {}
+    for h in hirek:
+        szo = re.findall(r"[A-ZÁÉÍÓÖŐÚÜŰ][a-záéíóöőúüű]{5,}", h["cim"])
+        n = {ekezet_nelkul(w.lower())[:7] for w in szo} - {ekezet_nelkul(w.lower())[:7] for w in szo[:1]
+                                                          if h["cim"].startswith(w) and ":" not in h["cim"][:len(w) + 2]}
+        n -= STOP
+        nevek.append(n)
+        for w in n:
+            nev_df[w] = nev_df.get(w, 0) + 1
+    ritka = [{w for w in n if nev_df[w] <= RITKA_NEV_MAX} for n in nevek]
     ablak = OSSZEVON_ABLAK_ORA * 3600
     # hasonlóságok a fordított indexszel: csak a közös darabot tartalmazó, időben közeli párokat számoljuk
     index, hason = {}, {}
@@ -497,12 +511,14 @@ def osszevon(hirek):
     csoportok, hova = [], {}
     for i in range(N):
         acc = hason[i]
-        jeloltek = {hova[j] for j, s in acc.items() if s >= OSSZEVON_EROS}
+        kuszob = lambda j: OSSZEVON_NEV if ritka[i] & ritka[j] else OSSZEVON_EROS
+        jeloltek = {hova[j] for j, s in acc.items() if s >= kuszob(j)}
         legjobb, legjobb_atl = None, 0
         for k in jeloltek:
             kozeli = [j for j in csoportok[k]["idx"] if T[i] - T[j] <= ablak]
             atl = sum(acc.get(j, 0) for j in kozeli) / len(kozeli)
-            if atl >= OSSZEVON_ATLAG and atl > legjobb_atl:
+            nevvel = atl >= OSSZEVON_NEV and any(ritka[i] & ritka[j] for j in kozeli)
+            if (atl >= OSSZEVON_ATLAG or nevvel) and atl > legjobb_atl:
                 legjobb, legjobb_atl = k, atl
         if legjobb is None:
             hova[i] = len(csoportok)
