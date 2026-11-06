@@ -780,7 +780,9 @@ def idojaras_panel(helyek, panel_hirek, meresek=None):
             "wmo": {str(k): v for k, v in WMO.items()}, "ikonok": IKONOK, "telepulesek": TELEPULESEK,
             "napok": ["H", "K", "Sze", "Cs", "P", "Szo", "V"],
             # a saját helyhez legközelebbi HungaroMet-állomás mért hőmérsékletéhez
-            "allomasok": [[a["lat"], a["lon"], a["nev"], round(a["t"], 1), f'{bp(a["ido"]):%H:%M}']
+            "allomasok": [[a["lat"], a["lon"], a["nev"], round(a["t"], 1), f'{bp(a["ido"]):%H:%M}',
+                           list(HM_KODOK[a["kod"]]) if a.get("kod") in HM_KODOK
+                           and a["ido"] - a["kod_ido"] <= timedelta(hours=2) else None]
                           for a in (meresek or {}).values() if a.get("lat") and a.get("lon")],
         }
         js = "<script>" + IDO_JS.replace("__IDO_ADAT__", json.dumps(adat, ensure_ascii=False).replace("</", "<\\/")) + "</script>"
@@ -842,12 +844,16 @@ IDO_JS = r"""(function(){
         '<span class="ido-max">'+Math.round(d.temperature_2m_max[i])+'°</span><span class="ido-min">'+Math.round(d.temperature_2m_min[i])+'°</span>'+
         '<span class="ido-csap">'+(p == null ? '' : p+'%')+'</span></li>';
     }
-    var m = null, mt = 30;   // legközelebbi mérőállomás 30 km-en belül
+    // 15 km-en belüli mérőállomásnál a nagy szám (és ha jelent, az égkép) a mért érték; különben a modellbecslés
+    var m = null, mt = 15;
     (D.allomasok || []).forEach(function(s){ var k = tav(hely[0], hely[1], s[0], s[1]); if (k < mt) { mt = k; m = s; } });
-    var mert = m ? '<p class="ido-mert">Mért: <b>'+String(m[3]).replace('.', ',')+'°</b> · '+esc(m[2])+', '+m[4]+'</p>' : '';
-    return '<h3><span class="ido-itt-jel" aria-hidden="true">◉</span> '+esc(nev)+'</h3>'+mert+
-      '<div class="ido-most">'+ikon(c.weather_code,52)+'<span class="ido-fok">'+Math.round(c.temperature_2m)+'°</span>'+
-      '<span class="ido-leiras">'+esc((D.wmo[c.weather_code]||[''])[0])+'<br><small>hőérzet '+Math.round(c.apparent_temperature)+
+    var fok = m ? Math.round(m[3]) : Math.round(c.temperature_2m);
+    var ik = m && m[5] ? '<svg class="ido-ikon" width="52" height="52" viewBox="0 0 32 32" aria-hidden="true">'+D.ikonok[m[5][1]]+'</svg>' : ikon(c.weather_code,52);
+    var leir = m && m[5] ? m[5][0] : (D.wmo[c.weather_code]||[''])[0];
+    var forras = m ? '<p class="ido-mert">Mérve '+m[4]+'-kor · '+esc(m[2])+'</p>' : '<p class="ido-mert">Becsült érték (Open-Meteo)</p>';
+    return '<h3><span class="ido-itt-jel" aria-hidden="true">◉</span> '+esc(nev)+'</h3>'+forras+
+      '<div class="ido-most">'+ik+'<span class="ido-fok">'+fok+'°</span>'+
+      '<span class="ido-leiras">'+esc(leir)+'<br><small>hőérzet '+Math.round(c.apparent_temperature)+
       '°, szél '+Math.round(c.wind_speed_10m)+' km/h</small></span></div><ul class="ido-napok">'+napok+'</ul>';
   }
   function betolt(lat, lon){
