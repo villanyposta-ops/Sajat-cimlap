@@ -151,7 +151,7 @@ ROVATOK = [
                  "orszagszerte", "jogallamisag", "kozpenz", "kozeleti"],
      "kulcsszavak": ["kormány", "orbán", "fidesz", "tisza párt", "magyar péter", "parlament", "országgyűlés",
                      "miniszter", "polgármester", "önkormányzat", "választás", "ellenzék", "budapest",
-                     "rendőrség", "bíróság", "ügyészség", "kdnp", "mi hazánk"]},
+                     "rendőrség", "bíróság", "ügyészség", "kdnp", "mi hazánk", "ügynök", "állambiztonság"]},
     {"id": "kulfold", "nev": "Külföld", "szin": "#0f766e",
      "utvonal": ["kulfold", "vilag", "nagyvilag", "europa", "eu", "kulpolitika", "my-europe", "world"],
      "kulcsszavak": ["ukrajn", "orosz", "putyin", "trump", "amerikai", "európai unió", "brüsszel",
@@ -160,7 +160,10 @@ ROVATOK = [
                      "demokrata párt", "kreml", "moszkva", "kijev", "zelenszkij", "irán", "brit", "olasz", "spanyol",
                      "török", "osztrák", "szerb", "horvát", "ensz", "európai bizottság", "von der leyen",
                      "pozsony", "bécs", "prága", "varsó", "bukarest", "belgrád", "zágráb", "berlin", "párizs", "london",
-                     "fico", "vučić", "vucic", "netanjahu", "macron", "merz", "meloni", "starmer", "erdoğan", "erdogan"]},
+                     "fico", "vučić", "vucic", "netanjahu", "macron", "merz", "meloni", "starmer", "erdoğan", "erdogan",
+                     "belga", "holland", "portugál", "svéd", "finn", "dán", "norvég", "bolgár",
+                     "japán", "kínai", "indiai", "brüsszel", "amszterdam", "lisszabon", "madrid", "róma", "athén",
+                     "stockholm", "koppenhága", "oslo", "helsinki", "dublin", "szófia"]},
     {"id": "gazdasag", "nev": "Gazdaság", "szin": "#b45309",
      "utvonal": ["gazdasag", "fn", "kkv", "penz", "ingatlan", "fogyasztas", "uzlet", "befektetes", "ceg",
                  "business", "bank", "deviza", "tozsde", "unios-forrasok", "krypto", "kriptopenz", "g7"],
@@ -368,7 +371,8 @@ BETU = "0-9a-záéíóöőúüű"
 
 # népnevek: ezek csak kisbetűvel (vagy mondat elején) számítanak, mert nagybetűvel többnyire vezetéknevek
 NEPNEVEK = {"orosz", "amerikai", "német", "szlovák", "román", "lengyel", "francia", "brit", "olasz",
-            "spanyol", "török", "osztrák", "szerb", "horvát"}
+            "spanyol", "török", "osztrák", "szerb", "horvát", "belga", "holland", "portugál", "svéd",
+            "finn", "dán", "norvég", "bolgár", "japán", "kínai", "indiai"}
 
 
 def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
@@ -431,7 +435,8 @@ def rovat(h):
         # (pl. „választás”) ne vigye el őket; csak egyértelmű belpolitikai cikk kerül máshova
         if forras.get("alap") in pontok:
             pontok[forras["alap"]] += forras.get("alap_elony", 0)
-        legjobb = max(pontok, key=pontok.get)
+        # döntetlennél a lap alapértelmezett rovata nyer (pl. Euronews: Külföld)
+        legjobb = max(pontok, key=lambda r: (pontok[r], r == forras.get("alap")))
         return ki(legjobb, 1)
     if forras.get("alap"):
         return ki(forras["alap"], 0.5)
