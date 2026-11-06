@@ -105,7 +105,7 @@ IDOJARAS_SAJAT_HELY = True
 # használható). Megjelenítési név + állomásszám (az állomáslista: .../10_minutes/station_meta_auto.csv).
 # Ha a mérések nem érhetők el, helyettük az IDOJARAS_HELYEK Open-Meteo-kártyái jelennek meg.
 MERES_ALLOMASOK = [
-    ("Budapest", 44121), ("Pécs", 38528), ("Kaposvár", 27815), ("Nagykanizsa", 17809), ("Nagyatád", 28210),
+    ("Budapest", 44121), ("Pécs", 38528), ("Kaposvár", 27815), ("Nagykanizsa", 17809), ("Szombathely", 15310),
     ("Siófok", 36100), ("Szeged", 58102), ("Debrecen", 64711), ("Győr", 23703), ("Miskolc", 52744),
 ]
 MERES_10P_URL = "https://odp.met.hu/weather/weather_reports/synoptic/hungary/10_minutes/csv/HABP_10M_SYNOP_LATEST.csv.zip"
