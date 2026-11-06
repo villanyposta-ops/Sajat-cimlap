@@ -108,6 +108,8 @@ IDOJARAS_SAJAT_HELY = True
 # A lista ABC-rendben jelenik meg, a sorrend itt mindegy.
 MERES_ALLOMASOK = [
     ("Budapest", 44527),      # Pestszentlőrinc
+    ("Békéscsaba", 66522),    # repülőtér
+    ("Kecskemét", 46400),     # repülőtér (égkép nélkül)
     ("Debrecen", 64711),      # repülőtér
     ("Győr", 24423),          # Pér repülőtér (Győrben nincs égképet jelentő állomás)
     ("Kékestető", 53101),     # az ország legmagasabb pontja, 1011 m
@@ -583,11 +585,32 @@ IKONOK = {
     "eso": _FELHO_FENT + '<path class="i-csepp" d="M11 24l-1.5 4M17 24l-1.5 4M23 24l-1.5 4"/>',
     "ho": _FELHO_FENT + '<path class="i-ho" d="M11 25v.1M16 27v.1M21 25v.1M13.5 29.5v.1M18.5 29.5v.1"/>',
     "zivatar": _FELHO_FENT + '<path class="i-villam" d="M17 21l-3.5 5h4l-2.5 5"/>',
+    # éjszakai változatok (napnyugta és napkelte között)
+    "hold": '<path class="i-hold" d="M20.5 5.5A11 11 0 1 0 26.5 21 9 9 0 0 1 20.5 5.5z"/>',
+    "holdfelho": '<path class="i-hold" d="M14 3.5A7 7 0 1 0 19.5 13 5.5 5.5 0 0 1 14 3.5z"/>' + _FELHO,
 }
+EJJEL = {"nap": "hold", "napfelho": "holdfelho"}
 
 
-def ikon(kod, meret=32):
+def nap_magassag(lat, lon, ido):
+    """A Nap horizont feletti magassága fokban (egyszerűsített csillagászati képlet, ~1 fok pontos)."""
+    import math
+    d = (ido - datetime(2000, 1, 1, 12, tzinfo=timezone.utc)).total_seconds() / 86400
+    r = math.radians
+    g, q = r(357.529 + 0.98560028 * d), 280.459 + 0.98564736 * d
+    lam = r(q + 1.915 * math.sin(g) + 0.020 * math.sin(2 * g))
+    eps = r(23.439 - 0.00000036 * d)
+    ra = math.degrees(math.atan2(math.cos(eps) * math.sin(lam), math.cos(lam)))
+    dec = math.asin(math.sin(eps) * math.sin(lam))
+    ora = (18.697374558 + 24.06570982441908 * d) % 24
+    lha = r(ora * 15 + lon - ra)
+    return math.degrees(math.asin(math.sin(r(lat)) * math.sin(dec) + math.cos(r(lat)) * math.cos(dec) * math.cos(lha)))
+
+
+def ikon(kod, meret=32, ejjel=False):
     nev = WMO.get(kod, ("", "felho"))[1]
+    if ejjel:
+        nev = EJJEL.get(nev, nev)
     return (f'<svg class="ido-ikon" width="{meret}" height="{meret}" viewBox="0 0 32 32" aria-hidden="true">'
             f'{IKONOK[nev]}</svg>')
 
@@ -681,8 +704,10 @@ def meres_letolt():
     return ervenyes or None
 
 
-def hm_ikon(kod, meret=32):
+def hm_ikon(kod, meret=32, ejjel=False):
     nev = HM_KODOK.get(kod, ("", ""))[1]
+    if ejjel:
+        nev = EJJEL.get(nev, nev)
     if not nev:
         return f'<span class="ido-ikon-ures" style="width:{meret}px"></span>'
     return (f'<svg class="ido-ikon" width="{meret}" height="{meret}" viewBox="0 0 32 32" aria-hidden="true">'
@@ -717,7 +742,7 @@ def meres_lista(meresek):
         sorok.append(
             f'<li data-ido="{a["ido"].isoformat()}"><span class="meres-nev">{e(nev)}'
             f'<small>{e(a["nev"]) + " · " if a["nev"] != nev else ""}{bp(a["ido"]):%H:%M}</small></span>'
-            f'<span title="{e(leiras)}">{hm_ikon(kod, 28)}</span>'
+            f'<span title="{e(leiras)}">{hm_ikon(kod, 28, a.get("lat") is not None and nap_magassag(a["lat"], a["lon"], a["ido"]) < -0.833)}</span>'
             f'<span class="meres-fok">{round(a["t"])}°</span>'
             f'<span class="meres-reszlet">{e(", ".join(reszlet))}</span></li>')
     if not sorok:
@@ -734,7 +759,7 @@ def idojaras_letolt():
     for hely in IDOJARAS_HELYEK:
         url = ("https://api.open-meteo.com/v1/forecast?"
                f"latitude={hely['lat']}&longitude={hely['lon']}"
-               "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m"
+               "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day"
                "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
                f"&timezone=Europe%2FBudapest&forecast_days={IDOJARAS_NAPOK}")
         try:
@@ -768,7 +793,7 @@ def ido_kartya(h):
     leiras = WMO.get(c["weather_code"], ("", ""))[0]
     napok = "".join(ido_nap(d, i) for i in range(len(d["time"])))
     return (f'<div class="ido-hely"><h3>{e(h["nev"])}</h3>'
-            f'<div class="ido-most">{ikon(c["weather_code"], 52)}'
+            f'<div class="ido-most">{ikon(c["weather_code"], 52, c.get("is_day") == 0)}'
             f'<span class="ido-fok">{round(c["temperature_2m"])}°</span>'
             f'<span class="ido-leiras">{e(leiras)}<br><small>hőérzet {round(c["apparent_temperature"])}°, '
             f'szél {round(c["wind_speed_10m"])} km/h</small></span></div>'
@@ -795,15 +820,17 @@ def idojaras_panel(helyek, panel_hirek, meresek=None):
     if IDOJARAS_SAJAT_HELY:
         adat = {
             "url": ("https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
-                    "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m"
-                    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+                    "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day"
+                    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset"
+                    "&hourly=temperature_2m,precipitation_probability,weather_code,is_day&forecast_hours=13"
                     f"&timezone=Europe%2FBudapest&forecast_days={IDOJARAS_NAPOK}"),
             "wmo": {str(k): v for k, v in WMO.items()}, "ikonok": IKONOK, "telepulesek": TELEPULESEK,
             "napok": ["H", "K", "Sze", "Cs", "P", "Szo", "V"],
             # a saját helyhez legközelebbi HungaroMet-állomás mért hőmérsékletéhez
             "allomasok": [[a["lat"], a["lon"], a["nev"], round(a["t"], 1), f'{bp(a["ido"]):%H:%M}',
                            list(HM_KODOK[a["kod"]]) if a.get("kod") in HM_KODOK
-                           and a["ido"] - a["kod_ido"] <= timedelta(hours=2) else None]
+                           and a["ido"] - a["kod_ido"] <= timedelta(hours=2) else None,
+                           a.get("szel"), a.get("para")]
                           for a in (meresek or {}).values() if a.get("lat") and a.get("lon")],
         }
         js = "<script>" + IDO_JS.replace("__IDO_ADAT__", json.dumps(adat, ensure_ascii=False).replace("</", "<\\/")) + "</script>"
@@ -844,8 +871,10 @@ IDO_JS = r"""(function(){
   var doboz = document.getElementById('ido-itt'); if (!doboz || !navigator.geolocation) return;
   doboz.hidden = false;
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-  function ikon(kod, m){ var w = D.wmo[kod] || ['', 'felho'];
-    return '<svg class="ido-ikon" width="'+m+'" height="'+m+'" viewBox="0 0 32 32" aria-hidden="true">'+D.ikonok[w[1]]+'</svg>'; }
+  var EJ = {nap: 'hold', napfelho: 'holdfelho'};
+  function rajz(nev, m, ejjel){ if (ejjel && EJ[nev]) nev = EJ[nev];
+    return '<svg class="ido-ikon" width="'+m+'" height="'+m+'" viewBox="0 0 32 32" aria-hidden="true">'+D.ikonok[nev]+'</svg>'; }
+  function ikon(kod, m, ejjel){ var w = D.wmo[kod] || ['', 'felho']; return rajz(w[1], m, ejjel); }
   function tav(a, b, c, d){ var r = Math.PI/180, x = (d-b)*r*Math.cos((a+c)/2*r), y = (c-a)*r; return Math.sqrt(x*x+y*y)*6371; }
   function helynev(lat, lon){
     var best = null, bt = 1e9;
@@ -869,13 +898,42 @@ IDO_JS = r"""(function(){
     var m = null, mt = 15;
     (D.allomasok || []).forEach(function(s){ var k = tav(hely[0], hely[1], s[0], s[1]); if (k < mt) { mt = k; m = s; } });
     var fok = m ? Math.round(m[3]) : Math.round(c.temperature_2m);
-    var ik = m && m[5] ? '<svg class="ido-ikon" width="52" height="52" viewBox="0 0 32 32" aria-hidden="true">'+D.ikonok[m[5][1]]+'</svg>' : ikon(c.weather_code,52);
+    var ejjel = c.is_day === 0;
+    var ik = m && m[5] ? rajz(m[5][1], 52, ejjel) : ikon(c.weather_code, 52, ejjel);
     var leir = m && m[5] ? m[5][0] : (D.wmo[c.weather_code]||[''])[0];
+    // hőérzet és szél: közeli állomásnál a mért szélből és páratartalomból (ausztrál „apparent temperature”
+    // képlet, ugyanaz, amit az Open-Meteo is használ), különben az Open-Meteo értéke
+    var hoerzet = Math.round(c.apparent_temperature), szel = Math.round(c.wind_speed_10m);
+    if (m && m[6] != null) {
+      szel = Math.round(m[6] * 3.6);
+      var gozny = m[7] != null ? m[7] / 100 * 6.105 * Math.exp(17.27 * m[3] / (237.7 + m[3])) : 0;
+      hoerzet = Math.round(m[3] + 0.33 * gozny - 0.70 * m[6] - 4.00);
+    }
     var forras = m ? '<p class="ido-mert">Mérve '+m[4]+'-kor · '+esc(m[2])+'</p>' : '<p class="ido-mert">Becsült érték (Open-Meteo)</p>';
     return '<h3><span class="ido-itt-jel" aria-hidden="true">◉</span> '+esc(nev)+'</h3>'+forras+
       '<div class="ido-most">'+ik+'<span class="ido-fok">'+fok+'°</span>'+
-      '<span class="ido-leiras">'+esc(leir)+'<br><small>hőérzet '+Math.round(c.apparent_temperature)+
-      '°, szél '+Math.round(c.wind_speed_10m)+' km/h</small></span></div><ul class="ido-napok">'+napok+'</ul>';
+      '<span class="ido-leiras">'+esc(leir)+'<br><small>hőérzet '+hoerzet+
+      '°, szél '+szel+' km/h</small></span></div>'+nap_sor(d)+orak(a.hourly)+
+      '<ul class="ido-napok">'+napok+'</ul><p class="ido-elo-forras">Előrejelzés: Open-Meteo</p>';
+  }
+  // napkelte, napnyugta, a nappal hossza (ma)
+  function nap_sor(d){
+    if (!d.sunrise || !d.sunset) return '';
+    var k = new Date(d.sunrise[0]), n = new Date(d.sunset[0]), p = Math.round((n - k) / 60000);
+    var hh = function(t){ return t.getHours() + ':' + String(t.getMinutes()).padStart(2, '0'); };
+    return '<p class="ido-napsor"><span>Napkelte <b>'+hh(k)+'</b></span><span>napnyugta <b>'+hh(n)+'</b></span>'+
+      '<span>nappal '+Math.floor(p/60)+' óra '+(p%60)+' perc</span></p>';
+  }
+  // a következő 12 óra kétóránként: idő, égkép, hőmérséklet, csapadékesély
+  function orak(h){
+    if (!h || !h.time) return '';
+    var li = '';
+    for (var i = 2; i < h.time.length && i <= 12; i += 2) {
+      var p = (h.precipitation_probability || [])[i];
+      li += '<li><span class="ido-nap">'+h.time[i].slice(11, 13)+'h</span>'+ikon(h.weather_code[i], 24, h.is_day[i] === 0)+
+        '<span class="ido-max">'+Math.round(h.temperature_2m[i])+'°</span><span class="ido-csap">'+(p == null ? '' : p+'%')+'</span></li>';
+    }
+    return '<p class="ido-alcim">A következő órák</p><ul class="ido-orak">'+li+'</ul><p class="ido-alcim">A következő napok</p>';
   }
   function betolt(lat, lon){
     lat = Math.round(lat*100)/100; lon = Math.round(lon*100)/100;   // kb. 1 km-re kerekítve
@@ -1442,7 +1500,13 @@ summary:hover{color:var(--tinta)}
 .ido-most{display:flex;align-items:center;gap:.6rem;margin:.5rem 0 .8rem}
 .ido-fok{font:750 2.5rem/1 var(--cimbetu);letter-spacing:-.03em}
 .ido-leiras{font-size:.88rem;line-height:1.35}.ido-leiras small{color:var(--halvany);font-size:.78rem}
-.ido-napok{list-style:none;margin:0;padding:.7rem 0 0;border-top:1px solid var(--vonal);display:grid;grid-template-columns:repeat(5,1fr);gap:.2rem;text-align:center}
+.ido-napsor{display:flex;flex-wrap:wrap;gap:.2rem 1rem;font-size:.8rem;color:var(--halvany);margin:.6rem 0 0;padding:.55rem 0 0;border-top:1px solid var(--vonal)}
+.ido-napsor b{color:var(--szoveg,inherit);font-weight:600}
+.ido-alcim{font-size:.72rem;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--halvany);margin:.75rem 0 .35rem}
+.ido-orak{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,1fr);gap:.2rem;text-align:center}
+.ido-orak li{display:flex;flex-direction:column;align-items:center;gap:.1rem;font-size:.82rem}
+.ido-elo-forras{font-size:.7rem;color:var(--halvany);margin:.6rem 0 0;text-align:right}
+.ido-napok{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:.2rem;text-align:center}
 .ido-napok li{display:flex;flex-direction:column;align-items:center;gap:.1rem;font-size:.82rem}
 .ido-nap{font-size:.74rem;font-weight:600;color:var(--halvany)}
 .ido-max{font-weight:700}.ido-min{color:var(--halvany);font-size:.76rem}
@@ -1464,7 +1528,7 @@ summary:hover{color:var(--tinta)}
 .meres-forras{font-size:.72rem;color:var(--halvany);margin:.6rem 0 0}.meres-forras a{text-decoration:underline}
 @media (max-width:760px){.ido-meres{grid-column:auto}.meres-lista{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}}
 .ido-ikon{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.i-nap{stroke:#f59e0b}.i-felho{stroke:var(--halvany)}.i-csepp{stroke:#3b82f6}.i-ho{stroke:#38bdf8;stroke-width:2.6}.i-villam{stroke:#eab308}
+.i-nap{stroke:#f59e0b}.i-hold{stroke:#94a3b8;fill:rgb(148 163 184/.18)}.i-felho{stroke:var(--halvany)}.i-csepp{stroke:#3b82f6}.i-ho{stroke:#38bdf8;stroke-width:2.6}.i-villam{stroke:#eab308}
 .ido-hirek{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:8px;padding:1rem 1.1rem}
 .ido-hirek h3{font-size:1.05rem;font-weight:700;color:var(--r);margin-bottom:.4rem}
 .ido-hirek ul{list-style:none;margin:0;padding:0}
