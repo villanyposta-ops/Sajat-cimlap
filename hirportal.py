@@ -58,7 +58,9 @@ FORRASOK = [
     {"id": "telex",  "nev": "Telex",         "szin": "#2563eb", "feeds": ["https://telex.hu/rss"],
      # a Telex időnként kitiltja a GitHub gépét (403); ilyenkor a Google Hírek Telexre szűrt csatornája
      # pótolja a címeket, a következő sikeres futásnál pedig a teljes (képes) változat lép a helyükre
-     "tartalek": "https://news.google.com/rss/search?q=site:telex.hu+when:2d&hl=hu&gl=HU&ceid=HU:hu"},
+     "tartalek": "https://news.google.com/rss/search?q=site:telex.hu+when:2d&hl=hu&gl=HU&ceid=HU:hu",
+     # a Google-csatornában az al-oldalak a cím elején állnak („G7: …”); ebből a rovat, és a cím előtag nélkül
+     "tartalek_elotag": {"After": "kultura", "Karakter": "kultura", "G7": "gazdasag"}},
     {"id": "444",    "nev": "444",           "szin": "#e11d48", "feeds": ["https://444.hu/feed"]},
     {"id": "24",     "nev": "24.hu",         "szin": "#ea580c", "feeds": ["https://24.hu/feed/"]},
     {"id": "hvg",    "nev": "HVG",           "szin": "#7c3aed", "feeds": ["https://hvg.hu/rss"]},
@@ -149,9 +151,10 @@ ROVATOK = [
                      "fico", "vučić", "vucic", "netanjahu", "macron", "merz", "meloni", "starmer", "erdoğan", "erdogan"]},
     {"id": "gazdasag", "nev": "Gazdaság", "szin": "#b45309",
      "utvonal": ["gazdasag", "fn", "kkv", "penz", "ingatlan", "fogyasztas", "uzlet", "befektetes", "ceg",
-                 "business", "bank", "deviza", "tozsde", "unios-forrasok", "krypto", "kriptopenz"],
+                 "business", "bank", "deviza", "tozsde", "unios-forrasok", "krypto", "kriptopenz", "g7"],
      "kulcsszavak": ["infláció", "forint", "jegybank", "mnb", "kamat", "gdp", "költségvetés", "adó",
-                     "árak", "tőzsde", "vállalat", "cég", "bér", "nyugdíj", "benzin", "beruházás"]},
+                     "árak", "tőzsde", "vállalat", "cég", "bér", "nyugdíj", "benzin", "beruházás",
+                     "fogyasztás", "büdzsé", "kiskereskedelem", "ksh", "munkanélküli"]},
     {"id": "kultura", "nev": "Kultúra", "szin": "#be185d",
      "utvonal": ["kultura", "kult", "kulturalis", "zene", "film", "konyv", "szinhaz", "mediapiac", "media",
                  "culture", "after", "karakter"],
@@ -174,7 +177,8 @@ ROVATOK = [
                  "eletstilus"],
      "kulcsszavak": ["recept", "egészség", "utazás", "étterem", "kert", "kutya", "macska"]},
     {"id": "egyeb", "nev": "Egyéb", "szin": "#64748b",
-     "utvonal": ["kozlemeny", "promo", "x-promo", "szponzoralt", "partner", "hirdetes", "pr"], "kulcsszavak": []},
+     "utvonal": ["kozlemeny", "promo", "x-promo", "szponzoralt", "partner", "hirdetes", "pr", "pr-cikk",
+                 "tamogatott-tartalom"], "kulcsszavak": []},
 ]
 HELYI_UTAN = "kulfold"    # a Helyi rovat ez után jön (None = rögtön a fő hírek után)
 HELYI_SZIN = "#9f1239"
@@ -385,7 +389,12 @@ def rovat(h):
         return ki(forras["panel"], 9)
     if forras.get("hely"):
         return ki("helyi", 9)
+    if h.get("elotag_rovat"):
+        return ki(h["elotag_rovat"], 3)
     szakaszok = [ekezet_nelkul(s.lower()) for s in urlparse(h["link"]).path.split("/") if s]
+    # szponzorált/közlemény al-oldal bárhol a webcímben elsőbbséget kap (pl. telex.hu/g7/tamogatott-tartalom/…)
+    if any(sz in r["utvonal"] for r in ROVATOK if r["id"] == "egyeb" for sz in szakaszok[:3]):
+        return ki("egyeb", 3)
     for sz in szakaszok[:3]:
         for r in ROVATOK:
             if sz in r["utvonal"]:
@@ -1762,6 +1771,12 @@ def main():
     ervenyes = [h for h in tarolt.values() if h["ido"] >= hatar and h["forras"] in FN
                 # a Google Hírek tartalékból mentett cikkek törlése, ha a lapnak már nincs tartaléka
                 and not ("news.google.com" in h["link"] and not FN[h["forras"]].get("tartalek"))]
+    for h in ervenyes:
+        # Google-tartalék: „G7: Cím” → cím előtag nélkül + rovat, így a lap saját változatával is összepárosul
+        m = re.match(r"^([^:]{1,15}):\s+(.+)$", h["cim"])
+        elotagok = FN[h["forras"]].get("tartalek_elotag", {})
+        if m and "news.google.com" in h["link"] and m.group(1) in elotagok:
+            h["cim"], h["elotag_rovat"] = m.group(2), elotagok[m.group(1)]
     # ugyanannak a lapnak azonos című cikkei közül csak egy maradjon (amelyiknek van képe/leadje)
     egyedi = {}
     for h in sorted(ervenyes, key=lambda h: (bool(h["kep"]), len(h["lead"])), reverse=True):
