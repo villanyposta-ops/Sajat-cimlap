@@ -1057,7 +1057,8 @@ def fo_doboz(cs, i):
     tipus = "nyito" if i == 0 else ("masod" if i < 5 else "kis")
     kep = kep_html(h, "kep") if tipus != "kis" else ""
     lead = f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and tipus != "kis" else ""
-    return f'''<article class="fo-hir {tipus}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=tipus != "kis", kep=tipus != "kis")}>
+    rszin = next((r["szin"] for r in ROVATOK if r["id"] == cs["rovat"]), "#64748b")
+    return f'''<article class="fo-hir {tipus}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=tipus != "kis", kep=tipus != "kis")}>
   {kep}<div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
@@ -1434,7 +1435,12 @@ h3{font-weight:var(--cim-suly,650);letter-spacing:var(--cim-ter,-.01em)}
 .fo-hir .lefed i{box-shadow:0 0 0 1.5px var(--sav-felulet)}
 .lefed i:last-of-type{margin-right:.35rem}
 .tovabbi{margin:.35rem 0 0;font-size:.78rem;color:var(--halvany)}
-.atnez{overflow:hidden}.tovabbi a.mutatott{font-weight:700;text-decoration-color:currentColor}
+.atnez{overflow:hidden}
+.kep-helyett{position:absolute;inset:0;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--r,#64748b) 16%,var(--felulet,#fff));color:color-mix(in srgb,var(--r,#64748b) 70%,#000)}
+.kep-helyett .logo{width:62%;max-width:11rem;height:auto;max-height:45%;opacity:.5}
+.kep-helyett .logo .arnyek{display:none}
+.belyeg,.kiemelt-kep,.kep{position:relative}.tovabbi a.mutatott{font-weight:700;text-decoration-color:currentColor}
 .tovabbi a{text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:2px}
 
 /* rovatok */
@@ -1637,7 +1643,14 @@ if(window.matchMedia&&matchMedia('(hover: hover) and (pointer: fine)').matches){
       const h=el.querySelector('h3 a'); if(h){h.textContent=u.c;h.href=u.l;}
       const ld=el.querySelector('.lead'); if(ld) ld.textContent=u.d||'';
       const img=el.querySelector('.kep img, .belyeg img, .kiemelt-kep img');
-      if(img){ if(u.k){img.src=u.k;img.style.visibility='';} else img.style.visibility='hidden'; }
+      // kép nélküli cikknél a kép helyén a rovat színe és diszkréten a lap aktuális fejléce
+      if(img){
+        const tarto=img.parentNode, h=tarto.querySelector('.kep-helyett');
+        if(u.k){ img.src=u.k; img.style.visibility=''; if(h) h.remove(); }
+        else { img.style.visibility='hidden';
+          if(!h){ const d=document.createElement('div'); d.className='kep-helyett';
+            const lg=[...document.querySelectorAll('#fej .logo')].find(l=>l.getClientRects().length); if(lg) d.appendChild(lg.cloneNode(true)); tarto.appendChild(d); } }
+      }
       el.querySelectorAll('.tovabbi a').forEach(x=>x.classList.toggle('mutatott',x.getAttribute('href')===u.l));
     },150);
   });
