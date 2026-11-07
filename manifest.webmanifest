@@ -1,0 +1,31 @@
+{
+ "name": "A Kezdőlap",
+ "short_name": "A Kezdőlap",
+ "description": "Rovatokba rendezett személyes hírcímlap a magyar lapok RSS-csatornáiból",
+ "lang": "hu",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#16202f",
+ "theme_color": "#16202f",
+ "icons": [
+  {
+   "src": "ikon-hirlap-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "ikon-hirlap-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "ikon-hirlap-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
