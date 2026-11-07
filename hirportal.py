@@ -883,7 +883,7 @@ IDO_JS = r"""(function(){
     if (bt < 40) return best + ' közelében';
     return 'A tartózkodási helyed';
   }
-  var hely = [0, 0];
+  var hely = [0, 0], pontossag = null;
   function kartya(nev, a){
     var c = a.current, d = a.daily, napok = '';
     for (var i = 0; i < d.time.length; i++) {
@@ -941,16 +941,30 @@ IDO_JS = r"""(function(){
     doboz.innerHTML = '<h3>Ahol most vagy</h3><p class="ido-nincs">Előrejelzés betöltése…</p>';
     fetch(D.url.replace('{lat}', lat).replace('{lon}', lon))
       .then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function(a){ doboz.innerHTML = kartya(helynev(lat, lon), a); doboz.classList.add('ido-itt-kesz'); })
+      .then(function(a){
+        doboz.innerHTML = kartya(helynev(lat, lon), a); doboz.classList.add('ido-itt-kesz');
+        var h3 = doboz.querySelector('h3');
+        if (h3) {
+          if (pontossag) {   // a hely pontossága: nagy érték = a gép csak becsülte (Wi-Fi, IP-cím)
+            var pt = document.createElement('small'); pt.className = 'ido-pontossag';
+            pt.textContent = pontossag < 1000 ? '±' + Math.round(pontossag) + ' m' : '±' + Math.round(pontossag / 1000) + ' km';
+            pt.title = 'A helymeghatározás pontossága'; h3.appendChild(pt);
+          }
+          var b = document.createElement('button'); b.type = 'button'; b.className = 'ido-ujra';
+          b.textContent = '↻'; b.title = 'Hely újrakérése'; b.setAttribute('aria-label', 'Hely újrakérése');
+          b.addEventListener('click', kerd); h3.appendChild(b);
+        }
+      })
       .catch(function(){ doboz.innerHTML = '<h3>Ahol most vagy</h3><p class="ido-nincs">Az előrejelzés most nem érhető el.</p>'; });
   }
   function kerd(){
     doboz.innerHTML = '<h3>Ahol most vagy</h3><p class="ido-nincs">Hely meghatározása…</p>';
     navigator.geolocation.getCurrentPosition(
-      function(p){ betolt(p.coords.latitude, p.coords.longitude); },
+      function(p){ pontossag = p.coords.accuracy; betolt(p.coords.latitude, p.coords.longitude); },
       function(){ doboz.innerHTML = '<h3>Ahol most vagy</h3><p class="ido-nincs">A böngésző nem adta meg a helyet. '+
         'A címsor melletti lakat vagy beállítás ikonnál engedélyezheted.</p>'; },
-      { timeout: 15000, maximumAge: 30*60*1000 });
+      // mindig friss helyet kérünk (nem a böngésző korábban megjegyzett helyét), a lehető legpontosabban
+      { timeout: 20000, maximumAge: 0, enableHighAccuracy: true });
   }
   function gomb(){
     doboz.innerHTML = '<h3>Ahol most vagy</h3><p class="ido-nincs">Engedélyezd a helymeghatározást, és itt a saját helyedre szóló előrejelzés jelenik meg.</p>'+
@@ -1512,6 +1526,10 @@ summary:hover{color:var(--tinta)}
 .ido-max{font-weight:700}.ido-min{color:var(--halvany);font-size:.76rem}
 .ido-csap{color:#2563eb;font-size:.7rem;min-height:1em}
 .ido-nincs{color:var(--halvany);font-size:.88rem}
+.ido-pontossag{font:500 .72rem/1 inherit;font-family:inherit;color:var(--halvany);margin-left:.45rem}
+.ido-ujra{margin-left:auto;float:right;border:1px solid var(--vonal);background:none;color:var(--halvany);border-radius:5px;
+  width:1.7rem;height:1.7rem;cursor:pointer;font-size:.95rem;line-height:1}
+.ido-ujra:hover{color:inherit;border-color:currentColor}
 .ido-mert{font-size:.8rem;color:var(--halvany);margin:.25rem 0 0}.ido-mert b{color:var(--szoveg,inherit)}
 .ido-meres{grid-column:span 2}
 .ido-meres h3 small{font-size:.78rem;font-weight:500;color:var(--halvany)}
