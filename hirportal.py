@@ -1434,6 +1434,7 @@ h3{font-weight:var(--cim-suly,650);letter-spacing:var(--cim-ter,-.01em)}
 .fo-hir .lefed i{box-shadow:0 0 0 1.5px var(--sav-felulet)}
 .lefed i:last-of-type{margin-right:.35rem}
 .tovabbi{margin:.35rem 0 0;font-size:.78rem;color:var(--halvany)}
+.atnez{overflow:hidden}.tovabbi a.mutatott{font-weight:700;text-decoration-color:currentColor}
 .tovabbi a{text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:2px}
 
 /* rovatok */
@@ -1608,6 +1609,43 @@ function csere(el){
   const tv=el.querySelector('.tovabbi');
   if(tv){const m=l.slice(1);lat(tv,m.length);
     tv.innerHTML='Erről írt még: '+m.map(x=>'<a href="'+esc(x.l)+'" target="_blank" rel="noopener" title="'+esc(x.c)+'">'+esc(x.n)+'</a>').join(', ');}
+}
+// asztali gépen: az „Erről írt még” sor egy lapjára vitt egérrel a dobozban az adott lap cikke látszik
+// (cím, bevezető, kép, idő); a doboz mérete közben nem változik, az egér elhagyásakor minden visszaáll
+if(window.matchMedia&&matchMedia('(hover: hover) and (pointer: fine)').matches){
+  let idozito=null;
+  const vissza=el=>{ if(el.dataset.eredeti==null) return;
+    el.innerHTML=el.dataset.eredeti; delete el.dataset.eredeti; el.style.height=''; el.classList.remove('atnez'); };
+  document.addEventListener('mouseover',ev=>{
+    const a=ev.target.closest&&ev.target.closest('article[data-alt] .tovabbi a'); if(!a) return;
+    const el=a.closest('article'); clearTimeout(idozito);
+    idozito=setTimeout(()=>{
+      const u=JSON.parse(el.dataset.alt).find(x=>x.l===a.getAttribute('href')); if(!u) return;
+      // az eredeti tartalmat csak egyszer mentjük; lapváltáskor a mezőket helyben írjuk át (az egér alatti linkek maradnak)
+      if(el.dataset.eredeti==null){
+        el.style.height=el.getBoundingClientRect().height+'px'; el.dataset.eredeti=el.innerHTML;
+        // a cím és a bevezető legfeljebb annyi sort foglalhat, amennyit az eredeti: így semmi nem mozdul el alattuk
+        el.querySelectorAll('h3, .lead').forEach(x=>{
+          const sm=parseFloat(getComputedStyle(x).lineHeight)||x.offsetHeight;
+          const mag=x.getBoundingClientRect().height, sor=Math.max(1,Math.round(mag/sm));
+          Object.assign(x.style,{display:'-webkit-box',webkitBoxOrient:'vertical',webkitLineClamp:String(sor),overflow:'hidden',height:mag+'px'});
+        });
+      }
+      el.classList.add('atnez');
+      const fs=el.querySelector('.meta .forras'); if(fs){fs.textContent=u.n;fs.style.setProperty('--c',u.s);}
+      const t=el.querySelector('.meta time'); if(t) t.textContent=u.t;
+      const h=el.querySelector('h3 a'); if(h){h.textContent=u.c;h.href=u.l;}
+      const ld=el.querySelector('.lead'); if(ld) ld.textContent=u.d||'';
+      const img=el.querySelector('.kep img, .belyeg img, .kiemelt-kep img');
+      if(img){ if(u.k){img.src=u.k;img.style.visibility='';} else img.style.visibility='hidden'; }
+      el.querySelectorAll('.tovabbi a').forEach(x=>x.classList.toggle('mutatott',x.getAttribute('href')===u.l));
+    },150);
+  });
+  document.addEventListener('mouseout',ev=>{
+    const el=ev.target.closest&&ev.target.closest('article[data-alt]'); if(!el) return;
+    if(ev.relatedTarget&&el.contains(ev.relatedTarget)) return;
+    clearTimeout(idozito); vissza(el);
+  });
 }
 function szur(){
   document.querySelectorAll('[data-srcs]').forEach(el=>{
