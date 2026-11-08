@@ -1091,7 +1091,32 @@ def sor(cs, csak_ora=False):
     ido = bp(datetime.fromisoformat(h["ido"])).strftime("%H:%M") if csak_ora else ido_szoveg(h["ido"])
     return (f'<li data-srcs="{" ".join(cs["forrasok"])}"{alt_adat(cs, csak_ora, lead=False, kep=False)}><time>{ido}</time>'
             f'<span class="sor-cim"><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a> '
-            f'{forras_nev(h["forras"])}</span></li>')
+            f'{forras_nev(h["forras"])}{cikklista(cs)}</span></li>')
+
+
+def rovid_ido(iso):
+    """A lenyíló cikklistához: ma csak óra:perc, korábbi napokon a nap is elé kerül."""
+    h = bp(datetime.fromisoformat(iso))
+    ma = bp(MOST).date()
+    if h.date() == ma:
+        return h.strftime("%H:%M")
+    if h.date() == ma - timedelta(days=1):
+        return h.strftime("tegnap %H:%M")
+    return f"{HONAPOK[h.month-1][:3]}. {h.day}. {h:%H:%M}"
+
+
+def cikklista(cs):
+    """Több cikkből álló sztorinál lenyitható lista az összes cikkel, a legújabbal kezdve."""
+    hk = sorted({h["link"]: h for h in cs["hirek"]}.values(), key=lambda h: h["ido"], reverse=True)
+    if len(hk) < 2:
+        return ""
+    sorok = "".join(
+        f'<li data-srcs="{h["forras"]}"><time>{rovid_ido(h["ido"])}</time>'
+        f'<span>{forras_nev(h["forras"])} <a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></span></li>'
+        for h in hk)
+    return (f' <button class="cikkek-gomb" type="button" aria-expanded="false">'
+            f'<span class="nyil">▸</span> <span class="db">{len(hk)}</span> cikk</button>'
+            f'<ul class="cikkek" hidden>{sorok}</ul>')
 
 
 def rovatfej(rid, nev, szin, db):
@@ -1504,6 +1529,15 @@ summary{cursor:pointer;color:var(--halvany);font-size:.88rem;font-weight:600;wid
 summary:hover{color:var(--tinta)}
 .lista{list-style:none;margin:.5rem 0 0;padding:0;columns:2 440px;column-gap:2.5rem}
 .lista li{break-inside:avoid;padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.93rem;display:flex;gap:.8rem;align-items:baseline;line-height:1.35}
+.cikkek-gomb{font:inherit;font-size:.78rem;color:var(--halvany,#888);background:none;border:1px solid var(--vonal);border-radius:3px;padding:0 .4rem;margin-left:.3rem;cursor:pointer;white-space:nowrap;vertical-align:.05em}
+.cikkek-gomb:hover{color:inherit;border-color:currentColor}
+.cikkek-gomb .nyil{display:inline-block;transition:transform .15s}
+.cikkek-gomb[aria-expanded="true"] .nyil{transform:rotate(90deg)}
+.lista .cikkek{list-style:none;margin:.45rem 0 .1rem;padding:0 0 0 .7rem;border-left:2px solid var(--vonal)}
+.lista .cikkek li{display:flex;gap:.6rem;padding:.22rem 0;border:0;font-size:.85rem;line-height:1.3}
+.lista .cikkek time{flex:0 0 auto;min-width:4.9rem;font-size:.74rem;white-space:nowrap}
+.lista .cikkek a{color:inherit;text-decoration:none}
+.lista .cikkek a:hover{text-decoration:underline;text-underline-offset:3px}
 .lista time{color:var(--halvany);font-size:.76rem;min-width:5.4rem;flex-shrink:0;font-variant-numeric:tabular-nums}
 .lista .forras{font-size:.76rem;margin-left:.25rem;white-space:nowrap}
 
@@ -1604,6 +1638,7 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
   .belyeg{width:64px;height:64px}
   .racs{grid-template-columns:1fr}.racs .doboz.kiemelt{grid-column:auto;grid-row:auto;flex-direction:column}
   .kiemelt-kep{width:100%}
+  .lista .cikkek li{flex-direction:column;gap:0}
   .lista time{min-width:4.6rem}
   .helyek{grid-template-columns:1fr}}
 """
@@ -1672,12 +1707,23 @@ document.addEventListener('click',ev=>{
   const k=((most<0?0:most)+(+b.dataset.irany)+l.length)%l.length;
   mutat(el,l[k]);
 });
+document.addEventListener('click',ev=>{
+  const b=ev.target.closest&&ev.target.closest('.cikkek-gomb'); if(!b) return;
+  const ul=b.nextElementSibling, nyit=ul.hidden; ul.hidden=!nyit; b.setAttribute('aria-expanded',nyit);
+});
+function cikkSzam(){
+  document.querySelectorAll('.cikkek').forEach(ul=>{
+    const db=ul.querySelectorAll('li:not(.rejtett)').length; const g=ul.previousElementSibling;
+    g.querySelector('.db').textContent=db; g.hidden=db<2; if(db<2){ul.hidden=true;g.setAttribute('aria-expanded',false);}
+  });
+}
 function szur(){
   document.querySelectorAll('[data-srcs]').forEach(el=>{
     const s=el.dataset.srcs.split(' ');const rejt=s.every(x=>rejtettForras.has(x));
     el.classList.toggle('rejtett',rejt);
     if(!rejt&&el.dataset.alt&&(el.dataset.csere||s.some(x=>rejtettForras.has(x)))){csere(el);el.dataset.csere='1';}
   });
+  cikkSzam();
 }
 document.querySelectorAll('.szuro input').forEach(i=>{
   i.checked=!rejtettForras.has(i.value);
