@@ -109,12 +109,12 @@ IDOJARAS_SAJAT_HELY = True
 MERES_ALLOMASOK = [
     ("Budapest", 44527),      # Pestszentlőrinc
     ("Békéscsaba", 66522),    # repülőtér
-    ("Kecskemét", 46400),     # repülőtér (égkép nélkül)
     ("Debrecen", 64711),      # repülőtér
     ("Győr", 24423),          # Pér repülőtér (Győrben nincs égképet jelentő állomás)
     ("Kékestető", 53101),     # az ország legmagasabb pontja, 1011 m
     ("Miskolc", 52744),       # Diósgyőr
     ("Nagykanizsa", 17809),
+    ("Paks", 37402),
     ("Pécs", 38528),          # Egyetem
     ("Siófok", 36100),
     ("Szeged", 58116),        # külterület
