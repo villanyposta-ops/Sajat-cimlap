@@ -1443,7 +1443,12 @@ h3{font-weight:var(--cim-suly,650);letter-spacing:var(--cim-ter,-.01em)}
 .lefed i:last-of-type{margin-right:.35rem}
 .tovabbi{margin:.35rem 0 0;font-size:.78rem;color:var(--halvany);display:flex;align-items:flex-end;gap:.6rem}
 .tovabbi-lapok{flex:1;min-width:0}
-.lapozo{display:flex;gap:.3rem;flex-shrink:0;margin-left:auto}
+/* a lapozógombok mindig a doboz jobb alsó sarkában, a dobozhoz rögzítve; a lapsor jobb oldalon helyet hagy nekik */
+article[data-alt]{position:relative}
+.lapozo{display:flex;gap:.3rem;position:absolute;right:1.1rem;bottom:1.1rem}
+article[data-alt] .tovabbi-lapok{padding-right:4.6rem}
+/* jobb oldali bélyegképnél a gombok a kép alatti üres sávba kerülnek, ott nem kell hely */
+.doboz:has(.belyeg) .tovabbi-lapok{padding-right:0}
 .lapoz{width:1.9rem;height:1.9rem;border:1px solid var(--vonal);border-radius:5px;background:none;color:inherit;
   font:600 1.15rem/1 system-ui,sans-serif;cursor:pointer;display:grid;place-items:center;padding:0 0 .12rem}
 .lapoz:hover{border-color:currentColor;color:var(--tinta,inherit)}
