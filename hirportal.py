@@ -1453,7 +1453,7 @@ h3{font-weight:var(--cim-suly,650);letter-spacing:var(--cim-ter,-.01em)}
   background:color-mix(in srgb,var(--r,#64748b) 16%,var(--felulet,#fff));color:color-mix(in srgb,var(--r,#64748b) 70%,#000)}
 .kep-helyett .logo{width:62%;max-width:11rem;height:auto;max-height:45%;opacity:.5}
 .kep-helyett .logo .arnyek{display:none}
-.belyeg,.kiemelt-kep,.kep{position:relative}.tovabbi a.mutatott{font-weight:700;text-decoration-color:currentColor}
+.belyeg,.kiemelt-kep,.kep{position:relative}.tovabbi a.mutatott{color:var(--tinta,inherit);text-decoration-color:currentColor;text-decoration-thickness:2px}
 .tovabbi a{text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:2px}
 
 /* rovatok */
@@ -1635,7 +1635,10 @@ function csere(el){
 const lathatoLapok=el=>{const a=JSON.parse(el.dataset.alt);const l=a.filter(x=>!rejtettForras.has(x.f));return l.length?l:a;};
 function mutat(el,u){
   if(!el.dataset.rogzitve){
-    el.dataset.rogzitve='1'; el.style.height=el.getBoundingClientRect().height+'px'; el.classList.add('atnez');
+    // a dobozt magát nem rögzítjük (az a rácsban a szomszédait is átméretezhetné), csak a belső részeit:
+    // a cím és a bevezető legfeljebb az eredeti sorszámot foglalhatja, a fejléc és a lapsor magassága fix
+    el.dataset.rogzitve='1';
+    el.querySelectorAll('.meta').forEach(x=>{ x.style.height=x.getBoundingClientRect().height+'px'; });
     el.querySelectorAll('h3, .lead').forEach(x=>{
       const sm=parseFloat(getComputedStyle(x).lineHeight)||x.offsetHeight;
       const mag=x.getBoundingClientRect().height, sor=Math.max(1,Math.round(mag/sm));
