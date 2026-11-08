@@ -1010,18 +1010,28 @@ def lefedettseg(cs):
     return f'<span class="lefed" title="{e(nevek)}">{pottyok}{len(cs["forrasok"])} lap írt róla</span>'
 
 
-def tovabbi(cs):
-    # csak a többi lap: minden lapból egy link, a fő cikk lapja nem ismétlődik
-    latott, tobbi = {cs["fo"]["forras"]}, []
-    for h in cs["hirek"]:
+def lapok(cs):
+    """Lapnként egy cikk: elöl a doboz fő cikke, utána a többi lap (a képes, hosszabb bevezetős előrébb).
+    Ugyanez a sorrend az „Erről írt” sorban és a lapozásban."""
+    latott, lista = set(), []
+    for h in [cs["fo"]] + sorted(cs["hirek"], key=lambda h: (bool(h["kep"]), len(h["lead"])), reverse=True):
         if h["forras"] not in latott:
             latott.add(h["forras"])
-            tobbi.append(h)
-    if not tobbi:
+            lista.append(h)
+    return lista
+
+
+def tovabbi(cs):
+    """„Erről írt: …” – az összes lap linkje (a dobozban látható félkövéren), mellette lapozógombok."""
+    l = lapok(cs)
+    if len(l) < 2:
         return ""
-    linkek = ", ".join(f'<a href="{e(h["link"])}" target="_blank" rel="noopener" title="{e(h["cim"])}">'
-                       f'{e(FN[h["forras"]]["nev"])}</a>' for h in tobbi)
-    return f'<p class="tovabbi">Erről írt még: {linkek}</p>'
+    linkek = ", ".join(f'<a href="{e(h["link"])}" target="_blank" rel="noopener" title="{e(h["cim"])}"'
+                       f'{" class=\"mutatott\"" if k == 0 else ""}>{e(FN[h["forras"]]["nev"])}</a>'
+                       for k, h in enumerate(l))
+    return (f'<div class="tovabbi"><span class="tovabbi-lapok">Erről írt: {linkek}</span>'
+            f'<span class="lapozo"><button type="button" class="lapoz" data-irany="-1" aria-label="Előző lap cikke">‹</button>'
+            f'<button type="button" class="lapoz" data-irany="1" aria-label="Következő lap cikke">›</button></span></div>')
 
 
 def alt_adat(cs, csak_ora=False, lead=True, kep=True):
@@ -1029,11 +1039,8 @@ def alt_adat(cs, csak_ora=False, lead=True, kep=True):
     lapját kikapcsolod, a böngésző egy másik lap cikkét mutassa helyette."""
     if len(cs["forrasok"]) < 2:
         return ""
-    latott, lista = set(), []
-    for h in [cs["fo"]] + sorted(cs["hirek"], key=lambda h: (bool(h["kep"]), len(h["lead"])), reverse=True):
-        if h["forras"] in latott:
-            continue
-        latott.add(h["forras"])
+    lista = []
+    for h in lapok(cs):
         f = FN.get(h["forras"], {"nev": h["forras"], "szin": "#666"})
         ido = bp(datetime.fromisoformat(h["ido"])).strftime("%H:%M") if csak_ora else ido_szoveg(h["ido"])
         a = {"f": h["forras"], "n": f["nev"], "s": f["szin"], "c": h["cim"], "l": h["link"], "t": ido}
@@ -1434,7 +1441,13 @@ h3{font-weight:var(--cim-suly,650);letter-spacing:var(--cim-ter,-.01em)}
 .lefed i{width:.55rem;height:.55rem;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px var(--felulet)}
 .fo-hir .lefed i{box-shadow:0 0 0 1.5px var(--sav-felulet)}
 .lefed i:last-of-type{margin-right:.35rem}
-.tovabbi{margin:.35rem 0 0;font-size:.78rem;color:var(--halvany)}
+.tovabbi{margin:.35rem 0 0;font-size:.78rem;color:var(--halvany);display:flex;align-items:flex-end;gap:.6rem}
+.tovabbi-lapok{flex:1;min-width:0}
+.lapozo{display:flex;gap:.3rem;flex-shrink:0;margin-left:auto}
+.lapoz{width:1.9rem;height:1.9rem;border:1px solid var(--vonal);border-radius:5px;background:none;color:inherit;
+  font:600 1.15rem/1 system-ui,sans-serif;cursor:pointer;display:grid;place-items:center;padding:0 0 .12rem}
+.lapoz:hover{border-color:currentColor;color:var(--tinta,inherit)}
+.lapoz:active{transform:scale(.94)}
 .atnez{overflow:hidden}
 .kep-helyett{position:absolute;inset:0;display:grid;place-items:center;
   background:color-mix(in srgb,var(--r,#64748b) 16%,var(--felulet,#fff));color:color-mix(in srgb,var(--r,#64748b) 70%,#000)}
@@ -1612,54 +1625,45 @@ function csere(el){
   const lf=el.querySelector('.lefed');
   if(lf){lat(lf,l.length>1);lf.title=l.map(x=>x.n).join(', ');
     lf.innerHTML=l.map(x=>'<i style="--c:'+esc(x.s)+'"></i>').join('')+l.length+' lap írt róla';}
-  const tv=el.querySelector('.tovabbi');
-  if(tv){const m=l.slice(1);lat(tv,m.length);
-    tv.innerHTML='Erről írt még: '+m.map(x=>'<a href="'+esc(x.l)+'" target="_blank" rel="noopener" title="'+esc(x.c)+'">'+esc(x.n)+'</a>').join(', ');}
+  const tv=el.querySelector('.tovabbi-lapok');
+  if(tv){lat(tv.parentNode,l.length>1);
+    tv.innerHTML='Erről írt: '+l.map((x,k)=>'<a href="'+esc(x.l)+'" target="_blank" rel="noopener" title="'+esc(x.c)+'"'+(k?'':' class="mutatott"')+'>'+esc(x.n)+'</a>').join(', ');}
 }
-// asztali gépen: az „Erről írt még” sor egy lapjára vitt egérrel a dobozban az adott lap cikke látszik
-// (cím, bevezető, kép, idő); a doboz mérete közben nem változik, az egér elhagyásakor minden visszaáll
-if(window.matchMedia&&matchMedia('(hover: hover) and (pointer: fine)').matches){
-  let idozito=null;
-  const vissza=el=>{ if(el.dataset.eredeti==null) return;
-    el.innerHTML=el.dataset.eredeti; delete el.dataset.eredeti; el.style.height=''; el.classList.remove('atnez'); };
-  document.addEventListener('mouseover',ev=>{
-    const a=ev.target.closest&&ev.target.closest('article[data-alt] .tovabbi a'); if(!a) return;
-    const el=a.closest('article'); clearTimeout(idozito);
-    idozito=setTimeout(()=>{
-      const u=JSON.parse(el.dataset.alt).find(x=>x.l===a.getAttribute('href')); if(!u) return;
-      // az eredeti tartalmat csak egyszer mentjük; lapváltáskor a mezőket helyben írjuk át (az egér alatti linkek maradnak)
-      if(el.dataset.eredeti==null){
-        el.style.height=el.getBoundingClientRect().height+'px'; el.dataset.eredeti=el.innerHTML;
-        // a cím és a bevezető legfeljebb annyi sort foglalhat, amennyit az eredeti: így semmi nem mozdul el alattuk
-        el.querySelectorAll('h3, .lead').forEach(x=>{
-          const sm=parseFloat(getComputedStyle(x).lineHeight)||x.offsetHeight;
-          const mag=x.getBoundingClientRect().height, sor=Math.max(1,Math.round(mag/sm));
-          Object.assign(x.style,{display:'-webkit-box',webkitBoxOrient:'vertical',webkitLineClamp:String(sor),overflow:'hidden',height:mag+'px'});
-        });
-      }
-      el.classList.add('atnez');
-      const fs=el.querySelector('.meta .forras'); if(fs){fs.textContent=u.n;fs.style.setProperty('--c',u.s);}
-      const t=el.querySelector('.meta time'); if(t) t.textContent=u.t;
-      const h=el.querySelector('h3 a'); if(h){h.textContent=u.c;h.href=u.l;}
-      const ld=el.querySelector('.lead'); if(ld) ld.textContent=u.d||'';
-      const img=el.querySelector('.kep img, .belyeg img, .kiemelt-kep img');
-      // kép nélküli cikknél a kép helyén a rovat színe és diszkréten a lap aktuális fejléce
-      if(img){
-        const tarto=img.parentNode, h=tarto.querySelector('.kep-helyett');
-        if(u.k){ img.src=u.k; img.style.visibility=''; if(h) h.remove(); }
-        else { img.style.visibility='hidden';
-          if(!h){ const d=document.createElement('div'); d.className='kep-helyett';
-            const lg=[...document.querySelectorAll('#fej .logo')].find(l=>l.getClientRects().length); if(lg) d.appendChild(lg.cloneNode(true)); tarto.appendChild(d); } }
-      }
-      el.querySelectorAll('.tovabbi a').forEach(x=>x.classList.toggle('mutatott',x.getAttribute('href')===u.l));
-    },150);
-  });
-  document.addEventListener('mouseout',ev=>{
-    const el=ev.target.closest&&ev.target.closest('article[data-alt]'); if(!el) return;
-    if(ev.relatedTarget&&el.contains(ev.relatedTarget)) return;
-    clearTimeout(idozito); vissza(el);
-  });
+// lapozás a többlapos dobozokban: a ‹ › gombokkal a doboz a következő/előző lap cikkét mutatja
+// (lap neve, idő, cím, bevezető, kép); a doboz mérete nem változik, a cím és a bevezető legfeljebb
+// annyi sort foglal, amennyit az eredeti
+const lathatoLapok=el=>{const a=JSON.parse(el.dataset.alt);const l=a.filter(x=>!rejtettForras.has(x.f));return l.length?l:a;};
+function mutat(el,u){
+  if(!el.dataset.rogzitve){
+    el.dataset.rogzitve='1'; el.style.height=el.getBoundingClientRect().height+'px'; el.classList.add('atnez');
+    el.querySelectorAll('h3, .lead').forEach(x=>{
+      const sm=parseFloat(getComputedStyle(x).lineHeight)||x.offsetHeight;
+      const mag=x.getBoundingClientRect().height, sor=Math.max(1,Math.round(mag/sm));
+      Object.assign(x.style,{display:'-webkit-box',webkitBoxOrient:'vertical',webkitLineClamp:String(sor),overflow:'hidden',height:mag+'px'});
+    });
+  }
+  const fs=el.querySelector('.meta .forras'); if(fs){fs.textContent=u.n;fs.style.setProperty('--c',u.s);}
+  const t=el.querySelector('.meta time'); if(t) t.textContent=u.t;
+  const h=el.querySelector('h3 a'); if(h){h.textContent=u.c;h.href=u.l;}
+  const ld=el.querySelector('.lead'); if(ld) ld.textContent=u.d||'';
+  // kép nélküli cikknél a kép helyén a rovat színe és diszkréten a lap aktuális fejléce
+  const img=el.querySelector('.kep img, .belyeg img, .kiemelt-kep img');
+  if(img){
+    const tarto=img.parentNode, hh=tarto.querySelector('.kep-helyett');
+    if(u.k){ img.src=u.k; img.style.visibility=''; if(hh) hh.remove(); }
+    else { img.style.visibility='hidden';
+      if(!hh){ const d=document.createElement('div'); d.className='kep-helyett';
+        const lg=[...document.querySelectorAll('#fej .logo')].find(l=>l.getClientRects().length); if(lg) d.appendChild(lg.cloneNode(true)); tarto.appendChild(d); } }
+  }
+  el.querySelectorAll('.tovabbi-lapok a').forEach(x=>x.classList.toggle('mutatott',x.getAttribute('href')===u.l));
 }
+document.addEventListener('click',ev=>{
+  const b=ev.target.closest&&ev.target.closest('.lapoz'); if(!b) return;
+  const el=b.closest('article[data-alt]'); if(!el) return;
+  const l=lathatoLapok(el), most=l.findIndex(x=>x.l===(el.querySelector('h3 a')||{}).getAttribute?.('href'));
+  const k=((most<0?0:most)+(+b.dataset.irany)+l.length)%l.length;
+  mutat(el,l[k]);
+});
 function szur(){
   document.querySelectorAll('[data-srcs]').forEach(el=>{
     const s=el.dataset.srcs.split(' ');const rejt=s.every(x=>rejtettForras.has(x));
