@@ -1509,6 +1509,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .doboz.szines{background:var(--r);border-color:var(--r);color:#fff}
 .doboz.szines .meta,.doboz.szines .lead,.doboz.szines .tovabbi{color:rgb(255 255 255/.82)}
 .doboz.szines .forras,.doboz.szines .lefed{color:#fff}
+.szines .tovabbi a.mutatott{color:#fff}
 .doboz.szines .lefed i{box-shadow:0 0 0 1.5px var(--r)}
 .doboz.szines .kiemelt-kep{background:rgb(0 0 0/.15)}
 .doboz.kiemelt h3{font-size:1.32rem;line-height:1.22;letter-spacing:-.015em}
@@ -1975,6 +1976,8 @@ def nem_cikk(cim):
     """Igaz, ha a cím csak egy név vagy címke (szerzői, címke- vagy rovatoldal), nem cikkcím:
     legfeljebb négy szó, mind nagybetűs (vagy „dr.”), szám és mondatírásjel nélkül."""
     szavak = cim.split()
+    if re.match(r"null\b", cim, re.I):   # rovatoldal, pl. „null: Külföld”
+        return True
     if not szavak or len(szavak) > 4 or re.search(r'[0-9?!,;:–—"„”«»()]', cim):
         return False
     return all(sz[0].isupper() or sz.lower() in ("dr.", "id.", "ifj.", "von", "de") for sz in szavak)
