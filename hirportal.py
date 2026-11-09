@@ -1971,6 +1971,15 @@ def pwa_fajlok(mappa, most):
     (mappa / "frissites.json").write_text(json.dumps({"ido": most}), "utf-8")
 
 
+def nem_cikk(cim):
+    """Igaz, ha a cím csak egy név vagy címke (szerzői, címke- vagy rovatoldal), nem cikkcím:
+    legfeljebb négy szó, mind nagybetűs (vagy „dr.”), szám és mondatírásjel nélkül."""
+    szavak = cim.split()
+    if not szavak or len(szavak) > 4 or re.search(r'[0-9?!,;:–—"„”«»()]', cim):
+        return False
+    return all(sz[0].isupper() or sz.lower() in ("dr.", "id.", "ifj.", "von", "de") for sz in szavak)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Személyre szabott hírportál generálása RSS-ből")
     ap.add_argument("-o", "--kimenet", default="index.html")
@@ -2000,6 +2009,8 @@ def main():
         elotagok = FN[h["forras"]].get("tartalek_elotag", {})
         if m and "news.google.com" in h["link"] and m.group(1) in elotagok:
             h["cim"], h["elotag_rovat"] = m.group(2), elotagok[m.group(1)]
+    # a Google Hírek néha szerzői vagy címkeoldalt is cikknek ad ki (pl. „Dr. Kovács Asztrik”)
+    ervenyes = [h for h in ervenyes if not ("news.google.com" in h["link"] and nem_cikk(h["cim"]))]
     # ugyanannak a lapnak azonos című cikkei közül csak egy maradjon (amelyiknek van képe/leadje)
     egyedi = {}
     for h in sorted(ervenyes, key=lambda h: (bool(h["kep"]), len(h["lead"])), reverse=True):
