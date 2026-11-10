@@ -68,6 +68,8 @@ FORRASOK = [
     {"id": "atlatszo", "nev": "Átlátszó",    "szin": "#65a30d", "feeds": ["https://atlatszo.hu/feed/"],
      "alap": "belfold", "alap_elony": 1},
     {"id": "valasz", "nev": "Válasz Online", "szin": "#a16207", "feeds": ["https://www.valaszonline.hu/feed/"]},
+    {"id": "nszo",   "nev": "Népszabadság",  "szin": "#991b1b", "feeds": ["https://nszo.hu/feed/"],
+     "kep_oldalrol": True},   # a hírfolyamban többnyire nincs kép: az új cikkeknél a cikkoldalról (og:image) olvassuk ki
     {"id": "infostart", "nev": "Infostart", "szin": "#4f46e5", "feeds": ["https://infostart.hu/24ora/rss/"]},
     {"id": "euronews", "nev": "Euronews",    "szin": "#0369a1",
      "feeds": ["https://hu.euronews.com/rss?level=theme&name=news"], "alap": "kulfold",
@@ -239,6 +241,33 @@ def letolt(url, probalkozas=3):
             if vegleges or i == probalkozas - 1:
                 raise
             time.sleep(4 * (i + 1))
+
+
+def oldalkep(h):
+    """A cikkoldal fejlécéből az og:image (vagy twitter:image) kép címe; hiba esetén üres."""
+    try:
+        lap = letolt(h["link"], probalkozas=1)[:300_000].decode("utf-8", "replace")
+    except Exception:
+        return ""
+    for minta in (r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',
+                  r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+                  r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)'):
+        m = re.search(minta, lap, re.I)
+        if m:
+            return html.unescape(m.group(1)).strip()
+    return ""
+
+
+def oldalkepek(hirek):
+    """Kép nélküli hírfolyamú lapoknál (kep_oldalrol) az új cikkek képét a cikkoldalról olvassuk ki.
+    Cikkenként csak egyszer próbáljuk meg, az eredményt az állapotfájl megőrzi."""
+    kell = [h for h in hirek if FN.get(h["forras"], {}).get("kep_oldalrol")
+            and not h["kep"] and not h.get("kep_probalva") and "news.google.com" not in h["link"]]
+    if not kell:
+        return
+    with ThreadPoolExecutor(6) as pool:
+        for h, kep in zip(kell, pool.map(oldalkep, kell)):
+            h["kep"], h["kep_probalva"] = kep, True
 
 
 def helyi(tag):
@@ -2014,8 +2043,14 @@ def main():
     uj, hibak = mind_letolt()
     for h in uj:
         if h["id"] in tarolt:
-            h["ido"] = min(h["ido"], tarolt[h["id"]]["ido"])
+            regi = tarolt[h["id"]]
+            h["ido"] = min(h["ido"], regi["ido"])
+            if not h["kep"] and regi.get("kep"):
+                h["kep"] = regi["kep"]
+            if regi.get("kep_probalva"):
+                h["kep_probalva"] = True
         tarolt[h["id"]] = h
+    oldalkepek(uj)
     hatar = (MOST - timedelta(hours=MEGORZES_ORA)).isoformat()
     ervenyes = [h for h in tarolt.values() if h["ido"] >= hatar and h["forras"] in FN
                 # a Google Hírek tartalékból mentett cikkek törlése, ha a lapnak már nincs tartaléka
