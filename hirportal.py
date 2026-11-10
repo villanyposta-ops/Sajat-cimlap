@@ -139,7 +139,8 @@ DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemel
 OSSZEVON_ABLAK_ORA = 12   # csak az ennyi órán belül megjelent cikkek vethetők össze
 OSSZEVON_EROS = 0.30      # legalább egy csoporttaghoz ennyi hasonlóság kell (kisebb: többet von össze)
 OSSZEVON_ATLAG = 0.18     # és a csoport közeli tagjaihoz átlagosan ennyi (a láncolódás ellen)
-OSSZEVON_NEV = 0.15       # ha a címekben közös egy ritka tulajdonnév (pl. „Republikon”), ennyi hasonlóság is elég
+OSSZEVON_NEV = 0.15       # ha a címekben közös egy ritka tulajdonnév (pl. „Republikon”), ennyi hasonlóság is elég,
+OSSZEVON_NEV_MARAD = 0.05 # …feltéve, hogy a név betűdarabjai nélkül is marad ennyi közös tartalom
 RITKA_NEV_MAX = 5         # ritkának számít a (legalább 6 betűs) név, ha legfeljebb ennyi cikk címében szerepel
 KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér egy lappal kevesebbet egy téma
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
@@ -545,16 +546,35 @@ def osszevon(hirek):
                     acc[j] = acc.get(j, 0) + x * V[j][g]
             index.setdefault(g, []).append(i)
         hason[i] = acc
+    # a közös ritka név önmagában nem elég: a névből származó betűdarabok nélkül is kell némi közös tartalom
+    # (különben pl. két „Dublinba” utazás – Magyar Péteré és Joe Bidené – egy sztorivá állna össze)
+    def nev_nelkul(i, j):
+        kozos = ritka[i] & ritka[j]
+        tilt = set()
+        for h in (hirek[i], hirek[j]):
+            for w in szavak(h["cim"]):
+                w = ekezet_nelkul(w)
+                if w[:7] in kozos:
+                    w = f"_{w}_"
+                    tilt |= {w[k:k + 4] for k in range(len(w) - 3)}
+        return sum(x * V[j].get(g, 0) for g, x in V[i].items() if g not in tilt)
+
+    nev_ok = {}
+    def nevvel_eleg(i, j):
+        if (i, j) not in nev_ok:
+            nev_ok[(i, j)] = bool(ritka[i] & ritka[j]) and nev_nelkul(i, j) >= OSSZEVON_NEV_MARAD
+        return nev_ok[(i, j)]
+
     csoportok, hova = [], {}
     for i in range(N):
         acc = hason[i]
-        kuszob = lambda j: OSSZEVON_NEV if ritka[i] & ritka[j] else OSSZEVON_EROS
+        kuszob = lambda j: OSSZEVON_NEV if nevvel_eleg(i, j) else OSSZEVON_EROS
         jeloltek = {hova[j] for j, s in acc.items() if s >= kuszob(j)}
         legjobb, legjobb_atl = None, 0
         for k in jeloltek:
             kozeli = [j for j in csoportok[k]["idx"] if T[i] - T[j] <= ablak]
             atl = sum(acc.get(j, 0) for j in kozeli) / len(kozeli)
-            nevvel = atl >= OSSZEVON_NEV and any(ritka[i] & ritka[j] for j in kozeli)
+            nevvel = atl >= OSSZEVON_NEV and any(nevvel_eleg(i, j) for j in kozeli)
             if (atl >= OSSZEVON_ATLAG or nevvel) and atl > legjobb_atl:
                 legjobb, legjobb_atl = k, atl
         if legjobb is None:
