@@ -131,7 +131,8 @@ FO_STILUS = "arnyalt"     # a kiemelt rész háttere: "arnyalt" (a fejléc szín
 FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában jelenik meg
 HELYI_LISTA = 8           # a helyi oszlopokban a kiemeltek alatt ennyi friss hír látszik; a többi a napokra bontott listában
 MEGORZES_ORA = 72         # ennél régebbi hír kiesik
-DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemelt, dupla széles), a többi listába megy
+DOBOZ_ROVATONKENT = 8     # rovatonként legfeljebb ennyi doboz (az első kiemelt, dupla széles), a többi listába megy;
+                          # egy rovat a "dobozok" kulccsal ettől eltérhet (Belföld, Külföld: 11 = egy sorral több)
 # Ugyanarról szóló cikkek összevonása (betű-n-gramos hasonlóság, 0–1 között)
 OSSZEVON_ABLAK_ORA = 12   # csak az ennyi órán belül megjelent cikkek vethetők össze
 OSSZEVON_EROS = 0.30      # legalább egy csoporttaghoz ennyi hasonlóság kell (kisebb: többet von össze)
@@ -148,13 +149,13 @@ DOBOZ_HELYENKENT = 3      # a helyi rovatban oszloponként ennyi kiemelt hír
 #            lap által megadott kategória (WordPress-lapoknál, pl. Magyar Hang, Válasz)
 #   kulcsszavak: ha sem az URL, sem a kategória nem árulkodó, a cím és a lead alapján
 ROVATOK = [
-    {"id": "belfold", "nev": "Belföld", "szin": "#1d4ed8",
+    {"id": "belfold", "nev": "Belföld", "szin": "#1d4ed8", "dobozok": 11,
      "utvonal": ["belfold", "itthon", "kozelet", "politika", "belpol", "orszag", "kozugyek",
                  "orszagszerte", "jogallamisag", "kozpenz", "kozeleti"],
      "kulcsszavak": ["kormány", "orbán", "fidesz", "tisza párt", "magyar péter", "parlament", "országgyűlés",
                      "miniszter", "polgármester", "önkormányzat", "választás", "ellenzék", "budapest",
                      "rendőrség", "bíróság", "ügyészség", "kdnp", "mi hazánk", "ügynök", "állambiztonság"]},
-    {"id": "kulfold", "nev": "Külföld", "szin": "#0f766e",
+    {"id": "kulfold", "nev": "Külföld", "szin": "#0f766e", "dobozok": 11,
      "utvonal": ["kulfold", "vilag", "nagyvilag", "europa", "eu", "kulpolitika", "my-europe", "world"],
      "kulcsszavak": ["ukrajn", "orosz", "putyin", "trump", "amerikai", "európai unió", "brüsszel",
                      "izrael", "gáza", "kína", "német", "nato", "szlovák", "román", "lengyel", "francia",
@@ -1062,14 +1063,20 @@ def kep_html(h, osztaly):
 def fo_doboz(cs, i):
     h = cs["fo"]
     tipus = "nyito" if i == 0 else ("masod" if i < 5 else "kis")
-    kep = kep_html(h, "kep") if tipus != "kis" else ""
+    if tipus != "kis":
+        kep = kep_html(h, "kep")
+    elif h["kep"]:
+        kep = kep_html(h, "belyeg")
+    else:   # kép nélkül is legyen bélyeg (a rovat színe és a fejléc), hogy lapozáskor be tudjon jönni a kép
+        kep = '<div class="belyeg"><img alt="" style="visibility:hidden"><div class="kep-helyett"></div></div>'
     lead = f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and tipus != "kis" else ""
     rszin = next((r["szin"] for r in ROVATOK if r["id"] == cs["rovat"]), "#64748b")
-    return f'''<article class="fo-hir {tipus}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=tipus != "kis", kep=tipus != "kis")}>
-  {kep}<div class="szoveg">
+    return f'''<article class="fo-hir {tipus}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=tipus != "kis")}>
+  {kep if tipus != "kis" else ""}<div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
   {lead}{lefedettseg(cs)}{tovabbi(cs)}</div>
+  {kep if tipus == "kis" else ""}
 </article>'''
 
 
@@ -1216,7 +1223,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None):
         cs = sorted([c for c in orszagos if c["rovat"] == r["id"] and id(c) not in fo_id],
                     key=lambda c: c["fo"]["ido"], reverse=True)
         if cs:
-            dobozok = [c for c in cs if c["kor_ora"] < FRISS_ORA][:DOBOZ_ROVATONKENT]
+            dobozok = [c for c in cs if c["kor_ora"] < FRISS_ORA][:r.get("dobozok", DOBOZ_ROVATONKENT)]
             lista = [c for c in cs if c not in dobozok]
             kiem = len(dobozok) >= 3          # van-e kiemelt (dupla) kártya
             if kiem:
@@ -1227,8 +1234,8 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None):
                 dobozok = [k] + [c for c in dobozok if c is not k]
             elr, szines = "bal-szeles", False
             if ROVAT_VALTOZATOS and kiem:
-                # annyi doboz, hogy a három oszlopos rács tele legyen (2, 5 vagy 8); a többi a listába kerül
-                teli = max(x for x in (2, 5, 8) if x <= len(dobozok))
+                # annyi doboz, hogy a három oszlopos rács tele legyen (2, 5, 8 vagy 11); a többi a listába kerül
+                teli = max(x for x in (2, 5, 8, 11) if x <= len(dobozok))
                 lista = dobozok[teli:] + lista
                 dobozok = dobozok[:teli]
                 lista.sort(key=lambda c: c["ido"], reverse=True)
@@ -1454,6 +1461,10 @@ h1,h2,h3,h4{font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);margin
 .masod h3{font-size:1.15rem;line-height:1.22}
 .masod .lead{-webkit-line-clamp:2}
 .kis{grid-column:span 2}
+.fo-hir.kis{flex-direction:row;align-items:flex-start}
+.fo-hir.kis .szoveg{flex:1;min-width:0}
+.fo-hir.kis .belyeg{margin:1rem 1.1rem 0 -.2rem}
+.belyeg .kep-helyett .logo{width:80%;max-height:60%}
 .kis h3{font-size:1.05rem;line-height:1.25;font-weight:650}
 .kep{background:#2b384c;overflow:hidden}.kep img{width:100%;height:100%;object-fit:cover;display:block}
 
@@ -1473,7 +1484,7 @@ article[data-alt]{position:relative}
 .lapozo{display:flex;gap:.3rem;position:absolute;right:1.1rem;bottom:1.1rem}
 article[data-alt] .tovabbi-lapok{padding-right:4.6rem}
 /* jobb oldali bélyegképnél a gombok a kép alatti üres sávba kerülnek, ott nem kell hely */
-.doboz:has(.belyeg) .tovabbi-lapok{padding-right:0}
+.doboz:has(.belyeg) .tovabbi-lapok,.fo-hir.kis:has(.belyeg) .tovabbi-lapok{padding-right:0}
 .lapoz{width:1.9rem;height:1.9rem;border:1px solid var(--vonal);border-radius:5px;background:none;color:inherit;
   font:600 1.15rem/1 system-ui,sans-serif;cursor:pointer;display:grid;place-items:center;padding:0 0 .12rem}
 .lapoz:hover{border-color:currentColor;color:var(--tinta,inherit)}
@@ -1712,6 +1723,9 @@ document.addEventListener('click',ev=>{
   const b=ev.target.closest&&ev.target.closest('.cikkek-gomb'); if(!b) return;
   const ul=b.nextElementSibling, nyit=ul.hidden; ul.hidden=!nyit; b.setAttribute('aria-expanded',nyit);
 });
+// a kép nélküli bélyegek helyére a lap aktuális fejléce
+addEventListener('load',()=>{ const lg=[...document.querySelectorAll('#fej .logo')].find(l=>l.getClientRects().length);
+  if(lg) document.querySelectorAll('.kep-helyett:empty').forEach(d=>d.appendChild(lg.cloneNode(true))); });
 function cikkSzam(){
   document.querySelectorAll('.cikkek').forEach(ul=>{
     const db=ul.querySelectorAll('li:not(.rejtett)').length; const g=ul.previousElementSibling;
