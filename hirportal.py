@@ -76,7 +76,7 @@ FORRASOK = [
      "alap_elony": 2},   # a kulcsszavas pontozásban ennyi előnnyel indul az alapértelmezett rovat
 
     # Helyi lapok: ezek nem kerülnek a fő hírek és az országos rovatok közé,
-    # hanem a „Helyi” rovatban jelennek meg, a „hely” szerinti oszlopokban.
+    # hanem a „Helyi” rovatban jelennek meg, a „hely” szerinti fülekben (új hely: elég új „hely” értéket megadni).
     {"id": "pecsma",   "nev": "PécsMa",      "szin": "#be123c", "feeds": ["https://www.pecsma.hu/feed/"],
      "hely": "Pécs"},
     {"id": "pecsakt",  "nev": "PécsAktuál",  "szin": "#9333ea", "feeds": ["https://pecsaktual.hu/feed/"],
@@ -85,6 +85,10 @@ FORRASOK = [
      "hely": "Pécs"},
     {"id": "hirbalaton", "nev": "HírBalaton", "szin": "#0284c7", "feeds": ["https://www.hirbalaton.hu/feed/"],
      "hely": "Balaton"},
+    {"id": "komlo7300", "nev": "7300.hu",      "szin": "#c2410c", "feeds": ["https://7300.hu/feed/"],
+     "hely": "Komló"},
+    {"id": "komloiu",  "nev": "Komlói Újság", "szin": "#4d7c0f", "feeds": ["https://komloiujsag.hu/feed/"],
+     "hely": "Komló"},
 
     # Az oldal alján, az időjárás-előrejelzés mellett jelenik meg
     {"id": "idokep", "nev": "Időkép", "szin": "#0284c7", "feeds": ["https://adat.idokep.hu/rss/news.xml"],
@@ -146,7 +150,7 @@ RITKA_NEV_MAX = 5         # ritkának számít a (legalább 6 betűs) név, ha l
 KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér egy lappal kevesebbet egy téma
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
 SZINES_ESELY = 0.35       # ekkora eséllyel színes (a rovat színében) a kiemelt kártya; 0 = soha
-DOBOZ_HELYENKENT = 3      # a helyi rovatban oszloponként ennyi kiemelt hír
+DOBOZ_HELYENKENT = 4      # a helyi rovatban helyenként ennyi kiemelt (legfrissebb) hír a bal oldalon
 
 # Országos rovatok a megjelenés sorrendjében. A „Helyi” rovat helyét a HELYI_UTAN adja meg.
 #   utvonal: a cikk URL-jének egy szakasza (telex.hu/belfold/... → "belfold") vagy a
@@ -1256,29 +1260,40 @@ def korabban(lista, nyitva=False):
             f'{csoportok}</details>')
 
 
+def hely_azon(hely):
+    return re.sub(r"[^a-z0-9]+", "-", ekezet_nelkul(hely).lower()).strip("-")
+
+
 def helyi_rovat(helyi_cs):
+    """Helyi rovat fülekkel: egyszerre egy hely látszik (alapból az első, a választást a böngésző megjegyzi;
+    ?hely=komlo a címben). Bal oldalon a legfrissebb hírek kiemelve, jobbra a többi friss hír listája,
+    alatta a korábbiak napokra bontva."""
     if not helyi_cs:
         return "", ""
     helyek = list(dict.fromkeys(f["hely"] for f in FORRASOK if f.get("hely")))
-    oszlopok = []
+    fulek, lapok_ = [], []
     for hely in helyek:
         cs = sorted([c for c in helyi_cs if FN[c["fo"]["forras"]].get("hely") == hely],
                     key=lambda c: c["ido"], reverse=True)
         if not cs:
             continue
-        kiemelt = [c for c in cs if c["kor_ora"] < FRISS_ORA][:DOBOZ_HELYENKENT]
-        tobbi = [c for c in cs if c not in kiemelt]
+        az = hely_azon(hely)
+        elso = not lapok_
+        kiemelt = cs[:DOBOZ_HELYENKENT]
+        tobbi = cs[DOBOZ_HELYENKENT:]
         friss_tobbi = [c for c in tobbi if c["kor_ora"] < FRISS_ORA][:HELYI_LISTA]
         regi = [c for c in tobbi if c not in friss_tobbi]
-        oszlopok.append(f'''<div class="hely">
-  <h3 class="helynev">{e(hely)}</h3>
-  {"".join(doboz(c, lead=False) for c in kiemelt)}
-  {f'<ul class="lista">{"".join(sor(c) for c in friss_tobbi)}</ul>' if friss_tobbi else ''}
-  {korabban(regi, nyitva=not kiemelt)}
+        fulek.append(f'<button type="button" class="hely-ful" data-hely="{az}" aria-selected="{str(elso).lower()}">'
+                     f'{e(hely)} <span class="db">{len(cs)}</span></button>')
+        lista = f'<ul class="lista">{"".join(sor(c) for c in friss_tobbi)}</ul>' if friss_tobbi else ""
+        lapok_.append(f'''<div class="hely" data-hely="{az}"{"" if elso else " hidden"}>
+  <div class="hely-kiemelt">{"".join(doboz(c, lead=False) for c in kiemelt)}</div>
+  <div class="hely-lista">{lista}{korabban(regi, nyitva=not friss_tobbi)}</div>
 </div>''')
     html_ = f'''<section class="rovat" id="helyi" style="--r:{HELYI_SZIN}">
   {rovatfej("helyi", "Helyi", HELYI_SZIN, len(helyi_cs))}
-  <div class="tartalom helyek">{"".join(oszlopok)}</div>
+  <div class="hely-fulek" role="tablist">{"".join(fulek)}</div>
+  <div class="tartalom helyek">{"".join(lapok_)}</div>
 </section>'''
     return html_, f'<a href="#helyi" style="--r:{HELYI_SZIN}">Helyi</a>'
 
@@ -1708,8 +1723,19 @@ summary:hover{color:var(--tinta)}
 :root[data-tema="sotet"] .ido-hirek h3,:root[data-tema="sotet"] .helynev{color:color-mix(in srgb,var(--r) 45%,#fff)}
 
 /* helyi rovat */
-.helyek{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1.4rem}
-.hely{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:8px;padding:1rem 1.1rem 1.1rem;display:flex;flex-direction:column;gap:.7rem}
+.helyek{display:block}
+.hely-fulek{display:flex;gap:.5rem;margin:0 0 1rem;overflow-x:auto;scrollbar-width:none}
+.hely-ful{font:inherit;font-weight:700;font-size:1rem;padding:.35rem .9rem;border-radius:999px;cursor:pointer;white-space:nowrap;
+  border:1.5px solid color-mix(in srgb,var(--r) 55%,transparent);background:transparent;color:var(--r)}
+.hely-ful .db{font-weight:400;font-size:.8rem;opacity:.75;color:inherit}
+.hely-ful[aria-selected="true"]{background:var(--r);border-color:var(--r);color:#fff}
+.hely-ful[aria-selected="true"] .db{opacity:.85}
+.hely[hidden]{display:none!important}
+.hely{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.4rem;align-items:start}
+.hely-kiemelt{display:flex;flex-direction:column;gap:.7rem}
+.hely-lista .lista{columns:1;margin:0}
+.hely-lista details{margin-top:.6rem}
+.hely{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:8px;padding:1.1rem}
 .helynev{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;color:var(--r)}
 .hely .lista{columns:1;margin:0}
 .hely details{margin-top:0}
@@ -1748,7 +1774,7 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
   .kiemelt-kep{width:100%}
   .lista .cikkek li{flex-direction:column;gap:0}
   .lista time{min-width:4.6rem}
-  .helyek{grid-template-columns:1fr}}
+  .hely{grid-template-columns:1fr!important}}
 """
 
 JS = """
@@ -1822,6 +1848,17 @@ document.addEventListener('click',ev=>{
 // a kép nélküli bélyegek helyére a lap aktuális fejléce
 addEventListener('load',()=>{ const lg=[...document.querySelectorAll('#fej .logo')].find(l=>l.getClientRects().length);
   if(lg) document.querySelectorAll('.kep-helyett:empty').forEach(d=>d.appendChild(lg.cloneNode(true))); });
+// helyi rovat fülei: a választás megmarad, ?hely=komlo felülírja
+(function(){
+  const fulek=[...document.querySelectorAll('.hely-ful')]; if(!fulek.length) return;
+  const valt=(az,ment)=>{ if(!fulek.some(f=>f.dataset.hely===az)) return;
+    fulek.forEach(f=>f.setAttribute('aria-selected',f.dataset.hely===az));
+    document.querySelectorAll('.hely[data-hely]').forEach(d=>d.hidden=d.dataset.hely!==az);
+    if(ment) tarol.set('hp_hely',az); };
+  const url=new URLSearchParams(location.search).get('hely');
+  if(url){ valt(url,true); } else { valt(tarol.get('hp_hely',''),false); }
+  fulek.forEach(f=>f.addEventListener('click',()=>valt(f.dataset.hely,true)));
+})();
 function cikkSzam(){
   document.querySelectorAll('.cikkek').forEach(ul=>{
     const db=ul.querySelectorAll('li:not(.rejtett)').length; const g=ul.previousElementSibling;
@@ -2136,6 +2173,8 @@ def main():
             h["cim"], h["elotag_rovat"] = m.group(2), elotagok[m.group(1)]
     # a Google Hírek néha szerzői vagy címkeoldalt is cikknek ad ki (pl. „Dr. Kovács Asztrik”)
     ervenyes = [h for h in ervenyes if not ("news.google.com" in h["link"] and nem_cikk(h["cim"]))]
+    # fizetett tartalom („… (x)”) nem kell
+    ervenyes = [h for h in ervenyes if not re.search(r"\(x\)\s*$", h["cim"])]
     # ugyanannak a lapnak azonos című cikkei közül csak egy maradjon (amelyiknek van képe/leadje)
     egyedi = {}
     for h in sorted(ervenyes, key=lambda h: (bool(h["kep"]), len(h["lead"])), reverse=True):
