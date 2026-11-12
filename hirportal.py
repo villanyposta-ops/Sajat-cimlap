@@ -90,7 +90,8 @@ FORRASOK = [
     {"id": "idokep", "nev": "Időkép", "szin": "#0284c7", "feeds": ["https://adat.idokep.hu/rss/news.xml"],
      "panel": "idojaras", "panel_cim": "Az Időkép hírei"},
     {"id": "hungaromet", "nev": "HungaroMet", "szin": "#1e40af", "feeds": ["https://met.hu/methu/rss/rss.php"],
-     "panel": "idojaras", "panel_cim": "A HungaroMet hírei"},
+     "panel": "idojaras", "panel_cim": "A HungaroMet hírei",
+     "datum_oldalrol": True},   # a hírfolyam minden cikknek a letöltés idejét adja: a valódi dátum a cikkoldalon van
 ]
 
 # Időjárás-előrejelzés (Open-Meteo, ingyenes, regisztráció nélkül). Helyszín: név + koordináták.
@@ -244,12 +245,25 @@ def letolt(url, probalkozas=3):
             time.sleep(4 * (i + 1))
 
 
-def oldalkep(h):
-    """A cikkoldal fejlécéből az og:image (vagy twitter:image) kép címe; hiba esetén üres."""
-    try:
-        lap = letolt(h["link"], probalkozas=1)[:300_000].decode("utf-8", "replace")
-    except Exception:
-        return ""
+DATUM_MINTA = re.compile(r"(20\d\d)\.\s*(" + "|".join(HONAPOK) + r")\s+(\d{1,2})\.(?:\s*(\d{1,2}):(\d\d))?")
+
+
+def oldal_letolt(url):
+    """A cikkoldal HTML-je; a HungaroMet-féle átirányító oldalaknál (meta refresh, location) egyszer továbblép."""
+    lap = letolt(url, probalkozas=1)[:300_000].decode("utf-8", "replace")
+    m = (re.search(r'http-equiv=["\']?refresh["\']?[^>]*?url=([^"\'>\s]+)', lap, re.I)
+         or re.search(r'location(?:\.href)?\s*=\s*["\']([^"\']+)', lap))
+    if m and len(lap) < 5000:
+        cel = html.unescape(m.group(1))
+        if cel.startswith("/"):
+            u = urlparse(url)
+            cel = f"{u.scheme}://{u.netloc}{cel}"
+        lap = letolt(cel, probalkozas=1)[:300_000].decode("utf-8", "replace")
+    return lap
+
+
+def oldal_kep(lap):
+    """Az og:image (vagy twitter:image) kép címe; ha nincs, üres."""
     for minta in (r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',
                   r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
                   r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)'):
@@ -259,16 +273,49 @@ def oldalkep(h):
     return ""
 
 
-def oldalkepek(hirek):
-    """Kép nélküli hírfolyamú lapoknál (kep_oldalrol) az új cikkek képét a cikkoldalról olvassuk ki.
-    Cikkenként csak egyszer próbáljuk meg, az eredményt az állapotfájl megőrzi."""
-    kell = [h for h in hirek if FN.get(h["forras"], {}).get("kep_oldalrol")
-            and not h["kep"] and not h.get("kep_probalva") and "news.google.com" not in h["link"]]
+def oldal_datum(lap):
+    """Az oldalon látható magyar dátum (pl. „HungaroMet: 2026. november 6. 14:24”), UTC ISO alakban; ha nincs, None."""
+    szoveg_ = re.sub(r"<[^>]+>", " ", lap)
+    # csak a cikk saját „HungaroMet: <dátum>” sorát fogadjuk el (a fejlécben a mai nap dátuma áll)
+    m = re.search(r"HungaroMet:\s*" + DATUM_MINTA.pattern, szoveg_)
+    if not m:
+        return None
+    ev, ho, nap, ora, perc = m.groups()
+    helyi_ido = datetime(int(ev), HONAPOK.index(ho) + 1, int(nap), int(ora or 12), int(perc or 0))
+    tz = budapest_tz(helyi_ido.replace(tzinfo=timezone.utc))
+    return helyi_ido.replace(tzinfo=tz).astimezone(timezone.utc).isoformat()
+
+
+def oldal_adatok(hirek):
+    """Ami a hírfolyamból hiányzik, azt az új cikkek oldaláról olvassuk ki, cikkenként egyszer
+    (az eredményt az állapotfájl megőrzi):
+    – kep_oldalrol: a kép (pl. Népszabadság, ahol a hírfolyamban többnyire nincs kép);
+    – datum_oldalrol: a megjelenés ideje (a HungaroMet hírfolyama minden cikknek a letöltés idejét adja,
+      ezért a régi cikkek háromnaponta újként bukkantak fel)."""
+    def kell_kep(h):
+        return FN.get(h["forras"], {}).get("kep_oldalrol") and not h["kep"] and not h.get("kep_probalva")
+
+    def kell_datum(h):
+        return FN.get(h["forras"], {}).get("datum_oldalrol") and not h.get("datum_kesz")
+
+    kell = [h for h in hirek if (kell_kep(h) or kell_datum(h)) and "news.google.com" not in h["link"]]
     if not kell:
         return
+
+    def egy(h):
+        try:
+            return oldal_letolt(h["link"])
+        except Exception:
+            return None
+
     with ThreadPoolExecutor(6) as pool:
-        for h, kep in zip(kell, pool.map(oldalkep, kell)):
-            h["kep"], h["kep_probalva"] = kep, True
+        for h, lap in zip(kell, pool.map(egy, kell)):
+            if kell_kep(h):
+                h["kep"], h["kep_probalva"] = (oldal_kep(lap) if lap else ""), True
+            if kell_datum(h) and lap:
+                d = oldal_datum(lap)
+                if d:
+                    h["ido"], h["datum_kesz"] = d, True
 
 
 def helyi(tag):
@@ -2069,9 +2116,15 @@ def main():
                 h["kep"] = regi["kep"]
             if regi.get("kep_probalva"):
                 h["kep_probalva"] = True
+            if regi.get("datum_kesz"):
+                h["ido"], h["datum_kesz"] = regi["ido"], True
         tarolt[h["id"]] = h
-    oldalkepek(uj)
+    oldal_adatok(uj)
     hatar = (MOST - timedelta(hours=MEGORZES_ORA)).isoformat()
+    # a megbízhatatlan dátumú hírfolyamok (datum_oldalrol) lejárt cikkeit 30 napig még megjegyezzük, így ha
+    # a lap újra kiadja őket, a korábbi dátumot kapják vissza, és nem bukkannak fel újként
+    emlek = [h for h in tarolt.values() if h["forras"] in FN and FN[h["forras"]].get("datum_oldalrol")
+             and (MOST - timedelta(days=30)).isoformat() <= h["ido"] < hatar]
     ervenyes = [h for h in tarolt.values() if h["ido"] >= hatar and h["forras"] in FN
                 # a Google Hírek tartalékból mentett cikkek törlése, ha a lapnak már nincs tartaléka
                 and not ("news.google.com" in h["link"] and not FN[h["forras"]].get("tartalek"))]
@@ -2093,7 +2146,7 @@ def main():
         h["ido"] = webcim_korlat(h["link"], datetime.fromisoformat(h["ido"])).isoformat()
         h["rovat"] = rovat(h)
 
-    allapot_ut.write_text(json.dumps(ervenyes, ensure_ascii=False), "utf-8")
+    allapot_ut.write_text(json.dumps(ervenyes + emlek, ensure_ascii=False), "utf-8")
     orszagos = osszevon([h for h in ervenyes if h["rovat"] not in ("helyi", "idojaras")])
     helyi_cs = osszevon([h for h in ervenyes if h["rovat"] == "helyi"])
     Path(a.kimenet).parent.mkdir(parents=True, exist_ok=True)
