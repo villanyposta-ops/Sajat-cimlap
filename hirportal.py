@@ -89,6 +89,12 @@ FORRASOK = [
      "hely": "Komló"},
     {"id": "komloiu",  "nev": "Komlói Újság", "szin": "#4d7c0f", "feeds": ["https://komloiujsag.hu/feed/"],
      "hely": "Komló"},
+    {"id": "kapospont", "nev": "KaposPont",   "szin": "#0e7490", "feeds": ["https://kapos.hu/rss/hirek/legfrissebb_hirek.xml"],
+     "hely": "Somogy"},
+    {"id": "kapost",   "nev": "Kapos-T",     "szin": "#b91c1c", "feeds": ["https://www.kapost.hu/feed/"],
+     "hely": "Somogy"},
+    {"id": "atadhir",  "nev": "Atádhír",     "szin": "#7c3aed", "feeds": ["https://www.atadhir.hu/feed/"],
+     "hely": "Somogy"},
 
     # Az oldal alján, az időjárás-előrejelzés mellett jelenik meg
     {"id": "idokep", "nev": "Időkép", "szin": "#0284c7", "feeds": ["https://adat.idokep.hu/rss/news.xml"],
@@ -388,8 +394,20 @@ def webcim_korlat(link, d):
     return min(d, nap_vege)
 
 
+def xml_beolvas(adat):
+    """XML-elemzés kis hibatűréssel: ha a hírfolyam csonka (pl. hiányzik a záró </rss>), az utolsó teljes
+    cikk után lezárjuk."""
+    try:
+        return ET.fromstring(adat)
+    except ET.ParseError:
+        vege = adat.rfind(b"</item>")
+        if vege < 0:
+            raise
+        return ET.fromstring(adat[:vege + 7] + b"</channel></rss>")
+
+
 def feed_feldolgoz(forras, url):
-    gyoker = ET.fromstring(letolt(url))
+    gyoker = xml_beolvas(letolt(url))
     elemek = [e for e in gyoker.iter() if helyi(e.tag) in ("item", "entry")]
     hirek = []
     for e in elemek:
@@ -1721,11 +1739,13 @@ summary:hover{color:var(--tinta)}
 
 @media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .ido-hirek h3,:root:not([data-tema="vilagos"]) .helynev{color:color-mix(in srgb,var(--r) 45%,#fff)}}
 :root[data-tema="sotet"] .ido-hirek h3,:root[data-tema="sotet"] .helynev{color:color-mix(in srgb,var(--r) 45%,#fff)}
+@media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .hely-ful[aria-selected="false"]{color:#e5e7eb;border-color:color-mix(in srgb,var(--r) 45%,#9ca3af)}}
+:root[data-tema="sotet"] .hely-ful[aria-selected="false"]{color:#e5e7eb;border-color:color-mix(in srgb,var(--r) 45%,#9ca3af)}
 
 /* helyi rovat */
 .helyek{display:block}
 .hely-fulek{display:flex;gap:.5rem;margin:0 0 1rem;overflow-x:auto;scrollbar-width:none}
-.hely-ful{font:inherit;font-weight:700;font-size:1rem;padding:.35rem .9rem;border-radius:999px;cursor:pointer;white-space:nowrap;
+.hely-ful{font:inherit;font-weight:700;font-size:1rem;padding:.35rem .9rem;border-radius:5px;cursor:pointer;white-space:nowrap;
   border:1.5px solid color-mix(in srgb,var(--r) 55%,transparent);background:transparent;color:var(--r)}
 .hely-ful .db{font-weight:400;font-size:.8rem;opacity:.75;color:inherit}
 .hely-ful[aria-selected="true"]{background:var(--r);border-color:var(--r);color:#fff}
@@ -1774,7 +1794,8 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
   .kiemelt-kep{width:100%}
   .lista .cikkek li{flex-direction:column;gap:0}
   .lista time{min-width:4.6rem}
-  .hely{grid-template-columns:1fr!important}}
+  .hely{grid-template-columns:1fr!important}
+  .hely-fulek{gap:.35rem}.hely-ful{padding:.3rem .65rem;font-size:.92rem}}
 """
 
 JS = """
