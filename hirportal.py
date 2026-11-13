@@ -155,6 +155,7 @@ OSSZEVON_EROS = 0.30      # legalább egy csoporttaghoz ennyi hasonlóság kell 
 OSSZEVON_ATLAG = 0.18     # és a csoport közeli tagjaihoz átlagosan ennyi (a láncolódás ellen)
 OSSZEVON_NEV = 0.15       # ha a címekben közös egy ritka tulajdonnév (pl. „Republikon”), ennyi hasonlóság is elég,
 OSSZEVON_NEV_MARAD = 0.05 # …feltéve, hogy a név betűdarabjai nélkül is marad ennyi közös tartalom
+OSSZEVON_EGYESIT = 0.25   # utólag két csoport egybeolvad, ha a tagpárjaik átlagos hasonlósága legalább ennyi
 RITKA_NEV_MAX = 5         # ritkának számít a (legalább 6 betűs) név, ha legfeljebb ennyi cikk címében szerepel
 KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér egy lappal kevesebbet egy téma
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
@@ -589,6 +590,37 @@ def ngramok(h, n=4):
     return v
 
 
+def egyesit(csoportok, hason, T, ablak):
+    """Utólagos egyesítés: az időrendi besorolás az első cikkeknél még kevés adatból dönt, ezért egy sztori
+    két csoportba is szakadhat (pl. a második cikk épp a küszöb alatt marad, a később jövők pedig az elsőhöz
+    csatlakoznak). Két csoport egybeolvad, ha az időben közeli tagpárjaik átlagos hasonlósága eléri az
+    OSSZEVON_EGYESIT értéket, és van köztük OSSZEVON_EROS feletti pár is. A legjobban illő pár olvad össze
+    először; a kiürült csoport idx-listája üres marad."""
+    def sim(a, b):
+        return hason[max(a, b)].get(min(a, b), 0.0)
+
+    hova = {i: k for k, cs in enumerate(csoportok) for i in cs["idx"]}
+    while True:
+        parok = {tuple(sorted((hova[i], hova[j]))) for i, acc in hason.items() for j, x in acc.items()
+                 if x >= OSSZEVON_EROS and hova[i] != hova[j]}
+        legjobb, legjobb_atl = None, 0.0
+        for a, b in parok:
+            ertekek = [sim(i, j) for i in csoportok[a]["idx"] for j in csoportok[b]["idx"] if abs(T[i] - T[j]) <= ablak]
+            if not ertekek:
+                continue
+            atl = sum(ertekek) / len(ertekek)
+            if atl >= OSSZEVON_EGYESIT and atl > legjobb_atl:
+                legjobb, legjobb_atl = (a, b), atl
+        if legjobb is None:
+            return
+        a, b = legjobb
+        for i in csoportok[b]["idx"]:
+            hova[i] = a
+        csoportok[a]["idx"] += csoportok[b]["idx"]
+        csoportok[a]["hirek"] += csoportok[b]["hirek"]
+        csoportok[b]["idx"], csoportok[b]["hirek"] = [], []
+
+
 def osszevon(hirek):
     """Ugyanarról szóló cikkek csoportosítása betű-n-gramos TF-IDF hasonlósággal.
     Minden cikkből súlyozott vektor készül a cím és a bevezető 4 betűs darabjaiból; a ritka darabok többet
@@ -673,6 +705,8 @@ def osszevon(hirek):
             hova[i] = legjobb
             csoportok[legjobb]["idx"].append(i)
             csoportok[legjobb]["hirek"].append(hirek[i])
+    egyesit(csoportok, hason, T, ablak)
+    csoportok = [cs for cs in csoportok if cs["idx"]]
     for cs in csoportok:
         hk = cs["hirek"]
         # a fő megjelenítendő változat: amelyiknek van képe és hosszabb leadje
