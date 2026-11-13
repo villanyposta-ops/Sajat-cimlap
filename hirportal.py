@@ -64,10 +64,13 @@ FORRASOK = [
     {"id": "444",    "nev": "444",           "szin": "#e11d48", "feeds": ["https://444.hu/feed"]},
     {"id": "24",     "nev": "24.hu",         "szin": "#ea580c", "feeds": ["https://24.hu/feed/"]},
     {"id": "hvg",    "nev": "HVG",           "szin": "#7c3aed", "feeds": ["https://hvg.hu/rss"]},
-    {"id": "mhang",  "nev": "Magyar Hang",   "szin": "#0d9488", "feeds": ["https://hang.hu/rss/"]},
+    {"id": "mhang",  "nev": "Magyar Hang",   "szin": "#0d9488", "feeds": ["https://hang.hu/rss/"],
+     # csak ezek a rovatok (a webcím első tagja) mennek a „Háttér”-be: hetilapos riportok, interjúk, publicisztikák
+     "hatter_rovatok": {"magyar-hang-plusz": "Plusz", "vendegoldal": "Vendégoldal"}},
     {"id": "atlatszo", "nev": "Átlátszó",    "szin": "#65a30d", "feeds": ["https://atlatszo.hu/feed/"],
-     "alap": "belfold", "alap_elony": 1},
-    {"id": "valasz", "nev": "Válasz Online", "szin": "#a16207", "feeds": ["https://www.valaszonline.hu/feed/"]},
+     "hatter": True},            # a „Háttér” rovatba kerül, kimarad a hírversenyből és az összevonásból
+    {"id": "valasz", "nev": "Válasz Online", "szin": "#a16207", "feeds": ["https://www.valaszonline.hu/feed/"],
+     "hatter": True},
     {"id": "nszo",   "nev": "Népszabadság",  "szin": "#991b1b", "feeds": ["https://nszo.hu/feed/"],
      "kep_oldalrol": True},   # a hírfolyamban többnyire nincs kép: az új cikkeknél a cikkoldalról (og:image) olvassuk ki
     {"id": "infostart", "nev": "Infostart", "szin": "#4f46e5", "feeds": ["https://infostart.hu/24ora/rss/"]},
@@ -213,6 +216,12 @@ ROVATOK = [
                  "tamogatott-tartalom"], "kulcsszavak": []},
 ]
 HELYI_UTAN = "kulfold"    # a Helyi rovat ez után jön (None = rögtön a fő hírek után)
+HATTER_UTAN = "kultura"   # a Háttér rovat ez után jön
+HATTER_SZIN = "#57534e"
+HATTER_SORREND = ["atlatszo", "valasz", "mhang"]   # a hasábok sorrendje; a többi háttérlap utánuk jön
+HATTER_NAP = 7            # a háttéranyagok ennyi napig maradnak meg (a hírek 72 óráig)
+HATTER_DOBOZ = 2          # lapokként ennyi legfrissebb anyag kap dobozt (bevezetővel)
+HATTER_LISTA = 6          # alattuk ennyi cím látszik, a többi a lenyitható „Korábban” részbe kerül
 HELYI_SZIN = "#9f1239"
 IDOJARAS_SZIN = "#0369a1"
 
@@ -495,6 +504,15 @@ def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
     return db
 
 
+def hatter_rovat_nev(h):
+    """Ha a cikk háttéranyag, a lapon belüli rovat neve („” ha a lap egésze háttér); ha nem az, None."""
+    f = FN.get(h["forras"], {})
+    if f.get("hatter"):
+        return ""
+    elso = urlparse(h["link"]).path.strip("/").split("/")[0]
+    return f.get("hatter_rovatok", {}).get(elso)
+
+
 def rovat(h):
     """Rovat és a besorolás megbízhatósága (h["rovat_suly"]): webcím 3, a lap kategóriája 2,
     kulcsszó 1, a lap alapértelmezett rovata 0.5, besorolatlan 0."""
@@ -507,6 +525,8 @@ def rovat(h):
         return ki(forras["panel"], 9)
     if forras.get("hely"):
         return ki("helyi", 9)
+    if hatter_rovat_nev(h) is not None:
+        return ki("hatter", 9)
     if h.get("elotag_rovat"):
         return ki(h["elotag_rovat"], 3)
     szakaszok = [ekezet_nelkul(s.lower()) for s in urlparse(h["link"]).path.split("/") if s]
@@ -1278,6 +1298,41 @@ def korabban(lista, nyitva=False):
             f'{csoportok}</details>')
 
 
+def hatter_szekcio(cs_lista):
+    """„Háttér” rovat: laponként egy hasáb; felül a legfrissebb anyagok bevezetővel, alatta címlista,
+    a régebbiek (legfeljebb HATTER_NAP napig) lenyitható részben. Nincs összevonás."""
+    if not cs_lista:
+        return "", ""
+
+    def sor_(c):
+        h = c["fo"]
+        rov = hatter_rovat_nev(h)
+        cimke = f' <span class="hatter-rov">{e(rov)}</span>' if rov else ""
+        return (f'<li data-srcs="{h["forras"]}"><time>{rovid_ido(h["ido"])}</time>'
+                f'<span class="sor-cim"><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a>{cimke}</span></li>')
+
+    hasabok = []
+    sorrend = HATTER_SORREND + [f["id"] for f in FORRASOK if f["id"] not in HATTER_SORREND]
+    for f in (FN[x] for x in sorrend):
+        cs = sorted([c for c in cs_lista if c["fo"]["forras"] == f["id"]], key=lambda c: c["fo"]["ido"], reverse=True)
+        if not cs:
+            continue
+        dob, lista = cs[:HATTER_DOBOZ], cs[HATTER_DOBOZ:]
+        lathato, regi = lista[:HATTER_LISTA], lista[HATTER_LISTA:]
+        reszlet = (f'<details class="tovabbi-hirek"><summary>Korábban ({len(regi)})</summary>'
+                   f'<ul class="lista">{"".join(sor_(c) for c in regi)}</ul></details>') if regi else ""
+        hasabok.append(f'''<div class="hatter-hasab" data-srcs="{f["id"]}">
+  <h3 class="helynev" style="--r:{f["szin"]}">{e(f["nev"])}</h3>
+  {"".join(doboz(c) for c in dob)}
+  {f'<ul class="lista">{"".join(sor_(c) for c in lathato)}</ul>' if lathato else ""}{reszlet}
+</div>''')
+    html_ = f'''<section class="rovat" id="hatter" style="--r:{HATTER_SZIN}">
+  {rovatfej("hatter", "Háttér", HATTER_SZIN, len(cs_lista))}
+  <div class="tartalom hatter-hasabok">{"".join(hasabok)}</div>
+</section>'''
+    return html_, f'<a href="#hatter" style="--r:{HATTER_SZIN}">Háttér</a>'
+
+
 def hely_azon(hely):
     return re.sub(r"[^a-z0-9]+", "-", ekezet_nelkul(hely).lower()).strip("-")
 
@@ -1316,7 +1371,7 @@ def helyi_rovat(helyi_cs):
     return html_, f'<a href="#helyi" style="--r:{HELYI_SZIN}">Helyi</a>'
 
 
-def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None):
+def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, hatter_cs=None):
     friss = [c for c in orszagos if c["kezdet_ora"] < FO_MAX_ORA]
     if len(friss) < FO_HIREK_SZAMA:           # hajnalban kevés a friss hír: legfeljebb 12 óráig visszanyúlunk
         friss = [c for c in orszagos if c["kezdet_ora"] < FO_TARTALEK_ORA]
@@ -1340,6 +1395,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None):
     fo_id = {id(c) for c in fo}
 
     helyi_html, helyi_nav = helyi_rovat(helyi_cs)
+    hatter_html, hatter_nav = hatter_szekcio(hatter_cs or [])
     reszek, nav = [], []
     if HELYI_UTAN is None:
         reszek.append(helyi_html); nav.append(helyi_nav)
@@ -1386,6 +1442,8 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None):
 </section>''')
         if r["id"] == HELYI_UTAN:
             reszek.append(helyi_html); nav.append(helyi_nav)
+        if r["id"] == HATTER_UTAN and hatter_html:
+            reszek.append(hatter_html); nav.append(hatter_nav)
 
     ido_html = idojaras_panel(idojaras or [], idokep or [], meresek)
     if ido_html:
@@ -1744,6 +1802,11 @@ summary:hover{color:var(--tinta)}
 
 /* helyi rovat */
 .helyek{display:block}
+.hatter-hasabok{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.4rem;align-items:start}
+.hatter-hasab{background:color-mix(in srgb,var(--r) 7%,var(--lap));border-radius:8px;padding:1.1rem;display:flex;flex-direction:column;gap:.7rem}
+.hatter-hasab .lista{columns:1;margin:0}
+.hatter-hasab .lista time{min-width:3.4rem;font-size:.78rem;white-space:nowrap}
+.hatter-rov{font-size:.74rem;color:var(--halvany,#888);margin-left:.35rem;white-space:nowrap}
 .hely-fulek{display:flex;gap:.5rem;margin:0 0 1rem;overflow-x:auto;scrollbar-width:none}
 .hely-ful{font:inherit;font-weight:700;font-size:1rem;padding:.35rem .9rem;border-radius:5px;cursor:pointer;white-space:nowrap;
   border:1.5px solid color-mix(in srgb,var(--r) 55%,transparent);background:transparent;color:var(--r)}
@@ -2183,7 +2246,9 @@ def main():
     # a lap újra kiadja őket, a korábbi dátumot kapják vissza, és nem bukkannak fel újként
     emlek = [h for h in tarolt.values() if h["forras"] in FN and FN[h["forras"]].get("datum_oldalrol")
              and (MOST - timedelta(days=30)).isoformat() <= h["ido"] < hatar]
-    ervenyes = [h for h in tarolt.values() if h["ido"] >= hatar and h["forras"] in FN
+    hatar_hatter = (MOST - timedelta(days=HATTER_NAP)).isoformat()
+    ervenyes = [h for h in tarolt.values() if h["forras"] in FN
+                and h["ido"] >= (hatar_hatter if hatter_rovat_nev(h) is not None else hatar)
                 # a Google Hírek tartalékból mentett cikkek törlése, ha a lapnak már nincs tartaléka
                 and not ("news.google.com" in h["link"] and not FN[h["forras"]].get("tartalek"))]
     for h in ervenyes:
@@ -2207,14 +2272,16 @@ def main():
         h["rovat"] = rovat(h)
 
     allapot_ut.write_text(json.dumps(ervenyes + emlek, ensure_ascii=False), "utf-8")
-    orszagos = osszevon([h for h in ervenyes if h["rovat"] not in ("helyi", "idojaras")])
+    orszagos = osszevon([h for h in ervenyes if h["rovat"] not in ("helyi", "idojaras", "hatter")])
+    # a háttéranyagokat nem vonjuk össze: mindegyik önálló „sztori”
+    hatter_cs = [osszevon([h])[0] for h in ervenyes if h["rovat"] == "hatter"]
     helyi_cs = osszevon([h for h in ervenyes if h["rovat"] == "helyi"])
     Path(a.kimenet).parent.mkdir(parents=True, exist_ok=True)
     idokep = [h for h in ervenyes if h["rovat"] == "idojaras"]
     meresek = meres_letolt()
     # ha vannak friss mérések, a három rögzített Open-Meteo-kártya helyett a mért lista jelenik meg
     helyek = [] if meresek else idojaras_letolt()
-    Path(a.kimenet).write_text(oldal(orszagos, helyi_cs, hibak, helyek, idokep, meresek), "utf-8")
+    Path(a.kimenet).write_text(oldal(orszagos, helyi_cs, hibak, helyek, idokep, meresek, hatter_cs), "utf-8")
     pwa_fajlok(Path(a.kimenet).parent, MOST.isoformat())
     print(f"{len(uj)} letöltött, {len(ervenyes)} megőrzött hír → {a.kimenet}")
     for x in hibak:
