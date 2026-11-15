@@ -12,6 +12,7 @@ ami már kiesett a lapok RSS-éből. 72 óránál régebbi hír törlődik.
 """
 import argparse
 import hashlib
+import math
 import html
 import json
 import random
@@ -155,7 +156,7 @@ OSSZEVON_EROS = 0.30      # legalább egy csoporttaghoz ennyi hasonlóság kell 
 OSSZEVON_ATLAG = 0.18     # és a csoport közeli tagjaihoz átlagosan ennyi (a láncolódás ellen)
 OSSZEVON_NEV = 0.15       # ha a címekben közös egy ritka tulajdonnév (pl. „Republikon”), ennyi hasonlóság is elég,
 OSSZEVON_NEV_MARAD = 0.05 # …feltéve, hogy a név betűdarabjai nélkül is marad ennyi közös tartalom
-OSSZEVON_EGYESIT = 0.25   # utólag két csoport egybeolvad, ha a tagpárjaik átlagos hasonlósága legalább ennyi
+OSSZEVON_EGYESIT = 0.32   # utólag két csoport egybeolvad, ha a súlypontjuk (összesített szóanyaguk) hasonlósága legalább ennyi
 OSSZEVON_KOZELI = 0.25    # két, egymáshoz időben közeli (OSSZEVON_KOZELI_ORA-n belüli) cikknél ennyi hasonlóság is elég
 OSSZEVON_KOZELI_ORA = 2
 RITKA_NEV_MAX = 5         # ritkának számít a (legalább 6 betűs) név, ha legfeljebb ennyi cikk címében szerepel
@@ -593,14 +594,27 @@ def ngramok(h, n=4):
     return v
 
 
-def egyesit(csoportok, hason, T, ablak):
+def egyesit(csoportok, hason, T, ablak, V):
     """Utólagos egyesítés: az időrendi besorolás az első cikkeknél még kevés adatból dönt, ezért egy sztori
-    két csoportba is szakadhat (pl. a második cikk épp a küszöb alatt marad, a később jövők pedig az elsőhöz
-    csatlakoznak). Két csoport egybeolvad, ha az időben közeli tagpárjaik átlagos hasonlósága eléri az
-    OSSZEVON_EGYESIT értéket, és van köztük OSSZEVON_EROS feletti pár is. A legjobban illő pár olvad össze
-    először; a kiürült csoport idx-listája üres marad."""
+    két csoportba is szakadhat. Két csoport egybeolvad, ha a súlypontjuk (a tagok összesített szóanyaga)
+    legalább OSSZEVON_EGYESIT mértékben hasonlít, van köztük OSSZEVON_EROS feletti cikkpár, és időben
+    közel vannak. A legjobban illő pár olvad össze először; a kiürült csoport idx-listája üres marad."""
     def sim(a, b):
         return hason[max(a, b)].get(min(a, b), 0.0)
+
+    def kozep(idx):
+        k = {}
+        for i in idx:
+            for g, x in V[i].items():
+                k[g] = k.get(g, 0.0) + x
+        n = math.sqrt(sum(x * x for x in k.values())) or 1.0
+        return {g: x / n for g, x in k.items()}
+
+    def kozep_hason(ia, ib):
+        ka, kb = kozep(ia), kozep(ib)
+        if len(ka) > len(kb):
+            ka, kb = kb, ka
+        return sum(x * kb.get(g, 0.0) for g, x in ka.items())
 
     hova = {i: k for k, cs in enumerate(csoportok) for i in cs["idx"]}
     while True:
@@ -608,10 +622,12 @@ def egyesit(csoportok, hason, T, ablak):
                  if x >= OSSZEVON_EROS and hova[i] != hova[j]}
         legjobb, legjobb_atl = None, 0.0
         for a, b in parok:
-            ertekek = [sim(i, j) for i in csoportok[a]["idx"] for j in csoportok[b]["idx"] if abs(T[i] - T[j]) <= ablak]
-            if not ertekek:
+            ia, ib = csoportok[a]["idx"], csoportok[b]["idx"]
+            if not any(abs(T[i] - T[j]) <= ablak for i in ia for j in ib):
                 continue
-            atl = sum(ertekek) / len(ertekek)
+            # a két csoport „súlypontjának” hasonlósága: a tagok szóanyagát összegezzük; ez nem hígul fel,
+            # ha az egyik csoport nagy (a páronkénti átlag egy egyedül maradt cikknél egyre kisebb lenne)
+            atl = kozep_hason(ia, ib)
             if atl >= OSSZEVON_EGYESIT and atl > legjobb_atl:
                 legjobb, legjobb_atl = (a, b), atl
         if legjobb is None:
@@ -710,7 +726,7 @@ def osszevon(hirek):
             hova[i] = legjobb
             csoportok[legjobb]["idx"].append(i)
             csoportok[legjobb]["hirek"].append(hirek[i])
-    egyesit(csoportok, hason, T, ablak)
+    egyesit(csoportok, hason, T, ablak, V)
     csoportok = [cs for cs in csoportok if cs["idx"]]
     for cs in csoportok:
         hk = cs["hirek"]
