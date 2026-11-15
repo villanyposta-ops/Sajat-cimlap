@@ -174,7 +174,8 @@ ROVATOK = [
                      "miniszter", "polgármester", "önkormányzat", "választás", "ellenzék", "budapest",
                      "rendőrség", "bíróság", "ügyészség", "kdnp", "mi hazánk", "ügynök", "állambiztonság"]},
     {"id": "kulfold", "nev": "Külföld", "szin": "#0f766e", "dobozok": 11,
-     "utvonal": ["kulfold", "vilag", "nagyvilag", "europa", "eu", "kulpolitika", "my-europe", "world"],
+     "utvonal": ["kulfold", "vilag", "nagyvilag", "europa", "eu", "kulpolitika", "my-europe", "world",
+                 "tudositoink"],  # Infostart: a külföldi tudósítók anyagai
      "kulcsszavak": ["ukrajn", "orosz", "putyin", "trump", "amerikai", "európai unió", "brüsszel",
                      "izrael", "gáza", "kína", "német", "nato", "szlovák", "román", "lengyel", "francia",
                      "egyesült államok", "washington", "fehér ház", "kongresszus", "szenátus", "republikánus",
