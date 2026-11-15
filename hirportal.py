@@ -156,6 +156,8 @@ OSSZEVON_ATLAG = 0.18     # és a csoport közeli tagjaihoz átlagosan ennyi (a 
 OSSZEVON_NEV = 0.15       # ha a címekben közös egy ritka tulajdonnév (pl. „Republikon”), ennyi hasonlóság is elég,
 OSSZEVON_NEV_MARAD = 0.05 # …feltéve, hogy a név betűdarabjai nélkül is marad ennyi közös tartalom
 OSSZEVON_EGYESIT = 0.25   # utólag két csoport egybeolvad, ha a tagpárjaik átlagos hasonlósága legalább ennyi
+OSSZEVON_KOZELI = 0.25    # két, egymáshoz időben közeli (OSSZEVON_KOZELI_ORA-n belüli) cikknél ennyi hasonlóság is elég
+OSSZEVON_KOZELI_ORA = 2
 RITKA_NEV_MAX = 5         # ritkának számít a (legalább 6 betűs) név, ha legfeljebb ennyi cikk címében szerepel
 KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér egy lappal kevesebbet egy téma
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
@@ -690,7 +692,9 @@ def osszevon(hirek):
     csoportok, hova = [], {}
     for i in range(N):
         acc = hason[i]
-        kuszob = lambda j: OSSZEVON_NEV if nevvel_eleg(i, j) else OSSZEVON_EROS
+        # ugyanarról az eseményről a lapok általában órákon belül írnak: két órán belül kicsit enyhébb a küszöb
+        kuszob = lambda j: (OSSZEVON_NEV if nevvel_eleg(i, j)
+                            else OSSZEVON_KOZELI if T[i] - T[j] <= OSSZEVON_KOZELI_ORA * 3600 else OSSZEVON_EROS)
         jeloltek = {hova[j] for j, s in acc.items() if s >= kuszob(j)}
         legjobb, legjobb_atl = None, 0
         for k in jeloltek:
