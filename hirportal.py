@@ -197,7 +197,7 @@ ROVATOK = [
      "kulcsszavak": ["infláció", "forint", "jegybank", "mnb", "kamat", "gdp", "költségvetés", "adó",
                      "árak", "tőzsde", "vállalat", "cég", "bér", "nyugdíj", "benzin", "beruházás",
                      "fogyasztás", "büdzsé", "kiskereskedelem", "ksh", "munkanélküli"]},
-    {"id": "kultura", "nev": "Kultúra", "szin": "#be185d",
+    {"id": "kultura", "nev": "Kultúra", "szin": "#be185d", "ujsag": True,
      "utvonal": ["kultura", "kult", "kulturalis", "zene", "film", "konyv", "konyveshaz", "szinhaz", "mediapiac", "media",
                  "culture", "after", "karakter"],
      "kulcsszavak": ["film", "színház", "koncert", "album", "regény", "író", "kiállítás", "múzeum",
@@ -214,7 +214,7 @@ ROVATOK = [
                      "forma-1", "teniszez", "kézilabd", "vízilabd", "úszó", "nb i.", "fradi",
                      "forma–1", "forma-1", "nb i", "bajnokok ligája",
                      "ftc", "európa-liga", "európa liga", "konferencialiga", "ultrá", "szurkol"]},
-    {"id": "eletmod", "nev": "Életmód", "szin": "#a16207",
+    {"id": "eletmod", "nev": "Életmód", "szin": "#a16207", "ujsag": True,
      "utvonal": ["eletmod", "elet-stilus", "elet", "egeszseg", "utazas", "gasztro", "otthon",
                  "eletstilus"],
      "kulcsszavak": ["recept", "egészség", "utazás", "étterem", "kert", "kutya", "macska"]},
@@ -511,6 +511,8 @@ def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
     return db
 
 
+KOTEG_LAP = 5             # ennyi lap felett a doboz mögött „lapköteg” látszik…
+KOTEG_NAGY = 7            # …ennyi felett vastagabb köteg
 TANULO_SZOMSZED = 15      # a tanuló besorolásnál ennyi leghasonlóbb, biztosan besorolt cikk szavaz
 TANULO_EGYEB = 0.60       # besorolatlan (Egyéb) cikk akkor kap rovatot, ha a szavazatok legalább ennyi része egy rovaté
 TANULO_KULCSSZO = 0.80    # csak kulcsszó alapján besorolt cikket ennél erősebb egyetértés esetén sorolunk át
@@ -1350,7 +1352,8 @@ def fo_doboz(cs, i):
         kep = '<div class="belyeg"><img alt="" style="visibility:hidden"><div class="kep-helyett"></div></div>'
     lead = f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and tipus != "kis" else ""
     rszin = next((r["szin"] for r in ROVATOK if r["id"] == cs["rovat"]), "#64748b")
-    return f'''<article class="fo-hir {tipus}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=tipus != "kis")}>
+    osztaly = tipus + koteg(cs) + (" rairt" if tipus == "nyito" and h["kep"] else "")
+    return f'''<article class="fo-hir {osztaly}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=tipus != "kis")}>
   {kep if tipus != "kis" else ""}<div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
@@ -1359,8 +1362,17 @@ def fo_doboz(cs, i):
 </article>'''
 
 
+def koteg(cs):
+    """Sokat megírt sztori: „lapköteg” jelölés a doboz mögött (KOTEG_LAP / KOTEG_NAGY lap felett)."""
+    n = len(cs["forrasok"])
+    return " koteg koteg-nagy" if n >= KOTEG_NAGY else (" koteg" if n >= KOTEG_LAP else "")
+
+
 def doboz(cs, lead=True, kiemelt=False, extra=""):
     h = cs["fo"]
+    extra += koteg(cs)
+    if kiemelt and not h["kep"]:
+        extra += " vezer"   # kép nélküli kiemelt: „vezércikk” tipográfia
     kep = kep_html(h, "kiemelt-kep") if kiemelt else kep_html(h, "belyeg")
     return f'''<article class="doboz{' kiemelt' if kiemelt else ''}{extra}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=lead)}>
   <div class="szoveg">
@@ -1513,9 +1525,11 @@ def helyi_rovat(helyi_cs):
 
 
 def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, hatter_cs=None):
-    friss = [c for c in orszagos if c["kezdet_ora"] < FO_MAX_ORA]
+    # a napi összefoglalók („A nap legfontosabb hírei” stb.) nem kerülnek a Topba és a kiemelt dobozokba
+    nem_osszefoglalo = [c for c in orszagos if not OSSZEFOGLALO.search(c["fo"]["cim"])]
+    friss = [c for c in nem_osszefoglalo if c["kezdet_ora"] < FO_MAX_ORA]
     if len(friss) < FO_HIREK_SZAMA:           # hajnalban kevés a friss hír: legfeljebb 12 óráig visszanyúlunk
-        friss = [c for c in orszagos if c["kezdet_ora"] < FO_TARTALEK_ORA]
+        friss = [c for c in nem_osszefoglalo if c["kezdet_ora"] < FO_TARTALEK_ORA]
     rangsor = sorted(friss, key=lambda c: c["pont"], reverse=True)
     # nyitóhír: a legtöbb lap által megírt képes hír a legszűkebb időablakból, ahol ilyen van
     nyito = None
@@ -1551,11 +1565,11 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
         if cs:
             dobozok = [c for c in cs if c["kor_ora"] < FRISS_ORA][:r.get("dobozok", DOBOZ_ROVATONKENT)]
             lista = [c for c in cs if c not in dobozok]
-            kiem = len(dobozok) >= 3          # van-e kiemelt (dupla) kártya
+            kiem = sum(1 for c in dobozok if not OSSZEFOGLALO.search(c["fo"]["cim"])) >= 3   # van-e kiemelt (dupla) kártya
             if kiem:
                 # kiemelt: amelyikről a legtöbb lap írt, de a sztori korával csökkenő súllyal
                 # (KIEMELT_ORA óránként egy lappal kevesebbet ér), hogy a reggeli téma este már ne vezessen
-                k = max(dobozok, key=lambda c: (round(len(c["forrasok"]) - c["kezdet_ora"] / KIEMELT_ORA, 1),
+                k = max((c for c in dobozok if not OSSZEFOGLALO.search(c["fo"]["cim"])), key=lambda c: (round(len(c["forrasok"]) - c["kezdet_ora"] / KIEMELT_ORA, 1),
                                                 bool(c["fo"]["kep"]), c["pont"]))
                 dobozok = [k] + [c for c in dobozok if c is not k]
             elr, szines = "bal-szeles", False
@@ -1572,9 +1586,11 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
                 elr = sors.choice(lehet)
                 szines = (not elozo_szines) and sors.random() < SZINES_ESELY
             elozo_elr, elozo_szines = elr, szines
+            if r.get("ujsag"):
+                szines = False   # az újságoldal módban nincs színes kártya
             extra = (" kiemelt-magas" if elr.endswith("magas") else "") + (" szines" if szines else "")
             nav.append(f'<a href="#{r["id"]}" style="--r:{r["szin"]}">{e(r["nev"])}</a>')
-            reszek.append(f'''<section class="rovat" id="{r["id"]}" style="--r:{r["szin"]}">
+            reszek.append(f'''<section class="rovat{' ujsag' if r.get('ujsag') else ''}" id="{r["id"]}" style="--r:{r["szin"]}">
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
   {f'<div class="racs elr-{elr}">{"".join(doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else "")) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
@@ -1852,6 +1868,41 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .doboz.szines .lefed i{box-shadow:0 0 0 1.5px var(--r)}
 .doboz.szines .kiemelt-kep{background:rgb(0 0 0/.15)}
 .doboz.kiemelt h3{font-size:1.32rem;line-height:1.22;letter-spacing:-.015em}
+/* rovatszínű sáv a nem színes kiemelt kártya tetején */
+.doboz.kiemelt:not(.szines){border-top:4px solid var(--r);padding-top:calc(1rem - 3px)}
+/* „vezércikk”: kép nélküli kiemelt kártya nagy, dőlt címmel */
+.doboz.vezer .kiemelt-kep{display:none}
+.doboz.vezer h3{font-size:1.75rem;line-height:1.15;font-style:italic;letter-spacing:-.02em}
+.doboz.vezer .lead{-webkit-line-clamp:7;font-size:1.02rem;border-top:1px solid var(--r);padding-top:.6rem;margin-top:.5rem}
+.doboz.vezer.szines .lead{border-top-color:rgb(255 255 255/.5)}
+/* „lapköteg”: sokat megírt sztori mögött eltolt lapok */
+.koteg{--kl:var(--felulet);box-shadow:4px 4px 0 -1px var(--kl),4px 4px 0 0 color-mix(in srgb,var(--r) 45%,var(--vonal)),
+  8px 8px 0 -1px var(--kl),8px 8px 0 0 color-mix(in srgb,var(--r) 30%,var(--vonal))}
+.koteg-nagy{box-shadow:4px 4px 0 -1px var(--kl),4px 4px 0 0 color-mix(in srgb,var(--r) 55%,var(--vonal)),
+  8px 8px 0 -1px var(--kl),8px 8px 0 0 color-mix(in srgb,var(--r) 40%,var(--vonal)),
+  12px 12px 0 -1px var(--kl),12px 12px 0 0 color-mix(in srgb,var(--r) 28%,var(--vonal))}
+.fo-hir.koteg{--kl:var(--sav-felulet);overflow:visible}
+.fo-hir.koteg .kep{border-radius:6px 6px 0 0;overflow:hidden}
+/* Top nyitóhír: a cím a képre írva */
+.nyito.rairt{position:relative;min-height:24rem;overflow:hidden}
+.nyito.rairt .kep{position:absolute;inset:0;flex:none;min-height:0}
+.nyito.rairt .szoveg{position:relative;z-index:1;margin-top:auto;align-self:flex-end;width:100%;justify-content:flex-end;
+  padding:4.5rem 1.6rem 1.3rem;color:#fff;background:linear-gradient(to top,rgb(0 0 0/.86) 0%,rgb(0 0 0/.66) 55%,rgb(0 0 0/0) 100%)}
+.nyito.rairt h3{max-width:46rem;font-size:clamp(1.55rem,2.4vw,2.2rem);text-shadow:0 1px 8px rgb(0 0 0/.35)}
+.nyito.rairt h3 a,.nyito.rairt .forras,.nyito.rairt .lefed,.nyito.rairt .tovabbi a,.nyito.rairt .tovabbi a.mutatott{color:#fff}
+.nyito.rairt .meta,.nyito.rairt .lead,.nyito.rairt .tovabbi{color:rgb(255 255 255/.85)}
+.nyito.rairt .lead{max-width:46rem}
+.nyito.rairt .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.6)}
+.nyito.rairt .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
+.nyito.rairt .kep-helyett{background:color-mix(in srgb,var(--r) 35%,#111)}
+/* újságoldal: hasábok vonalakkal, kártyák nélkül (Kultúra, Életmód) */
+.rovat.ujsag .racs{gap:0;border-top:3px double var(--tinta);border-bottom:1px solid var(--vonal);
+  background-image:linear-gradient(var(--vonal),var(--vonal)),linear-gradient(var(--vonal),var(--vonal));
+  background-size:1px 100%;background-repeat:no-repeat;background-position:33.333% 0,66.667% 0}
+.rovat.ujsag .doboz{background:transparent;border:0;border-radius:0;box-shadow:none;padding:1rem 1.2rem}
+.rovat.ujsag .doboz:not(.kiemelt){border-bottom:1px solid var(--vonal)}
+.rovat.ujsag .doboz.kiemelt{background:var(--lap);border-top:0;border-bottom:1px solid var(--vonal);padding-top:1rem}
+.rovat.ujsag .lapoz{background:transparent}
 .doboz.kiemelt .lead{-webkit-line-clamp:4}
 .kiemelt-kep{order:-1;width:42%;aspect-ratio:16/10;flex-shrink:0;border-radius:4px;overflow:hidden;background:var(--vonal)}
 .kiemelt-kep img{width:100%;height:100%;object-fit:cover;display:block}
@@ -1981,6 +2032,7 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
   .nyito .kep{aspect-ratio:2/1;min-height:0;flex:none}
   .masod,.kis{grid-column:span 1}
   .racs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rovat.ujsag .racs{background-image:linear-gradient(var(--vonal),var(--vonal));background-position:50% 0}
   .elr-bal-szeles .doboz.kiemelt,.elr-jobb-szeles .doboz.kiemelt{grid-column:1/-1;grid-row:auto}
   .elr-bal-magas .doboz.kiemelt{grid-column:1;grid-row:1/span 2}
   .elr-jobb-magas .doboz.kiemelt{grid-column:2;grid-row:1/span 2}}
@@ -1992,6 +2044,8 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
   .forrasmenu{padding:0}
   .nav-belso,main,.elso-belso{padding-left:1rem;padding-right:1rem}
   .fo-racs{grid-template-columns:1fr}.nyito,.masod,.kis{grid-column:auto}
+  .rovat.ujsag .racs{background-image:none}.rovat.ujsag .doboz{padding-left:0;padding-right:0}
+  .nyito.rairt{min-height:21rem}.nyito.rairt .szoveg{padding:3.5rem 1.1rem 1.1rem}
   .nyito .szoveg{padding:1.1rem}
   .belyeg{width:64px;height:64px}
   .racs{grid-template-columns:1fr}.racs .doboz.kiemelt{grid-column:auto;grid-row:auto;flex-direction:column}
