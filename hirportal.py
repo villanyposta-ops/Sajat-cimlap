@@ -13,6 +13,7 @@ ami már kiesett a lapok RSS-éből. 72 óránál régebbi hír törlődik.
 import argparse
 import hashlib
 import math
+from collections import Counter
 import html
 import json
 import random
@@ -180,7 +181,7 @@ ROVATOK = [
     {"id": "kulfold", "nev": "Külföld", "szin": "#0f766e", "dobozok": 11,
      "utvonal": ["kulfold", "vilag", "nagyvilag", "europa", "eu", "kulpolitika", "my-europe", "world",
                  "tudositoink"],  # Infostart: a külföldi tudósítók anyagai
-     "kulcsszavak": ["ukrajn", "orosz", "putyin", "trump", "amerikai", "európai unió", "brüsszel",
+     "kulcsszavak": ["emírség", "florida", "texas", "kalifornia", "new york", "ukrajn", "orosz", "putyin", "trump", "amerikai", "európai unió", "brüsszel",
                      "izrael", "gáza", "kína", "német", "nato", "szlovák", "román", "lengyel", "francia",
                      "egyesült államok", "washington", "fehér ház", "kongresszus", "szenátus", "republikánus",
                      "demokrata párt", "kreml", "moszkva", "kijev", "zelenszkij", "irán", "brit", "olasz", "spanyol",
@@ -510,6 +511,56 @@ def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
     return db
 
 
+TANULO_SZOMSZED = 15      # a tanuló besorolásnál ennyi leghasonlóbb, biztosan besorolt cikk szavaz
+TANULO_EGYEB = 0.60       # besorolatlan (Egyéb) cikk akkor kap rovatot, ha a szavazatok legalább ennyi része egy rovaté
+TANULO_KULCSSZO = 0.80    # csak kulcsszó alapján besorolt cikket ennél erősebb egyetértés esetén sorolunk át
+
+
+def tanulo_besorolas(hirek):
+    """A biztosan besorolt cikkekből (webcím vagy a lap kategóriája alapján) tanul: a gyenge jelű cikk
+    (Egyéb, vagy csak kulcsszavas tipp) a hozzá szóhasználatban leghasonlóbb biztos cikkek rovatát kapja,
+    ha azok elég egyértelműen egy rovat felé húznak. Szavak helyett a szótövek (első 6 betű) számítanak."""
+    hirovatok = {r["id"] for r in ROVATOK} - {"egyeb"}
+    def tovek(h):
+        szoveg_ = h["cim"] + " " + h["cim"] + " " + " ".join((h.get("lead") or "").split()[:60])
+        return [ekezet_nelkul(w)[:6] for w in szavak(szoveg_) if w not in STOP and len(w) > 2]
+    tanito = [h for h in hirek if h.get("rovat_suly", 0) >= 2 and h["rovat"] in hirovatok
+              and "/cegauto/" not in h["link"]]
+    cel = [h for h in hirek if (h["rovat"] == "egyeb" and h.get("rovat_suly", 0) < 3)
+           or (h["rovat"] in hirovatok and h.get("rovat_suly", 0) == 1)]
+    if len(tanito) < 200 or not cel:
+        return
+    szotar = [Counter(tovek(h)) for h in tanito + cel]
+    df = Counter(w for c in szotar for w in c)
+    N = len(szotar)
+    def vektor(c):
+        v = {w: (1 + math.log(n)) * math.log(N / df[w]) for w, n in c.items() if df[w] >= 2}
+        hossz = math.sqrt(sum(x * x for x in v.values())) or 1.0
+        return {w: x / hossz for w, x in v.items()}
+    tv = [vektor(c) for c in szotar[:len(tanito)]]
+    index = {}
+    for k, v in enumerate(tv):
+        for w in v:
+            index.setdefault(w, []).append(k)
+    for h, c in zip(cel, szotar[len(tanito):]):
+        v = vektor(c)
+        hason = {}
+        for w, x in v.items():
+            for k in index.get(w, ()):
+                hason[k] = hason.get(k, 0.0) + x * tv[k][w]
+        legk = sorted(hason.items(), key=lambda kv: kv[1], reverse=True)[:TANULO_SZOMSZED]
+        szav = Counter()
+        for k, x in legk:
+            szav[tanito[k]["rovat"]] += x
+        if not szav:
+            continue
+        r, x = szav.most_common(1)[0]
+        arany = x / sum(szav.values())
+        kuszob = TANULO_EGYEB if h["rovat"] == "egyeb" else TANULO_KULCSSZO
+        if arany >= kuszob and r != h["rovat"]:
+            h["rovat"], h["rovat_suly"], h["rovat_tanult"] = r, 1, True
+
+
 def hatter_rovat_nev(h):
     """Ha a cikk háttéranyag, a lapon belüli rovat neve („” ha a lap egésze háttér); ha nem az, None."""
     f = FN.get(h["forras"], {})
@@ -517,6 +568,11 @@ def hatter_rovat_nev(h):
         return ""
     elso = urlparse(h["link"]).path.strip("/").split("/")[0]
     return f.get("hatter_rovatok", {}).get(elso)
+
+
+BALESET = re.compile(r"\b(baleset|karambol|gázol|elgázol|ütköz|felborul|árokba|ámokfut|rendőr|üldöz|"
+                     r"halálos|meghalt|életét vesztette|sérült|ittas|részeg|cserbenhagy|száguld|lopott|lopás|"
+                     r"büntetőfék|börtön|bíróság)", re.I)
 
 
 def rovat(h):
@@ -536,10 +592,17 @@ def rovat(h):
     if h.get("elotag_rovat"):
         return ki(h["elotag_rovat"], 3)
     szakaszok = [ekezet_nelkul(s.lower()) for s in urlparse(h["link"]).path.split("/") if s]
+    baleset = False
     # szponzorált/közlemény al-oldal bárhol a webcímben elsőbbséget kap (pl. telex.hu/g7/tamogatott-tartalom/…)
     if any(sz in r["utvonal"] for r in ROVATOK if r["id"] == "egyeb" for sz in szakaszok[:3]):
         return ki("egyeb", 3)
     for sz in szakaszok[:3]:
+        if baleset:
+            break
+        # a HVG Cégautó rovatában a közlekedési balesetek, rendőrségi hírek is megjelennek: azok Belföld vagy Külföld
+        if sz == "cegauto" and BALESET.search(h["cim"] + " " + (h.get("lead") or "")):
+            baleset = True   # a webcím itt nem dönt: a kulcsszavak döntenek Belföld és Külföld közt
+            break
         for r in ROVATOK:
             if sz in r["utvonal"]:
                 return ki(r["id"], 3)
@@ -554,6 +617,8 @@ def rovat(h):
     eredeti = h["cim"] + ". " + h["lead"]
     szoveg_ = eredeti.lower()
     pontok = {r["id"]: sum(kulcsszo_talalat(szoveg_, k, eredeti) for k in r["kulcsszavak"]) for r in ROVATOK}
+    if baleset:
+        return ki("kulfold" if pontok.get("kulfold", 0) > pontok.get("belfold", 0) else "belfold", 1)
     if kat_pont:
         # döntetlennél a cím és a bevezető kulcsszavai döntenek, utána a rovatok sorrendje
         sorrend = [r["id"] for r in ROVATOK]
@@ -708,11 +773,12 @@ def osszevon(hirek):
             return 0.0
         h = hirek[i]
         szoveg_ = h["cim"] + " " + " ".join((h.get("lead") or "").split()[:35])
-        legtobb = 0.0
+        # egy szó minden alakja együtt számít (költségvetési, költségvetéséről…): az első 6 betű szerint csoportosítunk
+        tovek = {}
         for w in set(szavak(szoveg_)):
-            w = f"_{ekezet_nelkul(w)}_"
-            darabok = {w[k:k + 4] for k in range(len(w) - 3)}
-            legtobb = max(legtobb, sum(x for g, x in kozos.items() if g in darabok))
+            w = ekezet_nelkul(w)
+            tovek.setdefault(w[:6], set()).update(f"_{w}_"[k:k + 4] for k in range(len(w) - 1))
+        legtobb = max((sum(x for g, x in kozos.items() if g in darabok) for darabok in tovek.values()), default=0.0)
         return sum(kozos.values()) - legtobb
 
     nev_ok = {}
@@ -2345,6 +2411,8 @@ def main():
         # a mentett hírekre is (pl. egy korábban tévesen frissnek látszó, újra kiadott cikkre)
         h["ido"] = webcim_korlat(h["link"], datetime.fromisoformat(h["ido"])).isoformat()
         h["rovat"] = rovat(h)
+        h.pop("rovat_tanult", None)
+    tanulo_besorolas(ervenyes)
 
     allapot_ut.write_text(json.dumps(ervenyes + emlek, ensure_ascii=False), "utf-8")
     orszagos = osszevon([h for h in ervenyes if h["rovat"] not in ("helyi", "idojaras", "hatter")])
