@@ -1876,12 +1876,13 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .doboz.vezer .lead{-webkit-line-clamp:7;font-size:1.02rem;border-top:1px solid var(--r);padding-top:.6rem;margin-top:.5rem}
 .doboz.vezer.szines .lead{border-top-color:rgb(255 255 255/.5)}
 /* „lapköteg”: sokat megírt sztori mögött eltolt lapok */
-.koteg{--kl:var(--felulet);box-shadow:4px 4px 0 -1px var(--kl),4px 4px 0 0 color-mix(in srgb,var(--r) 45%,var(--vonal)),
-  8px 8px 0 -1px var(--kl),8px 8px 0 0 color-mix(in srgb,var(--r) 30%,var(--vonal))}
-.koteg-nagy{box-shadow:4px 4px 0 -1px var(--kl),4px 4px 0 0 color-mix(in srgb,var(--r) 55%,var(--vonal)),
-  8px 8px 0 -1px var(--kl),8px 8px 0 0 color-mix(in srgb,var(--r) 40%,var(--vonal)),
-  12px 12px 0 -1px var(--kl),12px 12px 0 0 color-mix(in srgb,var(--r) 28%,var(--vonal))}
+.koteg{--kl:var(--felulet);box-shadow:3px 3px 0 -1px var(--kl),3px 3px 0 0 color-mix(in srgb,var(--r) 38%,transparent),
+  6px 6px 0 -1px var(--kl),6px 6px 0 0 color-mix(in srgb,var(--r) 24%,transparent)}
+.koteg-nagy{box-shadow:3px 3px 0 -1px var(--kl),3px 3px 0 0 color-mix(in srgb,var(--r) 42%,transparent),
+  6px 6px 0 -1px var(--kl),6px 6px 0 0 color-mix(in srgb,var(--r) 30%,transparent),
+  9px 9px 0 -1px var(--kl),9px 9px 0 0 color-mix(in srgb,var(--r) 20%,transparent)}
 .fo-hir.koteg{--kl:var(--sav-felulet);overflow:visible}
+.elso-arnyalt .fo-hir.koteg,.elso-vilagos .fo-hir.koteg{--kl:var(--felulet)}
 .fo-hir.koteg .kep{border-radius:6px 6px 0 0;overflow:hidden}
 /* Top nyitóhír: a cím a képre írva */
 .nyito.rairt{position:relative;min-height:24rem;overflow:hidden}
@@ -1896,12 +1897,12 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .nyito.rairt .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
 .nyito.rairt .kep-helyett{background:color-mix(in srgb,var(--r) 35%,#111)}
 /* újságoldal: hasábok vonalakkal, kártyák nélkül (Kultúra, Életmód) */
-.rovat.ujsag .racs{gap:0;border-top:3px double var(--tinta);border-bottom:1px solid var(--vonal);
+.rovat.ujsag .racs{gap:0;border-top:3px double var(--tinta);border-bottom:1px solid var(--vonal);background-color:var(--felulet);border-radius:0 0 6px 6px;
   background-image:linear-gradient(var(--vonal),var(--vonal)),linear-gradient(var(--vonal),var(--vonal));
   background-size:1px 100%;background-repeat:no-repeat;background-position:33.333% 0,66.667% 0}
 .rovat.ujsag .doboz{background:transparent;border:0;border-radius:0;box-shadow:none;padding:1rem 1.2rem}
 .rovat.ujsag .doboz:not(.kiemelt){border-bottom:1px solid var(--vonal)}
-.rovat.ujsag .doboz.kiemelt{background:var(--lap);border-top:0;border-bottom:1px solid var(--vonal);padding-top:1rem}
+.rovat.ujsag .doboz.kiemelt{background:var(--felulet);border-top:0;border-bottom:1px solid var(--vonal);padding-top:1rem}
 .rovat.ujsag .lapoz{background:transparent}
 .doboz.kiemelt .lead{-webkit-line-clamp:4}
 .kiemelt-kep{order:-1;width:42%;aspect-ratio:16/10;flex-shrink:0;border-radius:4px;overflow:hidden;background:var(--vonal)}
