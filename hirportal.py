@@ -159,6 +159,7 @@ OSSZEVON_NEV_MARAD = 0.05 # …feltéve, hogy a név betűdarabjai nélkül is m
 OSSZEVON_EGYESIT = 0.32   # utólag két csoport egybeolvad, ha a súlypontjuk (összesített szóanyaguk) hasonlósága legalább ennyi
 OSSZEVON_KOZELI = 0.25    # két, egymáshoz időben közeli (OSSZEVON_KOZELI_ORA-n belüli) cikknél ennyi hasonlóság is elég
 OSSZEVON_KOZELI_ORA = 2
+OSSZEVON_KOZELI_MARAD = 0.13  # …de csak ha a legerősebb közös szó nélkül is marad ennyi hasonlóság
 RITKA_NEV_MAX = 5         # ritkának számít a (legalább 6 betűs) név, ha legfeljebb ennyi cikk címében szerepel
 KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér egy lappal kevesebbet egy téma
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
@@ -699,6 +700,21 @@ def osszevon(hirek):
                     tilt |= {w[k:k + 4] for k in range(len(w) - 3)}
         return sum(x * V[j].get(g, 0) for g, x in V[i].items() if g not in tilt)
 
+    def szo_nelkul(i, j):
+        """A hasonlóság abból a szóból eredő rész nélkül, amelyik a legtöbbet adja hozzá. Ha két cikket
+        szinte csak egy hosszú szó köt össze (pl. „költségvetés”), a maradék kicsi."""
+        kozos = {g: x * V[j].get(g, 0.0) for g, x in V[i].items() if g in V[j]}
+        if not kozos:
+            return 0.0
+        h = hirek[i]
+        szoveg_ = h["cim"] + " " + " ".join((h.get("lead") or "").split()[:35])
+        legtobb = 0.0
+        for w in set(szavak(szoveg_)):
+            w = f"_{ekezet_nelkul(w)}_"
+            darabok = {w[k:k + 4] for k in range(len(w) - 3)}
+            legtobb = max(legtobb, sum(x for g, x in kozos.items() if g in darabok))
+        return sum(kozos.values()) - legtobb
+
     nev_ok = {}
     def nevvel_eleg(i, j):
         if (i, j) not in nev_ok:
@@ -709,8 +725,12 @@ def osszevon(hirek):
     for i in range(N):
         acc = hason[i]
         # ugyanarról az eseményről a lapok általában órákon belül írnak: két órán belül kicsit enyhébb a küszöb
-        kuszob = lambda j: (OSSZEVON_NEV if nevvel_eleg(i, j)
-                            else OSSZEVON_KOZELI if T[i] - T[j] <= OSSZEVON_KOZELI_ORA * 3600 else OSSZEVON_EROS)
+        def kuszob(j):
+            if nevvel_eleg(i, j):
+                return OSSZEVON_NEV
+            if T[i] - T[j] <= OSSZEVON_KOZELI_ORA * 3600 and szo_nelkul(i, j) >= OSSZEVON_KOZELI_MARAD:
+                return OSSZEVON_KOZELI
+            return OSSZEVON_EROS
         jeloltek = {hova[j] for j, s in acc.items() if s >= kuszob(j)}
         legjobb, legjobb_atl = None, 0
         for k in jeloltek:
