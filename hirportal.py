@@ -67,7 +67,7 @@ FORRASOK = [
     {"id": "hvg",    "nev": "HVG",           "szin": "#7c3aed", "feeds": ["https://hvg.hu/rss"]},
     {"id": "mhang",  "nev": "Magyar Hang",   "szin": "#0d9488", "feeds": ["https://hang.hu/rss/"],
      # csak ezek a rovatok (a webcím első tagja) mennek a „Háttér”-be: hetilapos riportok, interjúk, publicisztikák
-     "hatter_rovatok": {"magyar-hang-plusz": "Plusz", "vendegoldal": "Vendégoldal"}},
+     "hatter_rovatok": {"magyar-hang-plusz": "Plusz", "vendegoldal": "Vendégoldal", "budaihang": "Budai Hang"}},
     {"id": "atlatszo", "nev": "Átlátszó",    "szin": "#65a30d", "feeds": ["https://atlatszo.hu/feed/"],
      "hatter": True},            # a „Háttér” rovatba kerül, kimarad a hírversenyből és az összevonásból
     {"id": "valasz", "nev": "Válasz Online", "szin": "#a16207", "feeds": ["https://www.valaszonline.hu/feed/"],
@@ -196,7 +196,7 @@ ROVATOK = [
                      "árak", "tőzsde", "vállalat", "cég", "bér", "nyugdíj", "benzin", "beruházás",
                      "fogyasztás", "büdzsé", "kiskereskedelem", "ksh", "munkanélküli"]},
     {"id": "kultura", "nev": "Kultúra", "szin": "#be185d",
-     "utvonal": ["kultura", "kult", "kulturalis", "zene", "film", "konyv", "szinhaz", "mediapiac", "media",
+     "utvonal": ["kultura", "kult", "kulturalis", "zene", "film", "konyv", "konyveshaz", "szinhaz", "mediapiac", "media",
                  "culture", "after", "karakter"],
      "kulcsszavak": ["film", "színház", "koncert", "album", "regény", "író", "kiállítás", "múzeum",
                      "rendező", "színész", "fesztivál", "könyv"]},
@@ -223,7 +223,7 @@ ROVATOK = [
 HELYI_UTAN = "kulfold"    # a Helyi rovat ez után jön (None = rögtön a fő hírek után)
 HATTER_UTAN = "kultura"   # a Háttér rovat ez után jön
 HATTER_SZIN = "#57534e"
-HATTER_SORREND = ["atlatszo", "valasz", "mhang"]   # a hasábok sorrendje; a többi háttérlap utánuk jön
+HATTER_SORREND = ["atlatszo", "mhang", "valasz"]   # a hasábok sorrendje; a többi háttérlap utánuk jön
 HATTER_NAP = 7            # a háttéranyagok ennyi napig maradnak meg (a hírek 72 óráig)
 HATTER_DOBOZ = 2          # lapokként ennyi legfrissebb anyag kap dobozt (bevezetővel)
 HATTER_LISTA = 6          # alattuk ennyi cím látszik, a többi a lenyitható „Korábban” részbe kerül
