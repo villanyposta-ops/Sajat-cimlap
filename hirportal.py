@@ -181,7 +181,7 @@ ROVATOK = [
     {"id": "kulfold", "nev": "Külföld", "szin": "#0f766e", "dobozok": 11,
      "utvonal": ["kulfold", "vilag", "nagyvilag", "europa", "eu", "kulpolitika", "my-europe", "world",
                  "tudositoink"],  # Infostart: a külföldi tudósítók anyagai
-     "kulcsszavak": ["emírség", "florida", "texas", "kalifornia", "new york", "ukrajn", "orosz", "putyin", "trump", "amerikai", "európai unió", "brüsszel",
+     "kulcsszavak": ["!EP", "!EU", "!ENSZ", "!NATO", "európai parlament", "európai bizottság", "emírség", "florida", "texas", "kalifornia", "new york", "ukrajn", "orosz", "putyin", "trump", "amerikai", "európai unió", "brüsszel",
                      "izrael", "gáza", "kína", "német", "nato", "szlovák", "román", "lengyel", "francia",
                      "egyesült államok", "washington", "fehér ház", "kongresszus", "szenátus", "republikánus",
                      "demokrata párt", "kreml", "moszkva", "kijev", "zelenszkij", "irán", "brit", "olasz", "spanyol",
@@ -198,7 +198,7 @@ ROVATOK = [
                      "árak", "tőzsde", "vállalat", "cég", "bér", "nyugdíj", "benzin", "beruházás",
                      "fogyasztás", "büdzsé", "kiskereskedelem", "ksh", "munkanélküli"]},
     {"id": "kultura", "nev": "Kultúra", "szin": "#be185d", "ujsag": True,
-     "utvonal": ["kultura", "kult", "kulturalis", "zene", "film", "konyv", "konyveshaz", "szinhaz", "mediapiac", "media",
+     "utvonal": ["kultura", "kult", "kulturalis", "zene", "film", "konyv", "konyveshaz", "hvgkonyvek", "szinhaz", "mediapiac", "media",
                  "culture", "after", "karakter"],
      "kulcsszavak": ["film", "színház", "koncert", "album", "regény", "író", "kiállítás", "múzeum",
                      "rendező", "színész", "fesztivál", "könyv"]},
@@ -498,6 +498,8 @@ def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
     de a „kiadó” szóra nem. A népnevek (pl. „német”) nagy kezdőbetűvel csak mondat elején számítanak,
     így a „Németh” vagy a „Horváth” vezetéknév nem ad külföldi találatot."""
     k = kulcsszo.strip()
+    if k.startswith("!"):   # kis- és nagybetűre érzékeny rövidítés (pl. „!EP”: az EP-s igen, az „epizód” nem)
+        return len(re.findall(rf"(?<![{BETU}-]){re.escape(k[1:])}(?![A-ZÁÉÍÓÖŐÚÜŰ])", eredeti or ""))
     talalatok = list(re.finditer(rf"(?<![{BETU}-]){re.escape(k)}", szoveg))
     if eredeti is None or k not in NEPNEVEK:
         return len(talalatok)
@@ -1897,7 +1899,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .nyito.rairt .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
 .nyito.rairt .kep-helyett{background:color-mix(in srgb,var(--r) 35%,#111)}
 /* újságoldal: hasábok vonalakkal, kártyák nélkül (Kultúra, Életmód) */
-.rovat.ujsag .racs{gap:0;border-top:3px double var(--tinta);border-bottom:1px solid var(--vonal);background-color:var(--felulet);border-radius:0 0 6px 6px;
+.rovat.ujsag .racs{gap:0;border:1px solid var(--vonal);background-color:var(--felulet);border-radius:6px;overflow:hidden;
   background-image:linear-gradient(var(--vonal),var(--vonal)),linear-gradient(var(--vonal),var(--vonal));
   background-size:1px 100%;background-repeat:no-repeat;background-position:33.333% 0,66.667% 0}
 .rovat.ujsag .doboz{background:transparent;border:0;border-radius:0;box-shadow:none;padding:1rem 1.2rem}
