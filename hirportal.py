@@ -1908,6 +1908,13 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .fo-hir.koteg{--kl:var(--sav-felulet);overflow:visible}
 .elso-arnyalt .fo-hir.koteg,.elso-vilagos .fo-hir.koteg{--kl:var(--felulet)}
 .fo-hir.koteg .kep{border-radius:6px 6px 0 0;overflow:hidden}
+/* kis képek csak ott, ahol jelentenek valamit: az egy lapos sima dobozban nincs kép, a cím kiér a szélig és nagyobb;
+   a több lapos (csíkos) dobozban marad a bélyeg, de ott is nagyobb a cím (az újságos rovatok kivételek) */
+.rovat:not(.ujsag) .doboz:not(.kiemelt):not(.tobblap) .belyeg{display:none}
+.rovat:not(.ujsag) .doboz:not(.kiemelt) h3{font-size:1.24rem;line-height:1.22}
+.rovat:not(.ujsag) .doboz.tobblap:not(.kiemelt) h3{font-size:1.2rem}
+.fo-racs .fo-hir.kis h3{font-size:1.2rem;line-height:1.22}
+@media (max-width:640px){.rovat:not(.ujsag) .doboz:not(.kiemelt) h3,.fo-racs .fo-hir.kis h3{font-size:1.18rem}}
 /* Top nyitóhír: a cím a képre írva */
 @media (max-width:640px){
 .fo-racs .fo-hir.rairt-kicsi{position:relative;min-height:21rem;overflow:hidden}
