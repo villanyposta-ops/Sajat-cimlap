@@ -1352,10 +1352,12 @@ def fo_doboz(cs, i):
         kep = kep_html(h, "belyeg")
     else:   # kép nélkül is legyen bélyeg (a rovat színe és a fejléc), hogy lapozáskor be tudjon jönni a kép
         kep = '<div class="belyeg"><img alt="" style="visibility:hidden"><div class="kep-helyett"></div></div>'
-    lead = f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and tipus != "kis" else ""
+    lead = f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] else ""
     rszin = next((r["szin"] for r in ROVATOK if r["id"] == cs["rovat"]), "#64748b")
-    osztaly = tipus + koteg(cs) + (" rairt" if tipus == "nyito" and h["kep"] else "")
-    return f'''<article class="fo-hir {osztaly}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=tipus != "kis")}>
+    # képre írt cím: a nyitóhírnél csak keskeny képernyőn, a mellette álló második hírnél csak széles képernyőn
+    rairt = (" rairt-kicsi" if i == 0 else " rairt-nagy" if i == 1 else "") if h["kep"] else ""
+    osztaly = tipus + koteg(cs) + rairt
+    return f'''<article class="fo-hir {osztaly}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs)}>
   {kep if tipus != "kis" else ""}<div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
@@ -1813,6 +1815,7 @@ h1,h2,h3,h4{font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);margin
 .fo-hir.kis .belyeg{margin:1rem 1.1rem 0 -.2rem}
 .belyeg .kep-helyett .logo{width:80%;max-height:60%}
 .kis h3{font-size:1.05rem;line-height:1.25;font-weight:650}
+.kis .lead{-webkit-line-clamp:2;font-size:.9rem;margin-top:.3rem}
 .kep{background:#2b384c;overflow:hidden}.kep img{width:100%;height:100%;object-fit:cover;display:block}
 
 /* közös szövegelemek */
@@ -1888,17 +1891,31 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .elso-arnyalt .fo-hir.koteg,.elso-vilagos .fo-hir.koteg{--kl:var(--felulet)}
 .fo-hir.koteg .kep{border-radius:6px 6px 0 0;overflow:hidden}
 /* Top nyitóhír: a cím a képre írva */
-.nyito.rairt{position:relative;min-height:24rem;overflow:hidden}
-.nyito.rairt .kep{position:absolute;inset:0;flex:none;min-height:0}
-.nyito.rairt .szoveg{position:relative;z-index:1;margin-top:auto;align-self:flex-end;width:100%;justify-content:flex-end;
-  padding:4.5rem 1.6rem 1.3rem;color:#fff;background:linear-gradient(to top,rgb(0 0 0/.86) 0%,rgb(0 0 0/.66) 55%,rgb(0 0 0/0) 100%)}
-.nyito.rairt h3{max-width:46rem;font-size:clamp(1.55rem,2.4vw,2.2rem);text-shadow:0 1px 8px rgb(0 0 0/.35)}
-.nyito.rairt h3 a,.nyito.rairt .forras,.nyito.rairt .lefed,.nyito.rairt .tovabbi a,.nyito.rairt .tovabbi a.mutatott{color:#fff}
-.nyito.rairt .meta,.nyito.rairt .lead,.nyito.rairt .tovabbi{color:rgb(255 255 255/.85)}
-.nyito.rairt .lead{max-width:46rem}
-.nyito.rairt .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.6)}
-.nyito.rairt .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
-.nyito.rairt .kep-helyett{background:color-mix(in srgb,var(--r) 35%,#111)}
+@media (max-width:640px){
+.fo-racs .fo-hir.rairt-kicsi{position:relative;min-height:21rem;overflow:hidden}
+.fo-racs .fo-hir.rairt-kicsi .kep{position:absolute;inset:0;flex:none;min-height:0}
+.fo-racs .fo-hir.rairt-kicsi .szoveg{position:relative;z-index:1;margin-top:auto;align-self:flex-end;width:100%;justify-content:flex-end;
+  padding:3.5rem 1.1rem 1.1rem;color:#fff;background:linear-gradient(to top,rgb(0 0 0/.86) 0%,rgb(0 0 0/.66) 55%,rgb(0 0 0/0) 100%)}
+.fo-racs .fo-hir.rairt-kicsi h3{max-width:46rem;font-size:clamp(1.55rem,2.4vw,2.2rem);text-shadow:0 1px 8px rgb(0 0 0/.35)}
+.fo-racs .fo-hir.rairt-kicsi h3 a,.fo-racs .fo-hir.rairt-kicsi .forras,.fo-racs .fo-hir.rairt-kicsi .lefed,.fo-racs .fo-hir.rairt-kicsi .tovabbi a,.fo-racs .fo-hir.rairt-kicsi .tovabbi a.mutatott{color:#fff}
+.fo-racs .fo-hir.rairt-kicsi .meta,.fo-racs .fo-hir.rairt-kicsi .lead,.fo-racs .fo-hir.rairt-kicsi .tovabbi{color:rgb(255 255 255/.85)}
+.fo-racs .fo-hir.rairt-kicsi .lead{max-width:46rem}
+.fo-racs .fo-hir.rairt-kicsi .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.6)}
+.fo-racs .fo-hir.rairt-kicsi .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
+.fo-racs .fo-hir.rairt-kicsi .kep-helyett{background:color-mix(in srgb,var(--r) 35%,#111)}}
+@media (min-width:641px){
+.fo-racs .fo-hir.rairt-nagy{position:relative;min-height:24rem;overflow:hidden}
+.fo-racs .fo-hir.rairt-nagy .kep{position:absolute;inset:0;flex:none;min-height:0}
+.fo-racs .fo-hir.rairt-nagy .szoveg{position:relative;z-index:1;margin-top:auto;align-self:flex-end;width:100%;justify-content:flex-end;
+  padding:5rem 1.2rem 1.1rem;color:#fff;background:linear-gradient(to top,rgb(0 0 0/.86) 0%,rgb(0 0 0/.66) 55%,rgb(0 0 0/0) 100%)}
+.fo-racs .fo-hir.rairt-nagy h3{max-width:46rem;font-size:clamp(1.25rem,1.7vw,1.6rem);text-shadow:0 1px 8px rgb(0 0 0/.35)}
+.fo-racs .fo-hir.rairt-nagy h3 a,.fo-racs .fo-hir.rairt-nagy .forras,.fo-racs .fo-hir.rairt-nagy .lefed,.fo-racs .fo-hir.rairt-nagy .tovabbi a,.fo-racs .fo-hir.rairt-nagy .tovabbi a.mutatott{color:#fff}
+.fo-racs .fo-hir.rairt-nagy .meta,.fo-racs .fo-hir.rairt-nagy .lead,.fo-racs .fo-hir.rairt-nagy .tovabbi{color:rgb(255 255 255/.85)}
+.fo-racs .fo-hir.rairt-nagy .lead{max-width:46rem}
+.fo-racs .fo-hir.rairt-nagy .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.6)}
+.fo-racs .fo-hir.rairt-nagy .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
+.fo-racs .fo-hir.rairt-nagy .kep-helyett{background:color-mix(in srgb,var(--r) 35%,#111)}
+.fo-racs .fo-hir.rairt-nagy .lead{-webkit-line-clamp:3}}
 /* újságoldal: hasábok vonalakkal, kártyák nélkül (Kultúra, Életmód) */
 .rovat.ujsag .racs{gap:0;border:1px solid var(--vonal);background-color:var(--felulet);border-radius:6px;overflow:hidden;
   background-image:linear-gradient(var(--vonal),var(--vonal)),linear-gradient(var(--vonal),var(--vonal));
@@ -2073,7 +2090,7 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
   .nav-belso,main,.elso-belso{padding-left:1rem;padding-right:1rem}
   .fo-racs{grid-template-columns:1fr}.nyito,.masod,.kis{grid-column:auto}
   .rovat.ujsag .racs{background-image:none}.rovat.ujsag .doboz{padding-left:0;padding-right:0}
-  .nyito.rairt{min-height:21rem}.nyito.rairt .szoveg{padding:3.5rem 1.1rem 1.1rem}
+
   .nyito .szoveg{padding:1.1rem}
   .belyeg{width:64px;height:64px}
   .racs{grid-template-columns:1fr}.racs .doboz.kiemelt{grid-column:auto;grid-row:auto;flex-direction:column}
