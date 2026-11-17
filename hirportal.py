@@ -2077,7 +2077,7 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
   .forrasmenu{padding:0}
   .nav-belso,main,.elso-belso{padding-left:1rem;padding-right:1rem}
   .fo-racs{grid-template-columns:1fr}.nyito,.masod,.kis{grid-column:auto}
-  .rovat.ujsag .racs{background-image:none}.rovat.ujsag .doboz{padding-left:0;padding-right:0}
+  .rovat.ujsag .racs{background-image:none}.rovat.ujsag .doboz{padding-left:1rem;padding-right:1rem}
 
   .nyito .szoveg{padding:1.1rem}
   .belyeg{width:64px;height:64px}
