@@ -192,7 +192,7 @@ ROVATOK = [
                      "belga", "holland", "portugál", "svéd", "finn", "dán", "norvég", "bolgár",
                      "japán", "kínai", "indiai", "brüsszel", "amszterdam", "lisszabon", "madrid", "róma", "athén",
                      "stockholm", "koppenhága", "oslo", "helsinki", "dublin", "szófia"]},
-    {"id": "gazdasag", "nev": "Gazdaság", "szin": "#b45309",
+    {"id": "gazdasag", "nev": "Gazdaság", "szin": "#b45309", "dobozok": 11,
      "utvonal": ["gazdasag", "fn", "kkv", "penz", "ingatlan", "fogyasztas", "uzlet", "befektetes", "ceg",
                  "business", "bank", "deviza", "tozsde", "unios-forrasok", "krypto", "kriptopenz", "g7"],
      "kulcsszavak": ["infláció", "forint", "jegybank", "mnb", "kamat", "gdp", "költségvetés", "adó",
