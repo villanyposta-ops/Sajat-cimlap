@@ -520,6 +520,7 @@ def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
     return db
 
 
+TOBBLAP = 2               # a rovatokban ennyi lapnál felső csíkot kap a sima doboz is
 KOTEG_LAP = 5             # ennyi lap felett a doboz mögött „lapköteg” látszik…
 KOTEG_NAGY = 7            # …ennyi felett vastagabb köteg
 TANULO_SZOMSZED = 15      # a tanuló besorolásnál ennyi leghasonlóbb, biztosan besorolt cikk szavaz
@@ -1369,7 +1370,7 @@ def fo_doboz(cs, i):
     rszin = next((r["szin"] for r in ROVATOK if r["id"] == cs["rovat"]), "#64748b")
     # képre írt cím: csak a nyitóhírnél, és csak keskeny képernyőn (telefonon)
     rairt = " rairt-kicsi" if i == 0 and h["kep"] else ""
-    osztaly = tipus + koteg(cs) + rairt
+    osztaly = tipus + rairt   # a Topban nincs köteg: ott eleve csak sokat megírt témák vannak
     return f'''<article class="fo-hir {osztaly}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs)}>
   {kep if tipus != "kis" else ""}<div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
@@ -1387,7 +1388,8 @@ def koteg(cs):
 
 def doboz(cs, lead=True, kiemelt=False, extra=""):
     h = cs["fo"]
-    extra += koteg(cs)
+    # több lap írta: ugyanaz a rovatszínű felső csík, mint a kiemelt dobozon (a köteg helyett)
+    extra += " tobblap" if len(cs["forrasok"]) >= TOBBLAP and not kiemelt else ""
     if kiemelt and not h["kep"] and (h.get("lead") or "").strip():
         extra += " vezer"   # kép nélküli kiemelt: „vezércikk” tipográfia
     kep = kep_html(h, "kiemelt-kep") if kiemelt else kep_html(h, "belyeg")
@@ -1891,6 +1893,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .doboz.kiemelt h3{font-size:1.32rem;line-height:1.22;letter-spacing:-.015em}
 /* rovatszínű sáv a nem színes kiemelt kártya tetején */
 .doboz.kiemelt:not(.szines){border-top:4px solid var(--r);padding-top:calc(1rem - 3px)}
+.doboz.tobblap{border-top:4px solid var(--r);padding-top:calc(.9rem - 3px)}
 /* „vezércikk”: kép nélküli kiemelt kártya nagy, dőlt címmel */
 .doboz.vezer .kiemelt-kep{display:none}
 .doboz.vezer h3{font-size:1.75rem;line-height:1.15;font-style:italic;letter-spacing:-.02em}
@@ -1927,6 +1930,8 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.ujsag .doboz:not(.kiemelt){border-bottom:1px solid var(--vonal)}
 .rovat.ujsag .doboz.kiemelt{background:color-mix(in srgb,var(--r) 9%,var(--felulet));border-top:0;border-bottom:1px solid var(--vonal);padding-top:1rem}
 .rovat.ujsag .lapoz{background:transparent}
+.rovat.ujsag .doboz.tobblap{border-top:0;padding-top:1rem;box-shadow:inset 0 3px 0 var(--r)}
+.rovat.stadion .doboz.tobblap{border-top:1px solid transparent;padding-top:.9rem}
 /* Sport: „stadion” – a rovat sötét pályazöld sávon, fűcsíkokkal, félpályavonallal és középkörrel */
 .rovat.stadion{--pa:#14532d;position:relative;padding:1.6rem 0 1.8rem;
   background:radial-gradient(circle at 50% 50%,transparent 0 118px,rgb(255 255 255/.10) 119px 121px,transparent 122px),
