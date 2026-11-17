@@ -1928,7 +1928,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.stadion .tovabbi-hirek summary,.rovat.stadion .lista li,.rovat.stadion .lista a,.rovat.stadion .lista time{color:rgb(255 255 255/.92)}
 .rovat.stadion .lista li{border-color:rgb(255 255 255/.15)}
 .rovat.stadion .lista .forras{color:rgb(255 255 255/.65)}
-.rovat.stadion .cikkek-gomb{color:rgb(255 255 255/.75);border-color:rgb(255 255 255/.4)}
+.rovat.stadion .cikkek-gomb{color:rgb(255 255 255/.9);border-color:rgb(255 255 255/.5)}.rovat.stadion .cikkek-gomb .db{color:inherit;font-weight:600;order:0;font-size:inherit}.rovat.stadion .cikkek-gomb:hover{color:#fff;border-color:#fff}
 .rovat.stadion .cikkek{border-left-color:rgb(255 255 255/.25)}
 /* Egyéb: egyszerű, kártyák nélküli címlista */
 .rovat.egyszeru .rovatcim{font-size:1rem;padding:.25rem .7rem}
