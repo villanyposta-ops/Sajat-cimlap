@@ -1914,7 +1914,8 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat:not(.ujsag) .doboz:not(.kiemelt) h3{font-size:1.24rem;line-height:1.22}
 .rovat:not(.ujsag) .doboz.tobblap:not(.kiemelt) h3{font-size:1.2rem}
 .fo-racs .fo-hir.kis h3{font-size:1.2rem;line-height:1.22}
-@media (max-width:640px){.rovat:not(.ujsag) .doboz:not(.kiemelt) h3,.fo-racs .fo-hir.kis h3{font-size:1.18rem}}
+.rovat.ujsag .doboz:not(.kiemelt) h3{font-size:1.2rem;line-height:1.22}
+@media (max-width:640px){.rovat .doboz:not(.kiemelt) h3,.fo-racs .fo-hir.kis h3{font-size:1.18rem}}
 /* Top nyitóhír: a cím a képre írva */
 @media (max-width:640px){
 .fo-racs .fo-hir.rairt-kicsi{position:relative;min-height:21rem;overflow:hidden}
