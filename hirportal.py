@@ -1696,15 +1696,15 @@ Időjárásadatok: <a href="https://open-meteo.com/" target="_blank" rel="noopen
 
 CSS = """
 :root{
-  --lap:#e9edf2;--felulet:#fff;--tinta:#16202f;--halvany:#5a6577;--vonal:#d3dae3;
-  --sav:#16202f;--sav-szoveg:#f2f5f9;--sav-halvany:#a9b4c4;--sav-felulet:#212d3f;
+  --lap:#e9edf2;--felulet:#fff;--tinta:#16202f;--halvany:#5a6577;--lead:#2f3a4b;--vonal:#d3dae3;
+  --sav:#16202f;--sav-szoveg:#f2f5f9;--sav-halvany:#a9b4c4;--sav-lead:#d5dce6;--sav-felulet:#212d3f;
   --cimbetu:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif}
 /* sötét mód: a rendszer beállítása szerint (data-tema="auto"), vagy kézzel választva */
 @media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]){
-  --lap:#0e141d;--felulet:#18212d;--tinta:#e6ebf2;--halvany:#97a3b5;--vonal:#2a3545;
+  --lap:#0e141d;--felulet:#18212d;--tinta:#e6ebf2;--halvany:#97a3b5;--lead:#c9d1dc;--vonal:#2a3545;
   --sav:#1c2636;--sav-felulet:#263347;color-scheme:dark}}
 :root[data-tema="sotet"]{
-  --lap:#0e141d;--felulet:#18212d;--tinta:#e6ebf2;--halvany:#97a3b5;--vonal:#2a3545;
+  --lap:#0e141d;--felulet:#18212d;--tinta:#e6ebf2;--halvany:#97a3b5;--lead:#c9d1dc;--vonal:#2a3545;
   --sav:#1c2636;--sav-felulet:#263347;color-scheme:dark}
 :root[data-tema="vilagos"]{color-scheme:light}
 *{box-sizing:border-box}
@@ -1798,7 +1798,8 @@ h1,h2,h3,h4{font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);margin
 .elso-arnyalt,.elso-vilagos{color:var(--tinta)}
 .elso.elso-arnyalt h2,.elso.elso-vilagos h2{color:var(--tinta);font-weight:700}
 .elso-arnyalt .fo-hir,.elso-vilagos .fo-hir{background:var(--felulet);border:1px solid var(--vonal)}
-.elso-arnyalt .fo-hir .meta,.elso-vilagos .fo-hir .meta,.elso-arnyalt .fo-hir .lead,.elso-vilagos .fo-hir .lead,
+.elso-arnyalt .fo-hir .lead,.elso-vilagos .fo-hir .lead{color:var(--lead)}
+.elso-arnyalt .fo-hir .meta,.elso-vilagos .fo-hir .meta,
 .elso-arnyalt .fo-hir .tovabbi,.elso-vilagos .fo-hir .tovabbi{color:var(--halvany)}
 .elso-arnyalt .fo-hir .forras,.elso-vilagos .fo-hir .forras{color:var(--c)}
 .elso-arnyalt .fo-hir .lefed,.elso-vilagos .fo-hir .lefed{color:var(--tinta)}
@@ -1813,7 +1814,7 @@ h1,h2,h3,h4{font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);margin
 .fo-hir .szoveg{padding:1rem 1.1rem 1.1rem}
 .fo-hir .meta{color:var(--sav-halvany)}
 .fo-hir .forras{color:color-mix(in srgb,var(--c) 45%,#fff)}
-.fo-hir .lead{color:var(--sav-halvany)}
+.fo-hir .lead{color:var(--sav-lead)}
 .fo-hir .tovabbi{color:var(--sav-halvany)}
 .fo-hir .lefed{color:var(--sav-szoveg)}
 .nyito{grid-column:span 4;flex-direction:row}
@@ -1840,7 +1841,7 @@ h1,h2,h3,h4{font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);margin
 h3{font-weight:var(--cim-suly,650);letter-spacing:var(--cim-ter,-.01em)}
 .meta{display:flex;gap:.55rem;align-items:baseline;font-size:.78rem;color:var(--halvany);margin-bottom:.3rem}
 .forras{font-weight:700;color:var(--c)}
-.lead{margin:.45rem 0 0;font-size:.9rem;line-height:1.45;color:var(--halvany);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.lead{margin:.45rem 0 0;font-size:.9rem;line-height:1.45;color:var(--lead);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .lefed{display:inline-flex;align-items:center;gap:.18rem;margin-top:.65rem;font-size:.76rem;font-weight:600}
 .lefed i{width:.55rem;height:.55rem;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px var(--felulet)}
 .fo-hir .lefed i{box-shadow:0 0 0 1.5px var(--sav-felulet)}
