@@ -1354,8 +1354,8 @@ def fo_doboz(cs, i):
         kep = '<div class="belyeg"><img alt="" style="visibility:hidden"><div class="kep-helyett"></div></div>'
     lead = f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] else ""
     rszin = next((r["szin"] for r in ROVATOK if r["id"] == cs["rovat"]), "#64748b")
-    # képre írt cím: a nyitóhírnél csak keskeny képernyőn, a mellette álló második hírnél csak széles képernyőn
-    rairt = (" rairt-kicsi" if i == 0 else " rairt-nagy" if i == 1 else "") if h["kep"] else ""
+    # képre írt cím: csak a nyitóhírnél, és csak keskeny képernyőn (telefonon)
+    rairt = " rairt-kicsi" if i == 0 and h["kep"] else ""
     osztaly = tipus + koteg(cs) + rairt
     return f'''<article class="fo-hir {osztaly}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs)}>
   {kep if tipus != "kis" else ""}<div class="szoveg">
@@ -1903,19 +1903,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .fo-racs .fo-hir.rairt-kicsi .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.6)}
 .fo-racs .fo-hir.rairt-kicsi .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
 .fo-racs .fo-hir.rairt-kicsi .kep-helyett{background:color-mix(in srgb,var(--r) 35%,#111)}}
-@media (min-width:641px){
-.fo-racs .fo-hir.rairt-nagy{position:relative;min-height:24rem;overflow:hidden}
-.fo-racs .fo-hir.rairt-nagy .kep{position:absolute;inset:0;flex:none;min-height:0}
-.fo-racs .fo-hir.rairt-nagy .szoveg{position:relative;z-index:1;margin-top:auto;align-self:flex-end;width:100%;justify-content:flex-end;
-  padding:5rem 1.2rem 1.1rem;color:#fff;background:linear-gradient(to top,rgb(0 0 0/.86) 0%,rgb(0 0 0/.66) 55%,rgb(0 0 0/0) 100%)}
-.fo-racs .fo-hir.rairt-nagy h3{max-width:46rem;font-size:clamp(1.25rem,1.7vw,1.6rem);text-shadow:0 1px 8px rgb(0 0 0/.35)}
-.fo-racs .fo-hir.rairt-nagy h3 a,.fo-racs .fo-hir.rairt-nagy .forras,.fo-racs .fo-hir.rairt-nagy .lefed,.fo-racs .fo-hir.rairt-nagy .tovabbi a,.fo-racs .fo-hir.rairt-nagy .tovabbi a.mutatott{color:#fff}
-.fo-racs .fo-hir.rairt-nagy .meta,.fo-racs .fo-hir.rairt-nagy .lead,.fo-racs .fo-hir.rairt-nagy .tovabbi{color:rgb(255 255 255/.85)}
-.fo-racs .fo-hir.rairt-nagy .lead{max-width:46rem}
-.fo-racs .fo-hir.rairt-nagy .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.6)}
-.fo-racs .fo-hir.rairt-nagy .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
-.fo-racs .fo-hir.rairt-nagy .kep-helyett{background:color-mix(in srgb,var(--r) 35%,#111)}
-.fo-racs .fo-hir.rairt-nagy .lead{-webkit-line-clamp:3}}
+
 /* újságoldal: hasábok vonalakkal, kártyák nélkül (Kultúra, Életmód) */
 .rovat.ujsag .racs{gap:0;border:1px solid var(--vonal);background-color:var(--felulet);border-radius:6px;overflow:hidden;
   background-image:linear-gradient(var(--vonal),var(--vonal)),linear-gradient(var(--vonal),var(--vonal));
@@ -1936,7 +1924,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.stadion .rovatfej .csuk{background:#fff;color:var(--pa)}
 .rovat.stadion .rovatfej .db{color:rgb(255 255 255/.7)}
 .rovat.stadion .doboz{border-color:transparent;box-shadow:0 2px 10px rgb(0 0 0/.25)}
-.rovat.stadion .doboz.kiemelt:not(.szines){border-top-color:#facc15}
+.rovat.stadion .doboz.kiemelt:not(.szines){border-top:1px solid transparent;padding-top:.9rem}
 .rovat.stadion .tovabbi-hirek summary,.rovat.stadion .lista li,.rovat.stadion .lista a,.rovat.stadion .lista time{color:rgb(255 255 255/.92)}
 .rovat.stadion .lista li{border-color:rgb(255 255 255/.15)}
 .rovat.stadion .lista .forras{color:rgb(255 255 255/.65)}
