@@ -1590,9 +1590,10 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
                     lehet = [x for x in lehet if x.endswith("szeles")] or ["bal-szeles"]
                 elr = sors.choice(lehet)
                 szines = (not elozo_szines) and sors.random() < SZINES_ESELY
+            if not r.get("stadion"):
+                szines = False   # színes kiemelt kártya csak a Sportban; a közéleti rovatok felül csíkot,
+                                 # az újságoldal módú rovatok (Kultúra, Tech, Életmód) halvány rovatszínt kapnak
             elozo_elr, elozo_szines = elr, szines
-            if r.get("ujsag"):
-                szines = False   # az újságoldal módban nincs színes kártya
             extra = (" kiemelt-magas" if elr.endswith("magas") else "") + (" szines" if szines else "")
             nav.append(f'<a href="#{r["id"]}" style="--r:{r["szin"]}">{e(r["nev"])}</a>')
             reszek.append(f'''<section class="rovat{' ujsag' if r.get('ujsag') else ''}{' egyszeru' if r.get('egyszeru') else ''}{' stadion' if r.get('stadion') else ''}" id="{r["id"]}" style="--r:{r["szin"]}">
@@ -1910,7 +1911,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
   background-size:1px 100%;background-repeat:no-repeat;background-position:33.333% 0,66.667% 0}
 .rovat.ujsag .doboz{background:transparent;border:0;border-radius:0;box-shadow:none;padding:1rem 1.2rem}
 .rovat.ujsag .doboz:not(.kiemelt){border-bottom:1px solid var(--vonal)}
-.rovat.ujsag .doboz.kiemelt{background:var(--felulet);border-top:0;border-bottom:1px solid var(--vonal);padding-top:1rem}
+.rovat.ujsag .doboz.kiemelt{background:color-mix(in srgb,var(--r) 9%,var(--felulet));border-top:0;border-bottom:1px solid var(--vonal);padding-top:1rem}
 .rovat.ujsag .lapoz{background:transparent}
 /* Sport: „stadion” – a rovat sötét pályazöld sávon, fűcsíkokkal, félpályavonallal és középkörrel */
 .rovat.stadion{--pa:#14532d;position:relative;padding:1.6rem 0 1.8rem;
