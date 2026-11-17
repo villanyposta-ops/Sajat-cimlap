@@ -1824,7 +1824,8 @@ h1,h2,h3,h4{font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);margin
 .nyito .lead{font-size:.95rem;-webkit-line-clamp:3}
 .masod{grid-column:span 2}
 .masod .kep{aspect-ratio:2/1}
-.masod h3{font-size:1.15rem;line-height:1.22}
+.masod h3{font-size:1.3rem;line-height:1.2}
+@media (max-width:640px){.masod h3{font-size:1.22rem}}
 .masod .lead{-webkit-line-clamp:2}
 .kis{grid-column:span 2}
 .fo-hir.kis{flex-direction:row;align-items:flex-start}
