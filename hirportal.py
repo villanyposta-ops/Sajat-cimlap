@@ -202,28 +202,28 @@ ROVATOK = [
                  "culture", "after", "karakter"],
      "kulcsszavak": ["film", "színház", "koncert", "album", "regény", "író", "kiállítás", "múzeum",
                      "rendező", "színész", "fesztivál", "könyv"]},
-    {"id": "tech", "nev": "Tudomány és tech", "szin": "#6d28d9",
+    {"id": "tech", "nev": "Tudomány és tech", "szin": "#6d28d9", "ujsag": True,
      "utvonal": ["tech", "techtud", "tudomany", "tudomany-technika", "kornyezet", "zold", "mobil", "next",
                  "cegauto", "auto", "autos"],
      "kulcsszavak": ["kutató", "tudós", "mesterséges intelligencia", "űrszonda", "klíma", "apple",
                      "google", "okostelefon", "szoftver", "energia"]},
-    {"id": "sport", "nev": "Sport", "szin": "#15803d",
+    {"id": "eletmod", "nev": "Életmód", "szin": "#a16207", "ujsag": True,
+     "utvonal": ["eletmod", "elet-stilus", "elet", "egeszseg", "utazas", "gasztro", "otthon",
+                 "eletstilus"],
+     "kulcsszavak": ["recept", "egészség", "utazás", "étterem", "kert", "kutya", "macska"]},
+    {"id": "sport", "nev": "Sport", "szin": "#15803d", "stadion": True,
      "utvonal": ["sport", "foci", "futball", "sportmenu", "forma-1", "f1"],
      "kulcsszavak": ["meccs", "bajnokság", "válogatott", "gól", "edző", "olimpi",
                      "labdarúg", "focist", "futball", "játékvezet", "tizenegyes", "premier league", "csapatkapitány",
                      "forma-1", "teniszez", "kézilabd", "vízilabd", "úszó", "nb i.", "fradi",
                      "forma–1", "forma-1", "nb i", "bajnokok ligája",
                      "ftc", "európa-liga", "európa liga", "konferencialiga", "ultrá", "szurkol"]},
-    {"id": "eletmod", "nev": "Életmód", "szin": "#a16207", "ujsag": True,
-     "utvonal": ["eletmod", "elet-stilus", "elet", "egeszseg", "utazas", "gasztro", "otthon",
-                 "eletstilus"],
-     "kulcsszavak": ["recept", "egészség", "utazás", "étterem", "kert", "kutya", "macska"]},
-    {"id": "egyeb", "nev": "Egyéb", "szin": "#64748b",
+    {"id": "egyeb", "nev": "Egyéb", "szin": "#64748b", "dobozok": 0, "egyszeru": True,
      "utvonal": ["kozlemeny", "promo", "x-promo", "szponzoralt", "partner", "hirdetes", "pr", "pr-cikk",
                  "tamogatott-tartalom"], "kulcsszavak": []},
 ]
 HELYI_UTAN = "kulfold"    # a Helyi rovat ez után jön (None = rögtön a fő hírek után)
-HATTER_UTAN = "kultura"   # a Háttér rovat ez után jön
+HATTER_UTAN = "gazdasag"  # a Háttér rovat ez után jön
 HATTER_SZIN = "#57534e"
 HATTER_SORREND = ["atlatszo", "mhang", "valasz"]   # a hasábok sorrendje; a többi háttérlap utánuk jön
 HATTER_NAP = 7            # a háttéranyagok ennyi napig maradnak meg (a hírek 72 óráig)
@@ -1373,7 +1373,7 @@ def koteg(cs):
 def doboz(cs, lead=True, kiemelt=False, extra=""):
     h = cs["fo"]
     extra += koteg(cs)
-    if kiemelt and not h["kep"]:
+    if kiemelt and not h["kep"] and (h.get("lead") or "").strip():
         extra += " vezer"   # kép nélküli kiemelt: „vezércikk” tipográfia
     kep = kep_html(h, "kiemelt-kep") if kiemelt else kep_html(h, "belyeg")
     return f'''<article class="doboz{' kiemelt' if kiemelt else ''}{extra}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=lead)}>
@@ -1571,7 +1571,8 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
             if kiem:
                 # kiemelt: amelyikről a legtöbb lap írt, de a sztori korával csökkenő súllyal
                 # (KIEMELT_ORA óránként egy lappal kevesebbet ér), hogy a reggeli téma este már ne vezessen
-                k = max((c for c in dobozok if not OSSZEFOGLALO.search(c["fo"]["cim"])), key=lambda c: (round(len(c["forrasok"]) - c["kezdet_ora"] / KIEMELT_ORA, 1),
+                k = max((c for c in dobozok if not OSSZEFOGLALO.search(c["fo"]["cim"])), key=lambda c: (round(len(c["forrasok"]) - c["kezdet_ora"] / KIEMELT_ORA
+                                                      - (0 if c["fo"]["kep"] or (c["fo"].get("lead") or "").strip() else 1.5), 1),
                                                 bool(c["fo"]["kep"]), c["pont"]))
                 dobozok = [k] + [c for c in dobozok if c is not k]
             elr, szines = "bal-szeles", False
@@ -1592,7 +1593,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
                 szines = False   # az újságoldal módban nincs színes kártya
             extra = (" kiemelt-magas" if elr.endswith("magas") else "") + (" szines" if szines else "")
             nav.append(f'<a href="#{r["id"]}" style="--r:{r["szin"]}">{e(r["nev"])}</a>')
-            reszek.append(f'''<section class="rovat{' ujsag' if r.get('ujsag') else ''}" id="{r["id"]}" style="--r:{r["szin"]}">
+            reszek.append(f'''<section class="rovat{' ujsag' if r.get('ujsag') else ''}{' egyszeru' if r.get('egyszeru') else ''}{' stadion' if r.get('stadion') else ''}" id="{r["id"]}" style="--r:{r["szin"]}">
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
   {f'<div class="racs elr-{elr}">{"".join(doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else "")) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
@@ -1906,6 +1907,30 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.ujsag .doboz:not(.kiemelt){border-bottom:1px solid var(--vonal)}
 .rovat.ujsag .doboz.kiemelt{background:var(--felulet);border-top:0;border-bottom:1px solid var(--vonal);padding-top:1rem}
 .rovat.ujsag .lapoz{background:transparent}
+/* Sport: „stadion” – a rovat sötét pályazöld sávon, fűcsíkokkal, félpályavonallal és középkörrel */
+.rovat.stadion{--pa:#14532d;position:relative;padding:1.6rem 0 1.8rem;
+  background:radial-gradient(circle at 50% 50%,transparent 0 118px,rgb(255 255 255/.10) 119px 121px,transparent 122px),
+    linear-gradient(90deg,transparent calc(50% - 1px),rgb(255 255 255/.10) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)),
+    repeating-linear-gradient(90deg,rgb(255 255 255/.035) 0 90px,transparent 90px 180px),var(--pa);
+  box-shadow:0 0 0 100vmax var(--pa);clip-path:inset(0 -100vmax)}
+@media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .rovat.stadion{--pa:#0d331c}}
+:root[data-tema="sotet"] .rovat.stadion{--pa:#0d331c}
+.rovat.stadion .rovatfej::after{background:#fff;opacity:.3}
+.rovat.stadion .rovatfej .csuk{background:#fff;color:var(--pa)}
+.rovat.stadion .rovatfej .db{color:rgb(255 255 255/.7)}
+.rovat.stadion .doboz{border-color:transparent;box-shadow:0 2px 10px rgb(0 0 0/.25)}
+.rovat.stadion .doboz.kiemelt:not(.szines){border-top-color:#facc15}
+.rovat.stadion .tovabbi-hirek summary,.rovat.stadion .lista li,.rovat.stadion .lista a,.rovat.stadion .lista time{color:rgb(255 255 255/.92)}
+.rovat.stadion .lista li{border-color:rgb(255 255 255/.15)}
+.rovat.stadion .lista .forras{color:rgb(255 255 255/.65)}
+.rovat.stadion .cikkek-gomb{color:rgb(255 255 255/.75);border-color:rgb(255 255 255/.4)}
+.rovat.stadion .cikkek{border-left-color:rgb(255 255 255/.25)}
+/* Egyéb: egyszerű, kártyák nélküli címlista */
+.rovat.egyszeru .rovatcim{font-size:1rem;padding:.25rem .7rem}
+.rovat.egyszeru .tovabbi-hirek>summary{display:none}
+.rovat.egyszeru .tovabbi-hirek{margin-top:0}
+.rovat.egyszeru .lista{columns:3 300px;column-gap:2rem}
+.rovat.egyszeru .lista li{font-size:.86rem;padding:.32rem 0}
 .doboz.kiemelt .lead{-webkit-line-clamp:4}
 .kiemelt-kep{order:-1;width:42%;aspect-ratio:16/10;flex-shrink:0;border-radius:4px;overflow:hidden;background:var(--vonal)}
 .kiemelt-kep img{width:100%;height:100%;object-fit:cover;display:block}
@@ -2458,7 +2483,7 @@ def main():
     # a Google Hírek néha szerzői vagy címkeoldalt is cikknek ad ki (pl. „Dr. Kovács Asztrik”)
     ervenyes = [h for h in ervenyes if not ("news.google.com" in h["link"] and nem_cikk(h["cim"]))]
     # fizetett tartalom („… (x)”) nem kell
-    ervenyes = [h for h in ervenyes if not re.search(r"\(x\)\s*$", h["cim"])]
+    ervenyes = [h for h in ervenyes if not re.search(r"\(x\)\s*$", h["cim"], re.I)]
     # ugyanannak a lapnak azonos című cikkei közül csak egy maradjon (amelyiknek van képe/leadje)
     egyedi = {}
     for h in sorted(ervenyes, key=lambda h: (bool(h["kep"]), len(h["lead"])), reverse=True):
