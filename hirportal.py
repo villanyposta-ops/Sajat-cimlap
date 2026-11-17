@@ -163,6 +163,7 @@ OSSZEVON_KOZELI_ORA = 2
 OSSZEVON_KOZELI_MARAD = 0.13  # …de csak ha a legerősebb közös szó nélkül is marad ennyi hasonlóság
 RITKA_NEV_MAX = 5         # ritkának számít a (legalább 6 betűs) név, ha legfeljebb ennyi cikk címében szerepel
 KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér egy lappal kevesebbet egy téma
+KIEMELT_ABLAK = 12        # a kiemelt dobozhoz csak az ennyi óránál frissebb cikkek lapjai számítanak
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
 SZINES_ESELY = 0.35       # ekkora eséllyel színes (a rovat színében) a kiemelt kártya; 0 = soha
 DOBOZ_HELYENKENT = 4      # a helyi rovatban helyenként ennyi kiemelt (legfrissebb) hír a bal oldalon
@@ -493,6 +494,11 @@ NEPNEVEK = {"orosz", "amerikai", "német", "szlovák", "román", "lengyel", "fra
             "finn", "dán", "norvég", "bolgár", "japán", "kínai", "indiai"}
 
 
+# kulcsszó → azok a szóalakok, amelyek ugyan vele kezdődnek, de mást jelentenek
+# (az „iránti bizalom” nem Irán; a „Mi iránti” típusú cikkek így nem csúsznak a Külföldbe)
+KIZART_FOLYTATAS = {"irán": ("iránt",)}
+
+
 def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
     """A kulcsszó csak szó elején számít, utána toldalék állhat: az „adó” illik az „adóemelés” szóra,
     de a „kiadó” szóra nem. A népnevek (pl. „német”) nagy kezdőbetűvel csak mondat elején számítanak,
@@ -500,7 +506,8 @@ def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
     k = kulcsszo.strip()
     if k.startswith("!"):   # kis- és nagybetűre érzékeny rövidítés (pl. „!EP”: az EP-s igen, az „epizód” nem)
         return len(re.findall(rf"(?<![{BETU}-]){re.escape(k[1:])}(?![A-ZÁÉÍÓÖŐÚÜŰ])", eredeti or ""))
-    talalatok = list(re.finditer(rf"(?<![{BETU}-]){re.escape(k)}", szoveg))
+    talalatok = [m for m in re.finditer(rf"(?<![{BETU}-]){re.escape(k)}", szoveg)
+                 if not szoveg.startswith(KIZART_FOLYTATAS.get(k, ()), m.start())]
     if eredeti is None or k not in NEPNEVEK:
         return len(talalatok)
     db = 0
@@ -841,6 +848,12 @@ def osszevon(hirek):
         cs["kor_ora"] = kor_ora
     return csoportok
 
+
+
+def friss_lapok(cs):
+    """Hány különböző lap írt a témáról az utóbbi KIEMELT_ABLAK órában (legalább 1)."""
+    hatar = MOST - timedelta(hours=KIEMELT_ABLAK)
+    return max(1, len({h["forras"] for h in cs["hirek"] if datetime.fromisoformat(h["ido"]) >= hatar}))
 
 # ── Időjárás ───────────────────────────────────────────────────────
 
@@ -1571,9 +1584,10 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
             lista = [c for c in cs if c not in dobozok]
             kiem = sum(1 for c in dobozok if not OSSZEFOGLALO.search(c["fo"]["cim"])) >= 3   # van-e kiemelt (dupla) kártya
             if kiem:
-                # kiemelt: amelyikről a legtöbb lap írt, de a sztori korával csökkenő súllyal
-                # (KIEMELT_ORA óránként egy lappal kevesebbet ér), hogy a reggeli téma este már ne vezessen
-                k = max((c for c in dobozok if not OSSZEFOGLALO.search(c["fo"]["cim"])), key=lambda c: (round(len(c["forrasok"]) - c["kezdet_ora"] / KIEMELT_ORA
+                # kiemelt: amelyikről a legtöbb lap írt az utóbbi KIEMELT_ABLAK órában, a legfrissebb cikk
+                # korával csökkenő súllyal (KIEMELT_ORA óránként egy lappal kevesebbet ér); így a napközben
+                # tovább gördülő téma vezethet, a reggeli, azóta elhalt téma viszont este már nem
+                k = max((c for c in dobozok if not OSSZEFOGLALO.search(c["fo"]["cim"])), key=lambda c: (round(friss_lapok(c) - c["kor_ora"] / KIEMELT_ORA
                                                       - (0 if c["fo"]["kep"] or (c["fo"].get("lead") or "").strip() else 1.5), 1),
                                                 bool(c["fo"]["kep"]), c["pont"]))
                 dobozok = [k] + [c for c in dobozok if c is not k]
