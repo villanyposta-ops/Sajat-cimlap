@@ -2003,8 +2003,9 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.egyszeru .rovatcim{font-size:1rem;padding:.25rem .7rem}
 .rovat.egyszeru .tovabbi-hirek>summary{display:none}
 .rovat.egyszeru .tovabbi-hirek{margin-top:0}
-.rovat.egyszeru .lista{columns:3 300px;column-gap:2rem}
-.rovat.egyszeru .lista li{font-size:.86rem;padding:.32rem 0}
+.rovat.egyszeru .nap-csoport>.lista{background:var(--felulet);border-radius:8px;padding:.35rem 1.2rem .5rem;margin-top:.4rem}
+.rovat.egyszeru .lista time{min-width:2.9rem}
+.rovat.egyszeru .sor-cim>a{font-weight:600}
 .doboz.kiemelt .lead{-webkit-line-clamp:4}
 .kiemelt-kep{order:-1;width:42%;aspect-ratio:16/10;flex-shrink:0;border-radius:4px;overflow:hidden;background:var(--vonal)}
 .kiemelt-kep img{width:100%;height:100%;object-fit:cover;display:block}
