@@ -1415,9 +1415,12 @@ def doboz(cs, lead=True, kiemelt=False, extra=""):
 </article>'''
 
 
-def sor(cs, csak_ora=False):
+def sor(cs, csak_ora=False, rovid=False):
     h = cs["fo"]
-    ido = bp(datetime.fromisoformat(h["ido"])).strftime("%H:%M") if csak_ora else ido_szoveg(h["ido"])
+    if rovid:
+        ido = rovid_ido(h["ido"])   # ma csak óra:perc, korábban „tegnap 22:14”
+    else:
+        ido = bp(datetime.fromisoformat(h["ido"])).strftime("%H:%M") if csak_ora else ido_szoveg(h["ido"])
     return (f'<li data-srcs="{" ".join(cs["forrasok"])}"{alt_adat(cs, csak_ora, lead=False, kep=False)}><time>{ido}</time>'
             f'<span class="sor-cim"><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a> '
             f'{forras_nev(h["forras"])}{cikklista(cs)}</span></li>')
@@ -1427,7 +1430,7 @@ def friss_sav(lista):
     """A dobozokból kiszorult friss hírek a rovat alján: tömör, két hasábos lista egy külön lapon."""
     if not lista:
         return ""
-    return f'<div class="friss-sav"><ul class="lista">{"".join(sor(c, csak_ora=True) for c in lista)}</ul></div>'
+    return f'<div class="friss-sav"><ul class="lista">{"".join(sor(c, csak_ora=True, rovid=True) for c in lista)}</ul></div>'
 
 
 def rovid_ido(iso):
@@ -1635,9 +1638,11 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
             elozo_elr, elozo_szines = elr, szines
             # a dobozokból kiszorult, néhány óránál frissebb hírek ne tűnjenek el a lenyíló listában
             # (a kiírt cikk saját ideje számít, nem a téma legutóbbi frissülése)
-            hatar = MOST - timedelta(hours=FRISS_SAV_ORA)
+            # (az Egyéb rovatnak nincsenek dobozai: ott az utóbbi egy nap hírei kerülnek a sávba)
+            hatar = MOST - timedelta(hours=FRISS_ORA if r.get("egyszeru") else FRISS_SAV_ORA)
             sav = sorted([c for c in lista if datetime.fromisoformat(c["fo"]["ido"]) >= hatar],
-                         key=lambda c: datetime.fromisoformat(c["fo"]["ido"]), reverse=True)[:FRISS_SAV_MAX] if dobozok else []
+                         key=lambda c: datetime.fromisoformat(c["fo"]["ido"]), reverse=True)[:FRISS_SAV_MAX] \
+                if dobozok or r.get("egyszeru") else []
             lista = [c for c in lista if c not in sav]
             extra = (" kiemelt-magas" if elr.endswith("magas") else "") + (" szines" if szines else "")
             nav.append(f'<a href="#{r["id"]}" style="--r:{r["szin"]}">{e(r["nev"])}</a>')
@@ -1645,7 +1650,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
   {f'<div class="racs elr-{elr}">{"".join(doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else "")) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
-  {friss_sav(sav)}{korabban(lista, nyitva=not dobozok)}
+  {friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav)}
   </div>
 </section>''')
         if r["id"] == HELYI_UTAN:
@@ -1948,9 +1953,9 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.ujsag .doboz:not(.kiemelt) h3{font-size:1.2rem;line-height:1.22}
 @media (max-width:640px){.rovat .doboz:not(.kiemelt) h3,.fo-racs .fo-hir.kis h3{font-size:1.18rem}}
 /* a dobozokból kiszorult friss hírek sávja a rovat alján */
-.friss-sav{margin:1.2rem 0 .5rem;background:color-mix(in srgb,var(--r) 7%,var(--felulet));border-radius:8px;padding:.35rem 1.2rem .5rem}
+.friss-sav{margin:1.2rem 0 .5rem;background:var(--felulet);border-radius:8px;padding:.35rem 1.2rem .5rem}
 .friss-sav .lista{margin:0}
-.friss-sav .lista time{min-width:2.9rem}
+.friss-sav .lista time{min-width:2.9rem;white-space:nowrap}
 .friss-sav .sor-cim>a{font-weight:600}
 .rovat.stadion .friss-sav .lista li,.rovat.stadion .friss-sav .lista a{color:var(--tinta)}
 .rovat.stadion .friss-sav .lista time{color:var(--halvany)}.rovat.stadion .friss-sav .lista li{border-color:var(--vonal)}
@@ -2001,11 +2006,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.stadion .cikkek{border-left-color:rgb(255 255 255/.25)}
 /* Egyéb: egyszerű, kártyák nélküli címlista */
 .rovat.egyszeru .rovatcim{font-size:1rem;padding:.25rem .7rem}
-.rovat.egyszeru .tovabbi-hirek>summary{display:none}
-.rovat.egyszeru .tovabbi-hirek{margin-top:0}
-.rovat.egyszeru .nap-csoport>.lista{background:var(--felulet);border-radius:8px;padding:.35rem 1.2rem .5rem;margin-top:.4rem}
-.rovat.egyszeru .lista time{min-width:2.9rem}
-.rovat.egyszeru .sor-cim>a{font-weight:600}
+.rovat.egyszeru .friss-sav{background:var(--felulet);margin-top:.2rem}.rovat.egyszeru .friss-sav .lista time{min-width:5.4rem}
 .doboz.kiemelt .lead{-webkit-line-clamp:4}
 .kiemelt-kep{order:-1;width:42%;aspect-ratio:16/10;flex-shrink:0;border-radius:4px;overflow:hidden;background:var(--vonal)}
 .kiemelt-kep img{width:100%;height:100%;object-fit:cover;display:block}
