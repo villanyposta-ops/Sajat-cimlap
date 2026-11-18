@@ -50,7 +50,7 @@ FEJLEC_SZIN = None
 CIMBETUK = {
     "hirlap": {"csalad": "Oswald", "url": "Oswald:wght@400..700", "suly": 500, "nagy": 600, "ter": ".005em",
                "lista": "Barlow Semi Condensed", "lista_url": "Barlow+Semi+Condensed:wght@400;500;600",
-               "lista_tartalek": "'Arial Narrow',ui-sans-serif,system-ui,sans-serif"},
+               "lista_tartalek": "'Arial Narrow',ui-sans-serif,system-ui,sans-serif", "lista_suly": 500},
     "nemzeti": {"csalad": "Playfair Display", "url": "Playfair+Display:wght@400..900", "suly": 700, "nagy": 800, "ter": "0",
                 "tartalek": "Georgia,'Times New Roman',serif",
                 "lista": "Source Serif 4", "lista_url": "Source+Serif+4:opsz,wght@8..60,400..700",
@@ -2029,7 +2029,7 @@ summary{cursor:pointer;color:var(--halvany);font-size:.88rem;font-weight:600;wid
 .nap-csoport .lista time{min-width:3rem}
 summary:hover{color:var(--tinta)}
 .lista{list-style:none;margin:.5rem 0 0;padding:0;columns:2 440px;column-gap:2.5rem}
-.lista li{font-family:var(--listabetu,inherit);font-stretch:var(--lista-nyujt,100%);break-inside:avoid;padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.93rem;display:flex;gap:.8rem;align-items:baseline;line-height:1.35}
+.lista li{font-family:var(--listabetu,inherit);font-stretch:var(--lista-nyujt,100%);font-weight:var(--lista-suly,400);break-inside:avoid;padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.93rem;display:flex;gap:.8rem;align-items:baseline;line-height:1.35}
 .cikkek-gomb{font:inherit;font-size:.78rem;color:var(--halvany,#888);background:none;border:1px solid var(--vonal);border-radius:3px;padding:0 .4rem;margin-left:.3rem;cursor:pointer;white-space:nowrap;vertical-align:.05em}
 .cikkek-gomb:hover{color:inherit;border-color:currentColor}
 .cikkek-gomb .nyil{display:inline-block;transition:transform .15s}
@@ -2092,7 +2092,7 @@ summary:hover{color:var(--tinta)}
 .ido-hirek{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:8px;padding:1rem 1.1rem}
 .ido-hirek h3{font-size:1.05rem;font-weight:700;color:var(--r);margin-bottom:.4rem}
 .ido-hirek ul{list-style:none;margin:0;padding:0}
-.ido-hirek li{font-family:var(--listabetu,inherit);font-stretch:var(--lista-nyujt,100%);padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.9rem;line-height:1.35}
+.ido-hirek li{font-family:var(--listabetu,inherit);font-stretch:var(--lista-nyujt,100%);font-weight:var(--lista-suly,400);padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.9rem;line-height:1.35}
 .ido-hirek li:last-child{border-bottom:0}
 .ido-hirek time{display:block;color:var(--halvany);font-size:.74rem}
 .ido-hirek a:hover{text-decoration:underline}
@@ -2376,7 +2376,7 @@ FEJ_JS = r"""(function(){
     gy.setProperty('--cim-suly', bt.suly); gy.setProperty('--cim-suly-nagy', bt.nagy); gy.setProperty('--cim-ter', bt.ter); gy.setProperty('--cim-nyujt', bt.nyujt || '100%');
     // a listák (friss sáv, További hírek, Egyéb) a címbetűhöz illő, kicsiben is jól olvasható betűt kapnak
     if (bt.lista) { gy.setProperty('--listabetu', '"' + bt.lista + '",' + (bt.lista_tartalek || 'system-ui,sans-serif'));
-      gy.setProperty('--lista-nyujt', bt.lista_nyujt || '100%'); }
+      gy.setProperty('--lista-nyujt', bt.lista_nyujt || '100%'); gy.setProperty('--lista-suly', bt.lista_suly || 400); }
     var lk = document.createElement('link'); lk.rel = 'stylesheet';
     lk.href = 'https://fonts.googleapis.com/css2?family=' + bt.url + (bt.lista_url ? '&family=' + bt.lista_url : '') + '&display=swap';
     document.head.appendChild(lk);
