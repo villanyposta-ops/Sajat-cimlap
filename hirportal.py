@@ -2092,7 +2092,7 @@ summary:hover{color:var(--tinta)}
 .ido-hirek{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:8px;padding:1rem 1.1rem}
 .ido-hirek h3{font-size:1.05rem;font-weight:700;color:var(--r);margin-bottom:.4rem}
 .ido-hirek ul{list-style:none;margin:0;padding:0}
-.ido-hirek li{padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.9rem;line-height:1.35}
+.ido-hirek li{font-family:var(--listabetu,inherit);font-stretch:var(--lista-nyujt,100%);padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.9rem;line-height:1.35}
 .ido-hirek li:last-child{border-bottom:0}
 .ido-hirek time{display:block;color:var(--halvany);font-size:.74rem}
 .ido-hirek a:hover{text-decoration:underline}
