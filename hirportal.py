@@ -79,6 +79,12 @@ FORRASOK = [
     {"id": "euronews", "nev": "Euronews",    "szin": "#0369a1",
      "feeds": ["https://hu.euronews.com/rss?level=theme&name=news"], "alap": "kulfold",
      "alap_elony": 2},   # a kulcsszavas pontozásban ennyi előnnyel indul az alapértelmezett rovat
+    # BBC News Magyarul: a BBC World Service nyelvi oldalainak szokásos csatornája; ha nem létezik vagy
+    # nem elérhető, a Google Hírek tartaléka lép be (ott nincs bevezető és kép)
+    {"id": "bbc", "nev": "BBC News Magyarul", "szin": "#a21caf",
+     "feeds": ["https://feeds.bbci.co.uk/magyarul/rss.xml"],
+     "tartalek": "https://news.google.com/rss/search?q=site:bbc.com/magyarul+when:2d&hl=hu&gl=HU&ceid=HU:hu",
+     "alap": "kulfold", "alap_elony": 1},
 
     # Helyi lapok: ezek nem kerülnek a fő hírek és az országos rovatok közé,
     # hanem a „Helyi” rovatban jelennek meg, a „hely” szerinti fülekben (új hely: elég új „hely” értéket megadni).
