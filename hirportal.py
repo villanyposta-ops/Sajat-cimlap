@@ -155,6 +155,8 @@ MERES_ORAS_URL = "https://odp.met.hu/weather/weather_reports/synoptic/hungary/ho
 
 FO_HIREK_SZAMA = 11       # ennyi kerül a lap tetejére (1 nyitó + 4 képes + 6 kép nélküli)
 FO_MAX_ORA = 8            # a kiemelt részbe ennél frissebb hír kerülhet (a hír legutóbbi cikke számít)
+FEJLEMENY_ORA = 3         # ha egy régebbi témáról ennyi órán belül …
+FEJLEMENY_LAP = 2         # … legalább ennyi lap írt, a téma a friss fejlemény idejével számít
 NYITO_MAX_ORA = 3         # a nyitóhír ennél frissebb legyen; ha nincs ilyen, fokozatosan enged (5, 8, 12 óra)
 FO_TARTALEK_ORA = 12      # ha (pl. hajnalban) nincs elég 8 óránál frissebb hír, legfeljebb eddig nyúl vissza
 FO_STILUS = "arnyalt"     # a kiemelt rész háttere: "arnyalt" (a fejléc színének halvány árnyalata), "vilagos", "sotet"
@@ -865,7 +867,13 @@ def osszevon(hirek):
         cs["rovat"] = max(szavazat, key=lambda r: (szavazat[r], max(h.get("rovat_suly", 1) for h in hk if h["rovat"] == r)))
         kor_ora = (MOST - datetime.fromisoformat(cs["ido"])).total_seconds() / 3600
         # a sztori kora: az első róla szóló cikk óta eltelt idő (a kiemelt részhez ez számít)
-        cs["kezdet_ora"] = (MOST - min(datetime.fromisoformat(h["ido"]) for h in hk)).total_seconds() / 3600
+        # Egy továbbgördülő témánál viszont, ha az utóbbi FEJLEMENY_ORA órában legalább FEJLEMENY_LAP lap
+        # írt róla, az új fejlemény kezdete számít: így a délelőtt beharangozott, este bejelentett döntés
+        # újra friss hírként versenyez a Topért, nem szorul ki pusztán azért, mert reggel kezdődött.
+        idok = [(datetime.fromisoformat(h["ido"]), h["forras"]) for h in hk]
+        uj = [(t, f) for t, f in idok if MOST - t <= timedelta(hours=FEJLEMENY_ORA)]
+        kezdet = min(t for t, _ in uj) if len({f for _, f in uj}) >= FEJLEMENY_LAP else min(t for t, _ in idok)
+        cs["kezdet_ora"] = (MOST - kezdet).total_seconds() / 3600
         # fontosság: hány lap írt róla + frissesség
         cs["pont"] = 3 * len(cs["forrasok"]) + 0.5 * len(hk) + 5 * max(0.0, 1 - cs["kezdet_ora"] / FO_MAX_ORA)
         cs["kor_ora"] = kor_ora
