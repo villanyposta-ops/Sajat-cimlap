@@ -1431,7 +1431,8 @@ def friss_sav(lista):
         f'<li data-srcs="{" ".join(c["forrasok"])}"><div class="meta">{forras_nev(c["fo"]["forras"])}'
         f'<time>{ido_szoveg(c["fo"]["ido"])}</time></div>'
         f'<a class="fs-cim" href="{e(c["fo"]["link"])}" target="_blank" rel="noopener">{e(c["fo"]["cim"])}</a>'
-        + (f'<p class="fs-lead">{e(c["fo"]["lead"])}</p>' if c["fo"]["lead"] else "") + "</li>"
+        + (f'<p class="fs-lead">{e(c["fo"]["lead"])}</p>' if c["fo"]["lead"] else "")
+        + (f'<div class="fs-tobb">{cikklista(c)}</div>' if len(c["hirek"]) > 1 else "") + "</li>"
         for c in lista)
     return f'<div class="friss-sav"><h3>Az elmúlt órákból</h3><ul>{elemek}</ul></div>'
 
@@ -1956,14 +1957,15 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 /* a dobozokból kiszorult friss hírek sávja a rovat alján */
 .friss-sav{margin:1.3rem 0 .6rem}
 .friss-sav h3{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--r);margin:0 0 .5rem;font-family:inherit}
-.friss-sav ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);column-gap:1.6rem}
-.friss-sav li{border-top:1px solid var(--vonal,#d6dbe3);padding:.65rem 0 .8rem}
-.friss-sav .meta{font-size:.78rem;margin-bottom:.2rem}
-.friss-sav .fs-cim{display:block;font-weight:600;font-size:1.02rem;line-height:1.3;color:var(--tinta);text-decoration:none}
+.friss-sav>ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);column-gap:1.6rem}
+.friss-sav>ul>li{border-top:1px solid var(--vonal,#d6dbe3);padding:.65rem 0 .8rem}
+.friss-sav>ul>li>.meta{font-size:.78rem;margin-bottom:.2rem}
+.friss-sav .fs-cim{display:block;font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);font-weight:var(--cim-suly,650);letter-spacing:var(--cim-ter,-.01em);font-size:1.1rem;line-height:1.25;color:var(--tinta);text-decoration:none}
 .friss-sav .fs-cim:hover{text-decoration:underline}
+.friss-sav .fs-tobb{margin-top:.35rem}.friss-sav .cikkek{list-style:none;padding:0;margin:.4rem 0 0;font-size:.84rem;line-height:1.35}.friss-sav .cikkek li{display:flex;gap:.55rem;padding:.25rem 0}.friss-sav .cikkek time{color:var(--halvany);flex:none;min-width:2.6rem}.friss-sav .cikkek .forras{margin-right:.3rem}
 .friss-sav .fs-lead{margin:.25rem 0 0;font-size:.86rem;line-height:1.4;color:var(--lead);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-@media (max-width:1000px){.friss-sav ul{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:640px){.friss-sav ul{grid-template-columns:1fr}}
+@media (max-width:1000px){.friss-sav>ul{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.friss-sav>ul{grid-template-columns:1fr}}
 /* Top nyitóhír: a cím a képre írva */
 @media (max-width:640px){
 .fo-racs .fo-hir.rairt-kicsi{position:relative;min-height:21rem;overflow:hidden}
@@ -2004,7 +2006,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.stadion .tovabbi-hirek summary,.rovat.stadion .lista li,.rovat.stadion .lista a,.rovat.stadion .lista time{color:rgb(255 255 255/.92)}
 .rovat.stadion .lista li{border-color:rgb(255 255 255/.15)}
 .rovat.stadion .friss-sav h3,.rovat.stadion .friss-sav a,.rovat.stadion .friss-sav time{color:#fff}
-.rovat.stadion .friss-sav .fs-lead{color:rgb(255 255 255/.8)}.rovat.stadion .friss-sav li{border-color:rgb(255 255 255/.25)}
+.rovat.stadion .friss-sav .fs-lead{color:rgb(255 255 255/.8)}.rovat.stadion .friss-sav>ul>li{border-color:rgb(255 255 255/.25)}
 .rovat.stadion .lista .forras{color:rgb(255 255 255/.65)}
 .rovat.stadion .cikkek-gomb{color:rgb(255 255 255/.9);border-color:rgb(255 255 255/.5)}.rovat.stadion .cikkek-gomb .db{color:inherit;font-weight:600;order:0;font-size:inherit}.rovat.stadion .cikkek-gomb:hover{color:#fff;border-color:#fff}
 .rovat.stadion .cikkek{border-left-color:rgb(255 255 255/.25)}
