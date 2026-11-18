@@ -71,7 +71,7 @@ FORRASOK = [
      "hatter_rovatok": {"magyar-hang-plusz": "Plusz", "vendegoldal": "Vendégoldal", "budaihang": "Budai Hang"}},
     {"id": "atlatszo", "nev": "Átlátszó",    "szin": "#65a30d", "feeds": ["https://atlatszo.hu/feed/"],
      "hatter": True},            # a „Háttér” rovatba kerül, kimarad a hírversenyből és az összevonásból
-    {"id": "valasz", "nev": "Válasz Online", "szin": "#a16207", "feeds": ["https://www.valaszonline.hu/feed/"],
+    {"id": "valasz", "nev": "Válasz Online", "rovid": "Válasz", "szin": "#a16207", "feeds": ["https://www.valaszonline.hu/feed/"],
      "hatter": True},
     {"id": "nszo",   "nev": "Népszabadság",  "szin": "#991b1b", "feeds": ["https://nszo.hu/feed/"],
      "kep_oldalrol": True},   # a hírfolyamban többnyire nincs kép: az új cikkeknél a cikkoldalról (og:image) olvassuk ki
@@ -81,10 +81,10 @@ FORRASOK = [
      "alap_elony": 2},   # a kulcsszavas pontozásban ennyi előnnyel indul az alapértelmezett rovat
     # BBC News Magyarul: a BBC World Service nyelvi oldalainak szokásos csatornája; ha nem létezik vagy
     # nem elérhető, a Google Hírek tartaléka lép be (ott nincs bevezető és kép)
-    {"id": "bbc", "nev": "BBC News Magyarul", "szin": "#a21caf",
+    {"id": "bbc", "nev": "BBC News Magyarul", "rovid": "BBC", "szin": "#a21caf",
      "feeds": ["https://feeds.bbci.co.uk/magyarul/rss.xml"],
      "tartalek": "https://news.google.com/rss/search?q=site:bbc.com/magyarul+when:2d&hl=hu&gl=HU&ceid=HU:hu",
-     "alap": "kulfold", "alap_elony": 1},
+     "alap": "kulfold", "alap_elony": 1, "hatter": True},
 
     # Helyi lapok: ezek nem kerülnek a fő hírek és az országos rovatok közé,
     # hanem a „Helyi” rovatban jelennek meg, a „hely” szerinti fülekben (új hely: elég új „hely” értéket megadni).
@@ -232,10 +232,10 @@ ROVATOK = [
 HELYI_UTAN = "kulfold"    # a Helyi rovat ez után jön (None = rögtön a fő hírek után)
 HATTER_UTAN = "gazdasag"  # a Háttér rovat ez után jön
 HATTER_SZIN = "#57534e"
-HATTER_SORREND = ["atlatszo", "mhang", "valasz"]   # a hasábok sorrendje; a többi háttérlap utánuk jön
+HATTER_SORREND = ["atlatszo", "bbc", "mhang", "valasz"]   # a hasábok sorrendje; a többi háttérlap utánuk jön
 HATTER_NAP = 7            # a háttéranyagok ennyi napig maradnak meg (a hírek 72 óráig)
 HATTER_DOBOZ = 2          # lapokként ennyi legfrissebb anyag kap dobozt (bevezetővel)
-HATTER_LISTA = 6          # alattuk ennyi cím látszik, a többi a lenyitható „Korábban” részbe kerül
+HATTER_LISTA = 3          # alattuk ennyi cím látszik, a többi a lenyitható „Korábban” részbe kerül
 HELYI_SZIN = "#9f1239"
 IDOJARAS_SZIN = "#0369a1"
 
@@ -1493,7 +1493,7 @@ def hatter_szekcio(cs_lista):
         return (f'<li data-srcs="{h["forras"]}"><time>{rovid_ido(h["ido"])}</time>'
                 f'<span class="sor-cim"><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a>{cimke}</span></li>')
 
-    hasabok = []
+    hasabok, fulek = [], []
     sorrend = HATTER_SORREND + [f["id"] for f in FORRASOK if f["id"] not in HATTER_SORREND]
     for f in (FN[x] for x in sorrend):
         cs = sorted([c for c in cs_lista if c["fo"]["forras"] == f["id"]], key=lambda c: c["fo"]["ido"], reverse=True)
@@ -1503,13 +1503,17 @@ def hatter_szekcio(cs_lista):
         lathato, regi = lista[:HATTER_LISTA], lista[HATTER_LISTA:]
         reszlet = (f'<details class="tovabbi-hirek"><summary>Korábban ({len(regi)})</summary>'
                    f'<ul class="lista">{"".join(sor_(c) for c in regi)}</ul></details>') if regi else ""
-        hasabok.append(f'''<div class="hatter-hasab" data-srcs="{f["id"]}">
+        elso = not fulek
+        fulek.append(f'<button type="button" class="hely-ful hatter-ful" data-lap="{f["id"]}" style="--r:{f["szin"]}" '
+                     f'aria-selected="{str(elso).lower()}">{e(f.get("rovid", f["nev"]))}</button>')
+        hasabok.append(f'''<div class="hatter-hasab{" aktiv" if elso else ""}" data-srcs="{f["id"]}" data-lap="{f["id"]}">
   <h3 class="helynev" style="--r:{f["szin"]}">{e(f["nev"])}</h3>
   {"".join(doboz(c) for c in dob)}
   {f'<ul class="lista">{"".join(sor_(c) for c in lathato)}</ul>' if lathato else ""}{reszlet}
 </div>''')
     html_ = f'''<section class="rovat" id="hatter" style="--r:{HATTER_SZIN}">
   {rovatfej("hatter", "Háttér", HATTER_SZIN, len(cs_lista))}
+  <div class="hely-fulek hatter-fulek" role="tablist">{"".join(fulek)}</div>
   <div class="tartalom hatter-hasabok">{"".join(hasabok)}</div>
 </section>'''
     return html_, f'<a href="#hatter" style="--r:{HATTER_SZIN}">Háttér</a>'
@@ -2067,7 +2071,10 @@ summary:hover{color:var(--tinta)}
 
 /* helyi rovat */
 .helyek{display:block}
-.hatter-hasabok{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.4rem;align-items:start}
+.hatter-hasabok{display:grid;grid-template-columns:repeat(4,1fr);gap:1.2rem;align-items:start}
+@media (max-width:1199px){.hatter-hasabok{grid-template-columns:repeat(2,1fr)}}
+.hely-fulek.hatter-fulek{display:none}
+@media (max-width:640px){.hatter-hasabok{grid-template-columns:1fr}.hely-fulek.hatter-fulek{display:flex}.hatter-hasab:not(.aktiv){display:none}}
 .hatter-hasab{background:color-mix(in srgb,var(--r) 7%,var(--lap));border-radius:8px;padding:1.1rem;display:flex;flex-direction:column;gap:.7rem}
 .hatter-hasab .lista{columns:1;margin:0}
 .hatter-hasab .lista time{min-width:3.4rem;font-size:.78rem;white-space:nowrap}
@@ -2200,9 +2207,19 @@ document.addEventListener('click',ev=>{
 // a kép nélküli bélyegek helyére a lap aktuális fejléce
 addEventListener('load',()=>{ const lg=[...document.querySelectorAll('#fej .logo')].find(l=>l.getClientRects().length);
   if(lg) document.querySelectorAll('.kep-helyett:empty').forEach(d=>d.appendChild(lg.cloneNode(true))); });
+// háttér rovat fülei (csak telefonon látszanak): a választás megmarad
+(function(){
+  const fulek=[...document.querySelectorAll('.hatter-ful')]; if(!fulek.length) return;
+  const valt=(az,ment)=>{ if(!fulek.some(f=>f.dataset.lap===az)) return;
+    fulek.forEach(f=>f.setAttribute('aria-selected',f.dataset.lap===az));
+    document.querySelectorAll('.hatter-hasab').forEach(d=>d.classList.toggle('aktiv',d.dataset.lap===az));
+    if(ment) tarol.set('hp_hatter',az); };
+  valt(tarol.get('hp_hatter',''),false);
+  fulek.forEach(f=>f.addEventListener('click',()=>valt(f.dataset.lap,true)));
+})();
 // helyi rovat fülei: a választás megmarad, ?hely=komlo felülírja
 (function(){
-  const fulek=[...document.querySelectorAll('.hely-ful')]; if(!fulek.length) return;
+  const fulek=[...document.querySelectorAll('.hely-ful:not(.hatter-ful)')]; if(!fulek.length) return;
   const valt=(az,ment)=>{ if(!fulek.some(f=>f.dataset.hely===az)) return;
     fulek.forEach(f=>f.setAttribute('aria-selected',f.dataset.hely===az));
     document.querySelectorAll('.hely[data-hely]').forEach(d=>d.hidden=d.dataset.hely!==az);
