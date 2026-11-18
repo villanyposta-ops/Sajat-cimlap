@@ -177,6 +177,7 @@ OSSZEVON_KOZELI_ORA = 2
 OSSZEVON_KOZELI_MARAD = 0.13  # …de csak ha a legerősebb közös szó nélkül is marad ennyi hasonlóság
 RITKA_NEV_MAX = 5         # ritkának számít a (legalább 6 betűs) név, ha legfeljebb ennyi cikk címében szerepel
 KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér egy lappal kevesebbet egy téma
+FO_LEAD_MIN = 60          # ennél rövidebb bevezetőjű cikk csak végső esetben kerül egy téma élére
 KIEMELT_ABLAK = 12        # a kiemelt dobozhoz csak az ennyi óránál frissebb cikkek lapjai számítanak
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
 SZINES_ESELY = 0.35       # ekkora eséllyel színes (a rovat színében) a kiemelt kártya; 0 = soha
@@ -846,8 +847,11 @@ def osszevon(hirek):
     csoportok = [cs for cs in csoportok if cs["idx"]]
     for cs in csoportok:
         hk = cs["hirek"]
-        # a fő megjelenítendő változat: amelyiknek van képe és hosszabb leadje
-        hk.sort(key=lambda h: (bool(h["kep"]), len(h["lead"])), reverse=True)
+        # a fő megjelenítendő változat: a legfrissebb képes, rendes bevezetővel bíró cikk – egy továbbgördülő
+        # témánál így a legújabb fejlemény látszik elöl (pl. a bejelentés, nem a reggeli beharangozó);
+        # a lapozó a régebbiek felé visz. Ha nincs ilyen, a legfrissebb képes, végül bármelyik.
+        hk.sort(key=lambda h: (bool(h["kep"]) and len(h["lead"]) >= FO_LEAD_MIN, bool(h["kep"]),
+                               datetime.fromisoformat(h["ido"])), reverse=True)
         cs["fo"] = hk[0]
         cs["forrasok"] = sorted({h["forras"] for h in hk})
         cs["ido"] = max(h["ido"] for h in hk)
