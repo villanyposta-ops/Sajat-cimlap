@@ -48,11 +48,17 @@ NAPSZAK_SZINEK = [
 FEJLEC_SZIN = None
 # A címek betűtípusa a fejléchez igazodik (Google Fonts; csak a kiválasztott töltődik le)
 CIMBETUK = {
-    "hirlap": {"csalad": "Oswald", "url": "Oswald:wght@400..700", "suly": 500, "nagy": 600, "ter": ".005em"},
+    "hirlap": {"csalad": "Oswald", "url": "Oswald:wght@400..700", "suly": 500, "nagy": 600, "ter": ".005em",
+               "lista": "Barlow Semi Condensed", "lista_url": "Barlow+Semi+Condensed:wght@400;500;600",
+               "lista_tartalek": "'Arial Narrow',ui-sans-serif,system-ui,sans-serif"},
     "nemzeti": {"csalad": "Playfair Display", "url": "Playfair+Display:wght@400..900", "suly": 700, "nagy": 800, "ter": "0",
-                "tartalek": "Georgia,'Times New Roman',serif"},
+                "tartalek": "Georgia,'Times New Roman',serif",
+                "lista": "Source Serif 4", "lista_url": "Source+Serif+4:opsz,wght@8..60,400..700",
+                "lista_tartalek": "Georgia,'Times New Roman',serif"},
     "nepszava": {"csalad": "Roboto Serif", "url": "Roboto+Serif:opsz,wdth,wght@8..144,50..150,100..900", "suly": 700, "nagy": 750,
-                 "ter": "-.005em", "nyujt": "70%", "tartalek": "Georgia,'Times New Roman',serif"},
+                 "ter": "-.005em", "nyujt": "70%", "tartalek": "Georgia,'Times New Roman',serif",
+                 "lista": "Roboto Serif", "lista_nyujt": "85%",   # ugyanaz a család, kis méretre hangolt szélességgel
+                 "lista_tartalek": "Georgia,'Times New Roman',serif"},
 }        # ha egy állandó színt szeretnél, pl. "#16202f"; None = napszak szerint
 
 # Országos lapok. Az „alap” rovat akkor számít, ha a cikkről semmi más nem derül ki.
@@ -2023,7 +2029,7 @@ summary{cursor:pointer;color:var(--halvany);font-size:.88rem;font-weight:600;wid
 .nap-csoport .lista time{min-width:3rem}
 summary:hover{color:var(--tinta)}
 .lista{list-style:none;margin:.5rem 0 0;padding:0;columns:2 440px;column-gap:2.5rem}
-.lista li{break-inside:avoid;padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.93rem;display:flex;gap:.8rem;align-items:baseline;line-height:1.35}
+.lista li{font-family:var(--listabetu,inherit);font-stretch:var(--lista-nyujt,100%);break-inside:avoid;padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.93rem;display:flex;gap:.8rem;align-items:baseline;line-height:1.35}
 .cikkek-gomb{font:inherit;font-size:.78rem;color:var(--halvany,#888);background:none;border:1px solid var(--vonal);border-radius:3px;padding:0 .4rem;margin-left:.3rem;cursor:pointer;white-space:nowrap;vertical-align:.05em}
 .cikkek-gomb:hover{color:inherit;border-color:currentColor}
 .cikkek-gomb .nyil{display:inline-block;transition:transform .15s}
@@ -2368,8 +2374,11 @@ FEJ_JS = r"""(function(){
     var gy = document.documentElement.style;
     gy.setProperty('--cimbetu', '"' + bt.csalad + '",' + (bt.tartalek || 'ui-sans-serif,system-ui,sans-serif'));
     gy.setProperty('--cim-suly', bt.suly); gy.setProperty('--cim-suly-nagy', bt.nagy); gy.setProperty('--cim-ter', bt.ter); gy.setProperty('--cim-nyujt', bt.nyujt || '100%');
+    // a listák (friss sáv, További hírek, Egyéb) a címbetűhöz illő, kicsiben is jól olvasható betűt kapnak
+    if (bt.lista) { gy.setProperty('--listabetu', '"' + bt.lista + '",' + (bt.lista_tartalek || 'system-ui,sans-serif'));
+      gy.setProperty('--lista-nyujt', bt.lista_nyujt || '100%'); }
     var lk = document.createElement('link'); lk.rel = 'stylesheet';
-    lk.href = 'https://fonts.googleapis.com/css2?family=' + bt.url + '&display=swap';
+    lk.href = 'https://fonts.googleapis.com/css2?family=' + bt.url + (bt.lista_url ? '&family=' + bt.lista_url : '') + '&display=swap';
     document.head.appendChild(lk);
   }
   fej.querySelectorAll('.logo-v').forEach(function (el) { el.hidden = el.dataset.stilus !== st; });
