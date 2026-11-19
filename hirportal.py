@@ -2021,11 +2021,13 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .fo-hir.koteg .kep{border-radius:6px 6px 0 0;overflow:hidden}
 /* kis képek csak ott, ahol jelentenek valamit: az egy lapos sima dobozban nincs kép, a cím kiér a szélig és nagyobb;
    a több lapos (csíkos) dobozban marad a bélyeg, de ott is nagyobb a cím (az újságos rovatok kivételek) */
-.rovat:not(.ujsag) .doboz:not(.kiemelt):not(.tobblap) .belyeg{display:none}
+.rovat:not(.ujsag):not(.stadion) .doboz:not(.kiemelt):not(.tobblap) .belyeg{display:none}
 .rovat:not(.ujsag) .doboz:not(.kiemelt) h3{font-size:1.24rem;line-height:1.22}
+.rovat.stadion .doboz:not(.kiemelt) h3{font-size:1.2rem}
 .rovat:not(.ujsag) .doboz.tobblap:not(.kiemelt) h3{font-size:1.2rem}
 .fo-racs .fo-hir.kis h3{font-size:1.24rem;line-height:1.22}
 .rovat.ujsag .doboz:not(.kiemelt) h3{font-size:1.2rem;line-height:1.22}
+.rovat.ujsag .doboz .lead{-webkit-line-clamp:5}   /* az újságos hasábban több fér el a bevezetőből */
 @media (max-width:640px){.rovat .doboz:not(.kiemelt) h3,.fo-racs .fo-hir.kis h3{font-size:1.18rem}}
 /* halom: egy doboz helyén három kis kártya (lap, idő, cím) */
 .halom{display:flex;flex-direction:column;gap:.7rem;min-width:0}
@@ -2034,7 +2036,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .halom .mini .meta{font-size:.76rem;margin-bottom:.25rem}
 .halom .mini h4{margin:0;font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);font-weight:var(--cim-suly,600);letter-spacing:var(--cim-ter,0);font-size:1.04rem;line-height:1.22;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .halom .mini h4 a{color:var(--tinta);text-decoration:none}.halom .mini h4 a:hover{text-decoration:underline}
-.rovat.ujsag .halom{gap:0}
+.rovat.ujsag .halom{gap:0;border-bottom:1px solid var(--vonal)}
 .rovat.ujsag .halom .mini{background:transparent;border:0;border-radius:0;border-top:1px solid var(--vonal);padding:.8rem 1.2rem}
 @media (max-width:640px){.rovat.ujsag .halom .mini{padding-left:1rem;padding-right:1rem}}
 /* az Egyéb rovat friss hírei kis kártyákon, három hasábban */
@@ -2112,6 +2114,20 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.stadion .lista .forras{color:rgb(255 255 255/.65)}
 .rovat.stadion .cikkek-gomb{color:rgb(255 255 255/.9);border-color:rgb(255 255 255/.5)}.rovat.stadion .cikkek-gomb .db{color:inherit;font-weight:600;order:0;font-size:inherit}.rovat.stadion .cikkek-gomb:hover{color:#fff;border-color:#fff}
 .rovat.stadion .cikkek{border-left-color:rgb(255 255 255/.25)}
+/* Időjárás: „égbolt” – mélykék sáv halvány felhőfoltokkal és ferde esőcsíkokkal */
+.rovat.idojaras{--eg:#075985;position:relative;padding:1.6rem 0 1.8rem;
+  background:radial-gradient(ellipse 260px 70px at 12% 18%,rgb(255 255 255/.09),transparent 70%),
+    radial-gradient(ellipse 200px 55px at 20% 26%,rgb(255 255 255/.07),transparent 70%),
+    radial-gradient(ellipse 320px 80px at 78% 12%,rgb(255 255 255/.08),transparent 70%),
+    radial-gradient(ellipse 220px 60px at 88% 22%,rgb(255 255 255/.06),transparent 70%),
+    repeating-linear-gradient(105deg,transparent 0 22px,rgb(255 255 255/.04) 22px 23px,transparent 23px 46px),var(--eg);
+  box-shadow:0 0 0 100vmax var(--eg);clip-path:inset(0 -100vmax)}
+@media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .rovat.idojaras{--eg:#082f49}}
+:root[data-tema="sotet"] .rovat.idojaras{--eg:#082f49}
+.rovat.idojaras .rovatfej::after{background:#fff;opacity:.3}
+.rovat.idojaras .rovatfej .csuk{background:#fff;color:var(--eg)}
+.rovat.idojaras .rovatfej .db{color:rgb(255 255 255/.7)}
+.rovat.idojaras .ido-hely,.rovat.idojaras .ido-hirek,.rovat.idojaras .doboz{border-color:transparent;box-shadow:0 2px 10px rgb(0 0 0/.25)}
 /* Egyéb: egyszerű, kártyák nélküli címlista */
 .rovat.egyszeru .rovatcim{font-size:1rem;padding:.25rem .7rem}
 .rovat.egyszeru .friss-sav{background:var(--felulet);margin-top:.2rem}.rovat.egyszeru .friss-sav .lista time{min-width:5.4rem}
