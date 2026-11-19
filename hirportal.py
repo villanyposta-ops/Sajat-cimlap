@@ -192,13 +192,13 @@ DOBOZ_HELYENKENT = 4      # a helyi rovatban helyenként ennyi kiemelt (legfriss
 #            lap által megadott kategória (WordPress-lapoknál, pl. Magyar Hang, Válasz)
 #   kulcsszavak: ha sem az URL, sem a kategória nem árulkodó, a cím és a lead alapján
 ROVATOK = [
-    {"id": "belfold", "nev": "Belföld", "szin": "#1d4ed8", "dobozok": 11,
+    {"id": "belfold", "nev": "Belföld", "szin": "#1d4ed8", "dobozok": 11, "ujsag": True,
      "utvonal": ["belfold", "itthon", "kozelet", "politika", "belpol", "orszag", "kozugyek",
                  "orszagszerte", "jogallamisag", "kozpenz", "kozeleti"],
      "kulcsszavak": ["kormány", "orbán", "fidesz", "tisza párt", "magyar péter", "parlament", "országgyűlés",
                      "miniszter", "polgármester", "önkormányzat", "választás", "ellenzék", "budapest",
                      "rendőrség", "bíróság", "ügyészség", "kdnp", "mi hazánk", "ügynök", "állambiztonság"]},
-    {"id": "kulfold", "nev": "Külföld", "szin": "#0f766e", "dobozok": 11,
+    {"id": "kulfold", "nev": "Külföld", "szin": "#0f766e", "dobozok": 11, "ujsag": True,
      "utvonal": ["kulfold", "vilag", "nagyvilag", "europa", "eu", "kulpolitika", "my-europe", "world",
                  "tudositoink"],  # Infostart: a külföldi tudósítók anyagai
      "kulcsszavak": ["!EP", "!EU", "!ENSZ", "!NATO", "európai parlament", "európai bizottság", "emírség", "florida", "texas", "kalifornia", "new york", "ukrajn", "orosz", "putyin", "trump", "amerikai", "európai unió", "brüsszel",
@@ -211,7 +211,7 @@ ROVATOK = [
                      "belga", "holland", "portugál", "svéd", "finn", "dán", "norvég", "bolgár",
                      "japán", "kínai", "indiai", "brüsszel", "amszterdam", "lisszabon", "madrid", "róma", "athén",
                      "stockholm", "koppenhága", "oslo", "helsinki", "dublin", "szófia"]},
-    {"id": "gazdasag", "nev": "Gazdaság", "szin": "#b45309", "dobozok": 11,
+    {"id": "gazdasag", "nev": "Gazdaság", "szin": "#b45309", "dobozok": 11, "ujsag": True,
      "utvonal": ["gazdasag", "fn", "kkv", "penz", "ingatlan", "fogyasztas", "uzlet", "befektetes", "ceg",
                  "business", "bank", "deviza", "tozsde", "unios-forrasok", "krypto", "kriptopenz", "g7"],
      "kulcsszavak": ["infláció", "forint", "jegybank", "mnb", "kamat", "gdp", "költségvetés", "adó",
@@ -2072,6 +2072,17 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .fo-racs .fo-hir.rairt-kicsi .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
 .fo-racs .fo-hir.rairt-kicsi .kep-helyett{background:color-mix(in srgb,var(--r) 35%,#111)}}
 
+/* KÍSÉRLET: a Top is újságoldal – egy fehér lap, a hírek között vékony vonalak (a rács 1 px-es hézaga) */
+.elso .fo-racs{gap:1px;background:var(--vonal);border:1px solid var(--vonal);border-radius:6px;overflow:hidden}
+.elso .fo-racs .fo-hir{background:var(--felulet);border:0;border-radius:0;box-shadow:none}
+.elso .fo-racs .fo-hir .lead{color:var(--lead)}
+.elso .fo-racs .fo-hir .meta,.elso .fo-racs .fo-hir .tovabbi{color:var(--halvany)}
+.elso .fo-racs .fo-hir .forras{color:var(--c)}
+.elso .fo-racs .fo-hir .lefed{color:var(--tinta)}
+.elso .fo-racs .fo-hir h3 a{color:var(--tinta)}
+.elso .fo-racs .nyito{background:color-mix(in srgb,var(--fejszin,#16202f) 5%,var(--felulet))}
+.elso .fo-racs .fo-hir .kep{margin:1rem 1.1rem 0;border-radius:3px;overflow:hidden}
+.elso .fo-racs .nyito .kep{margin:1.2rem 0 1.2rem 1.2rem}
 /* újságoldal: hasábok vonalakkal, kártyák nélkül (Kultúra, Életmód) */
 .rovat.ujsag .racs{gap:0;border:1px solid var(--vonal);background-color:var(--felulet);border-radius:6px;overflow:hidden;
   background-image:linear-gradient(var(--vonal),var(--vonal)),linear-gradient(var(--vonal),var(--vonal));
