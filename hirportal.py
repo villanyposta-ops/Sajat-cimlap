@@ -182,6 +182,9 @@ KIEMELT_ORA = 4           # a rovat kiemelt dobozánál ennyi óránként ér eg
 FO_LEAD_MIN = 60          # ennél rövidebb bevezetőjű cikk csak végső esetben kerül egy téma élére
 KIEMELT_ABLAK = 12        # a kiemelt dobozhoz csak az ennyi óránál frissebb cikkek lapjai számítanak
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
+HALOM = True              # a rovatok egy-egy sorában egy doboz helyére három kis, kép és bevezető nélküli kártya kerül
+HALOM_DB = 3              # ennyi kis kártya egy halomban (ha a sor alacsony, eggyel kevesebb)
+HALOM_MAGAS = 9           # a szomszéd doboz becsült magassága („sor” egységben), amelytől három kis kártya fér el
 SZINES_ESELY = 0.35       # ekkora eséllyel színes (a rovat színében) a kiemelt kártya; 0 = soha
 DOBOZ_HELYENKENT = 4      # a helyi rovatban helyenként ennyi kiemelt (legfrissebb) hír a bal oldalon
 
@@ -1441,6 +1444,49 @@ def sor(cs, csak_ora=False, rovid=False):
             f'{forras_nev(h["forras"])}{cikklista(cs)}</span></li>')
 
 
+def halom(csoportok):
+    """Egy doboz helyén több kis kártya: lap, idő és cím (bevezető és kép nélkül) – egy lapos, régebbi hírekhez."""
+    kartyak = "".join(
+        f'<article class="mini" data-srcs="{c["fo"]["forras"]}"><div class="meta">{forras_nev(c["fo"]["forras"])}'
+        f'<time>{ido_szoveg(c["fo"]["ido"])}</time></div>'
+        f'<h4><a href="{e(c["fo"]["link"])}" target="_blank" rel="noopener">{e(c["fo"]["cim"])}</a></h4></article>'
+        for c in csoportok)
+    return f'<div class="halom">{kartyak}</div>'
+
+
+def becsult_magassag(c):
+    """Egy doboz várható magassága „sor” egységben (közelítés): fejléc, cím sorai (nagyobb betű),
+    a legfeljebb háromsoros bevezető és a több lapos témák plusz sorai (lefedettség, Erről írt, lapozó)."""
+    h = c["fo"]
+    cim = math.ceil(len(h["cim"]) / 38)
+    lead = min(3, math.ceil(len(h["lead"] or "") / 52))
+    return 1 + 1.5 * cim + lead + (3 if len(c["forrasok"]) > 1 else 0)
+
+
+def halom_helyek(dobozok, lista, sorok, sors):
+    """A megadott sorokban (a rács dobozainak indexei szerint) egy-egy sorsolt doboz helyére halom kerül.
+    Csak egy lapos, nem összevont hír kerülhet halomba: a helyén álló dobozé és a lista elejéről még kettő.
+    Visszaad: {doboz index: [csoportok]} és a megmaradt lista."""
+    egyszeru = lambda c: len(c["hirek"]) == 1
+    helyek = {}
+    for sor in sorok:
+        jo = [i for i in sor if i < len(dobozok) and egyszeru(dobozok[i])]
+        if not jo:
+            continue
+        i = sors.choice(jo)
+        # a sor magasságát a szomszéd dobozok adják: ha azok rövidek (rövid bevezető, egy lap),
+        # csak két kis kártya fér el szépen, különben három
+        szomszed = [becsult_magassag(dobozok[k]) for k in sor if k != i and k < len(dobozok)]
+        db = HALOM_DB if szomszed and max(szomszed) >= HALOM_MAGAS else HALOM_DB - 1
+        tobbi = [c for c in lista if egyszeru(c)]
+        if len(tobbi) < db - 1:
+            continue
+        hozza = tobbi[:db - 1]
+        helyek[i] = sorted([dobozok[i]] + hozza, key=lambda c: c["fo"]["ido"], reverse=True)
+        lista = [c for c in lista if not any(c is x for x in hozza)]
+    return helyek, lista
+
+
 def friss_sav(lista):
     """A dobozokból kiszorult friss hírek a rovat alján: tömör, két hasábos lista egy külön lapon."""
     if not lista:
@@ -1651,6 +1697,16 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
                 szines = False   # színes kiemelt kártya csak a Sportban; a közéleti rovatok felül csíkot,
                                  # az újságoldal módú rovatok (Kultúra, Tech, Életmód) halvány rovatszínt kapnak
             elozo_elr, elozo_szines = elr, szines
+            # halmok: az alsó sorban (a nagy rovatokban a harmadikban is) egy doboz helyére három kis kártya
+            halmok = {}
+            if HALOM and kiem and ROVAT_VALTOZATOS and not r.get("stadion") and len(dobozok) >= 5:
+                n = len(dobozok)
+                sorok = [range(n - 3, n)]
+                if n >= 11:
+                    sorok.insert(0, range(5, 8))
+                if n == 5 and elr.endswith("magas"):
+                    sorok = []          # öt doboznál a magas kiemelt mellett nincs teli sor
+                halmok, lista = halom_helyek(dobozok, lista, sorok, sors)
             # a dobozokból kiszorult, néhány óránál frissebb hírek ne tűnjenek el a lenyíló listában
             # (a kiírt cikk saját ideje számít, nem a téma legutóbbi frissülése)
             # (az Egyéb rovatnak nincsenek dobozai: ott az utóbbi egy nap hírei kerülnek a sávba)
@@ -1664,7 +1720,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
             reszek.append(f'''<section class="rovat{' ujsag' if r.get('ujsag') else ''}{' egyszeru' if r.get('egyszeru') else ''}{' stadion' if r.get('stadion') else ''}" id="{r["id"]}" style="--r:{r["szin"]}">
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
-  {f'<div class="racs elr-{elr}">{"".join(doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else "")) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
+  {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else "")) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
   {friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav)}
   </div>
 </section>''')
@@ -1967,6 +2023,16 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .fo-racs .fo-hir.kis h3{font-size:1.24rem;line-height:1.22}
 .rovat.ujsag .doboz:not(.kiemelt) h3{font-size:1.2rem;line-height:1.22}
 @media (max-width:640px){.rovat .doboz:not(.kiemelt) h3,.fo-racs .fo-hir.kis h3{font-size:1.18rem}}
+/* halom: egy doboz helyén három kis kártya (lap, idő, cím) */
+.halom{display:flex;flex-direction:column;gap:.7rem;min-width:0}
+.halom .mini{flex:1;background:var(--felulet);border:1px solid var(--vonal);border-radius:8px;padding:.7rem 1rem .75rem;display:flex;flex-direction:column;justify-content:center}
+.halom .mini.rejtett{display:none}
+.halom .mini .meta{font-size:.76rem;margin-bottom:.25rem}
+.halom .mini h4{margin:0;font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);font-weight:var(--cim-suly,600);letter-spacing:var(--cim-ter,0);font-size:1.04rem;line-height:1.22;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.halom .mini h4 a{color:var(--tinta);text-decoration:none}.halom .mini h4 a:hover{text-decoration:underline}
+.rovat.ujsag .halom{gap:0}
+.rovat.ujsag .halom .mini{background:transparent;border:0;border-radius:0;border-top:1px solid var(--vonal);padding:.8rem 1.2rem}
+@media (max-width:640px){.rovat.ujsag .halom .mini{padding-left:1rem;padding-right:1rem}}
 /* a dobozokból kiszorult friss hírek sávja a rovat alján */
 .friss-sav{margin:1.2rem 0 .5rem;background:var(--felulet);border-radius:8px;padding:.35rem 1.2rem .5rem}
 .friss-sav .lista{margin:0}
