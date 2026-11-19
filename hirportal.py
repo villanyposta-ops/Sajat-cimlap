@@ -2077,14 +2077,14 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 /* KÍSÉRLET: a Top is újságoldal – egy fehér lap, a hírek között vékony vonalak (a rács 1 px-es hézaga) */
 .elso .fo-racs{gap:1px;background:var(--vonal);border:1px solid var(--vonal);border-radius:6px;overflow:hidden}
 .elso .fo-racs .fo-hir{background:var(--felulet);border:0;border-radius:0;box-shadow:none}
-.elso .fo-racs .fo-hir .lead{color:var(--lead)}
-.elso .fo-racs .fo-hir .meta,.elso .fo-racs .fo-hir .tovabbi{color:var(--halvany)}
-.elso .fo-racs .fo-hir .forras{color:var(--c)}
-.elso .fo-racs .fo-hir .lefed{color:var(--tinta)}
-.elso .fo-racs .fo-hir h3 a{color:var(--tinta)}
+.elso .fo-racs .fo-hir:not(.rairt-kicsi) .lead{color:var(--lead)}
+.elso .fo-racs .fo-hir:not(.rairt-kicsi) .meta,.elso .fo-racs .fo-hir:not(.rairt-kicsi) .tovabbi{color:var(--halvany)}
+.elso .fo-racs .fo-hir:not(.rairt-kicsi) .forras{color:var(--c)}
+.elso .fo-racs .fo-hir:not(.rairt-kicsi) .lefed{color:var(--tinta)}
+.elso .fo-racs .fo-hir:not(.rairt-kicsi) h3 a{color:var(--tinta)}
 .elso .fo-racs .nyito{background:color-mix(in srgb,var(--fejszin,#16202f) 5%,var(--felulet))}
-.elso .fo-racs .fo-hir .kep{margin:1rem 1.1rem 0;border-radius:3px;overflow:hidden}
-.elso .fo-racs .nyito .kep{margin:1.2rem 0 1.2rem 1.2rem}
+.elso .fo-racs .fo-hir:not(.rairt-kicsi) .kep{margin:1rem 1.1rem 0;border-radius:3px;overflow:hidden}
+.elso .fo-racs .nyito:not(.rairt-kicsi) .kep{margin:1.2rem 0 1.2rem 1.2rem}
 /* újságoldal: hasábok vonalakkal, kártyák nélkül (Kultúra, Életmód) */
 .rovat.ujsag .racs{gap:0;border:1px solid var(--vonal);background-color:var(--felulet);border-radius:6px;overflow:hidden;
   background-image:linear-gradient(var(--vonal),var(--vonal)),linear-gradient(var(--vonal),var(--vonal));
@@ -2116,11 +2116,17 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.stadion .cikkek{border-left-color:rgb(255 255 255/.25)}
 /* Időjárás: „égbolt” – mélykék sáv halvány felhőfoltokkal és ferde esőcsíkokkal */
 .rovat.idojaras{--eg:#075985;position:relative;padding:1.6rem 0 1.8rem;
-  background:radial-gradient(ellipse 260px 70px at 12% 18%,rgb(255 255 255/.09),transparent 70%),
-    radial-gradient(ellipse 200px 55px at 20% 26%,rgb(255 255 255/.07),transparent 70%),
-    radial-gradient(ellipse 320px 80px at 78% 12%,rgb(255 255 255/.08),transparent 70%),
-    radial-gradient(ellipse 220px 60px at 88% 22%,rgb(255 255 255/.06),transparent 70%),
-    repeating-linear-gradient(105deg,transparent 0 22px,rgb(255 255 255/.04) 22px 23px,transparent 23px 46px),var(--eg);
+  background:
+    radial-gradient(ellipse 150px 46px at 8% 14%,rgb(255 255 255/.16),transparent 72%),
+    radial-gradient(ellipse 110px 40px at 14% 9%,rgb(255 255 255/.14),transparent 72%),
+    radial-gradient(ellipse 190px 52px at 46% 6%,rgb(255 255 255/.12),transparent 72%),
+    radial-gradient(ellipse 130px 44px at 52% 2%,rgb(255 255 255/.11),transparent 72%),
+    radial-gradient(ellipse 170px 50px at 86% 12%,rgb(255 255 255/.16),transparent 72%),
+    radial-gradient(ellipse 120px 42px at 93% 7%,rgb(255 255 255/.14),transparent 72%),
+    radial-gradient(ellipse 160px 48px at 28% 92%,rgb(255 255 255/.10),transparent 72%),
+    radial-gradient(ellipse 180px 50px at 72% 96%,rgb(255 255 255/.10),transparent 72%),
+    repeating-linear-gradient(105deg,transparent 0 18px,rgb(255 255 255/.075) 18px 20px,transparent 20px 40px),
+    var(--eg);
   box-shadow:0 0 0 100vmax var(--eg);clip-path:inset(0 -100vmax)}
 @media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .rovat.idojaras{--eg:#082f49}}
 :root[data-tema="sotet"] .rovat.idojaras{--eg:#082f49}
