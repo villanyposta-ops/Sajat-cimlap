@@ -1444,6 +1444,19 @@ def sor(cs, csak_ora=False, rovid=False):
             f'{forras_nev(h["forras"])}{cikklista(cs)}</span></li>')
 
 
+def kis_kartyak(csoportok):
+    """Az Egyéb rovat friss hírei: három hasábos rácsban kis kártyák (lap, idő, cím, kétsoros bevezető)."""
+    if not csoportok:
+        return ""
+    kartyak = "".join(
+        f'<article class="mini" data-srcs="{" ".join(c["forrasok"])}"><div class="meta">{forras_nev(c["fo"]["forras"])}'
+        f'<time>{ido_szoveg(c["fo"]["ido"])}</time></div>'
+        f'<h4><a href="{e(c["fo"]["link"])}" target="_blank" rel="noopener">{e(c["fo"]["cim"])}</a></h4>'
+        + (f'<p class="lead">{e(c["fo"]["lead"])}</p>' if c["fo"]["lead"] else "") + "</article>"
+        for c in csoportok)
+    return f'<div class="kis-kartyak">{kartyak}</div>'
+
+
 def halom(csoportok):
     """Egy doboz helyén több kis kártya: lap, idő és cím (bevezető és kép nélkül) – egy lapos, régebbi hírekhez."""
     kartyak = "".join(
@@ -1721,7 +1734,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
   {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else "")) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
-  {friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav)}
+  {kis_kartyak(sav) if r.get("egyszeru") else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav)}
   </div>
 </section>''')
         if r["id"] == HELYI_UTAN:
@@ -2033,6 +2046,16 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.ujsag .halom{gap:0}
 .rovat.ujsag .halom .mini{background:transparent;border:0;border-radius:0;border-top:1px solid var(--vonal);padding:.8rem 1.2rem}
 @media (max-width:640px){.rovat.ujsag .halom .mini{padding-left:1rem;padding-right:1rem}}
+/* az Egyéb rovat friss hírei kis kártyákon, három hasábban */
+.kis-kartyak{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;margin:.2rem 0 .6rem}
+.kis-kartyak .mini{background:var(--felulet);border:1px solid var(--vonal);border-radius:8px;padding:.75rem 1rem .85rem}
+.kis-kartyak .mini.rejtett{display:none}
+.kis-kartyak .mini .meta{font-size:.76rem;margin-bottom:.25rem}
+.kis-kartyak .mini h4{margin:0;font-weight:var(--cim-suly,600);letter-spacing:var(--cim-ter,0);font-size:1.06rem;line-height:1.22}
+.kis-kartyak .mini h4 a{color:var(--tinta);text-decoration:none}.kis-kartyak .mini h4 a:hover{text-decoration:underline}
+.kis-kartyak .mini .lead{margin-top:.3rem;font-size:.86rem;-webkit-line-clamp:2}
+@media (max-width:1000px){.kis-kartyak{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.kis-kartyak{grid-template-columns:1fr}}
 /* a dobozokból kiszorult friss hírek sávja a rovat alján */
 .friss-sav{margin:1.2rem 0 .5rem;background:var(--felulet);border-radius:8px;padding:.35rem 1.2rem .5rem}
 .friss-sav .lista{margin:0}
