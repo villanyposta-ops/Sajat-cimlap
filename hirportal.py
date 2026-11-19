@@ -739,7 +739,7 @@ def egyesit(csoportok, hason, T, ablak, V):
         csoportok[b]["idx"], csoportok[b]["hirek"] = [], []
 
 
-def osszevon(hirek):
+def osszevon(hirek, kulcs=None):
     """Ugyanarról szóló cikkek csoportosítása betű-n-gramos TF-IDF hasonlósággal.
     Minden cikkből súlyozott vektor készül a cím és a bevezető 4 betűs darabjaiból; a ritka darabok többet
     érnek (IDF), a nagyon gyakoriak (a cikkek >10%-ában) kimaradnak. Időrendben haladva egy cikk akkor kerül
@@ -747,7 +747,8 @@ def osszevon(hirek):
     – legalább egy, OSSZEVON_ABLAK_ORA órán belüli tagjához OSSZEVON_EROS feletti a hasonlósága, és
     – az ablakon belüli tagokhoz mért átlagos hasonlósága is eléri az OSSZEVON_ATLAG értéket
       (ez akadályozza meg, hogy a csoport láncszerűen átcsússzon más témákra);
-    több jelölt közül az átlagosan leghasonlóbb csoport nyer."""
+    több jelölt közül az átlagosan leghasonlóbb csoport nyer.
+    Ha kulcs is adott (cikk → érték), csak az azonos kulcsú cikkek kerülhetnek egy csoportba (helyi hírek: hely)."""
     import math
     hirek = sorted(hirek, key=lambda h: h["ido"])
     N = len(hirek)
@@ -776,12 +777,13 @@ def osszevon(hirek):
     ritka = [{w for w in n if nev_df[w] <= RITKA_NEV_MAX} for n in nevek]
     ablak = OSSZEVON_ABLAK_ORA * 3600
     # hasonlóságok a fordított indexszel: csak a közös darabot tartalmazó, időben közeli párokat számoljuk
+    K = [kulcs(h) for h in hirek] if kulcs else None
     index, hason = {}, {}
     for i, v in enumerate(V):
         acc = {}
         for g, x in v.items():
             for j in index.get(g, ()):
-                if T[i] - T[j] <= ablak:
+                if T[i] - T[j] <= ablak and (kulcs is None or K[i] == K[j]):
                     acc[j] = acc.get(j, 0) + x * V[j][g]
             index.setdefault(g, []).append(i)
         hason[i] = acc
@@ -1574,7 +1576,7 @@ def helyi_rovat(helyi_cs):
   <div class="hely-kiemelt">{"".join(doboz(c, lead=False) for c in kiemelt)}</div>
   <div class="hely-lista">{lista}{korabban(regi, nyitva=not friss_tobbi)}</div>
 </div>''')
-    html_ = f'''<section class="rovat" id="helyi" style="--r:{HELYI_SZIN}">
+    html_ = f'''<section class="rovat helyi" id="helyi" style="--r:{HELYI_SZIN}">
   {rovatfej("helyi", "Helyi", HELYI_SZIN, len(helyi_cs))}
   <div class="hely-fulek" role="tablist">{"".join(fulek)}</div>
   <div class="tartalom helyek">{"".join(lapok_)}</div>
@@ -1974,6 +1976,8 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.stadion .friss-sav .lista time{color:var(--halvany)}.rovat.stadion .friss-sav .lista li{border-color:var(--vonal)}
 .rovat.stadion .friss-sav .lista .forras{color:var(--c)}
 .rovat.stadion .friss-sav .cikkek-gomb{color:var(--halvany);border-color:var(--vonal)}.rovat.stadion .friss-sav .cikkek-gomb .db{font-weight:400}.rovat.stadion .friss-sav .cikkek-gomb:hover{color:var(--tinta);border-color:var(--halvany)}
+/* a Helyi rovat dobozaiban nincs kép, a több lapos témáknál sem */
+.rovat.helyi .doboz .belyeg{display:none}
 /* Top nyitóhír: a cím a képre írva */
 @media (max-width:640px){
 .fo-racs .fo-hir.rairt-kicsi{position:relative;min-height:21rem;overflow:hidden}
@@ -2605,7 +2609,9 @@ def main():
     orszagos = osszevon([h for h in ervenyes if h["rovat"] not in ("helyi", "idojaras", "hatter")])
     # a háttéranyagokat nem vonjuk össze: mindegyik önálló „sztori”
     hatter_cs = [osszevon([h])[0] for h in ervenyes if h["rovat"] == "hatter"]
-    helyi_cs = osszevon([h for h in ervenyes if h["rovat"] == "helyi"])
+    # a helyi híreket helyenként külön vonjuk össze: pécsi és somogyi cikk akkor se kerüljön egy témába,
+    # ha közös a tárgyuk (pl. nyugdíjak), hiszen a fülek helyek szerint választják szét őket
+    helyi_cs = osszevon([h for h in ervenyes if h["rovat"] == "helyi"], kulcs=lambda h: FN[h["forras"]].get("hely"))
     Path(a.kimenet).parent.mkdir(parents=True, exist_ok=True)
     idokep = [h for h in ervenyes if h["rovat"] == "idojaras"]
     meresek = meres_letolt()
