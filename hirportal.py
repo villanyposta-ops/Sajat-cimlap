@@ -1701,9 +1701,9 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
                 szines = False   # színes kiemelt kártya csak a Sportban; a közéleti rovatok felül csíkot,
                                  # az újságoldal módú rovatok (Kultúra, Tech, Életmód) halvány rovatszínt kapnak
             elozo_elr, elozo_szines = elr, szines
-            # halmok: az alsó sorban (a nagy rovatokban a harmadikban is) egy doboz helyére három kis kártya
+            # halmok: az alsó sorban (a nagy rovatokban a harmadikban is) egy doboz helyére két-három kis kártya
             halmok = {}
-            if HALOM and kiem and ROVAT_VALTOZATOS and not r.get("stadion") and len(dobozok) >= 5:
+            if HALOM and kiem and ROVAT_VALTOZATOS and len(dobozok) >= 5:
                 n = len(dobozok)
                 sorok = [range(n - 3, n)]
                 if n >= 11:
