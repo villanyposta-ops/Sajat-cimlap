@@ -1390,23 +1390,18 @@ def kep_html(h, osztaly):
 def fo_doboz(cs, i):
     h = cs["fo"]
     tipus = "nyito" if i == 0 else ("masod" if i < 5 else "kis")
-    if tipus != "kis":
-        kep = kep_html(h, "kep")
-    elif h["kep"]:
-        kep = kep_html(h, "belyeg")
-    else:   # kép nélkül is legyen bélyeg (a rovat színe és a fejléc), hogy lapozáskor be tudjon jönni a kép
-        kep = '<div class="belyeg"><img alt="" style="visibility:hidden"><div class="kep-helyett"></div></div>'
+    # a Top két alsó sorának kis dobozai kép nélküliek: a cím kiér a doboz széléig
+    kep = kep_html(h, "kep") if tipus != "kis" else ""
     lead = f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] else ""
     rszin = next((r["szin"] for r in ROVATOK if r["id"] == cs["rovat"]), "#64748b")
     # képre írt cím: csak a nyitóhírnél, és csak keskeny képernyőn (telefonon)
     rairt = " rairt-kicsi" if i == 0 and h["kep"] else ""
     osztaly = tipus + rairt   # a Topban nincs köteg: ott eleve csak sokat megírt témák vannak
     return f'''<article class="fo-hir {osztaly}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs)}>
-  {kep if tipus != "kis" else ""}<div class="szoveg">
+  {kep}<div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
   {lead}{lefedettseg(cs)}{tovabbi(cs)}</div>
-  {kep if tipus == "kis" else ""}
 </article>'''
 
 
@@ -1967,7 +1962,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat:not(.ujsag) .doboz:not(.kiemelt):not(.tobblap) .belyeg{display:none}
 .rovat:not(.ujsag) .doboz:not(.kiemelt) h3{font-size:1.24rem;line-height:1.22}
 .rovat:not(.ujsag) .doboz.tobblap:not(.kiemelt) h3{font-size:1.2rem}
-.fo-racs .fo-hir.kis h3{font-size:1.2rem;line-height:1.22}
+.fo-racs .fo-hir.kis h3{font-size:1.24rem;line-height:1.22}
 .rovat.ujsag .doboz:not(.kiemelt) h3{font-size:1.2rem;line-height:1.22}
 @media (max-width:640px){.rovat .doboz:not(.kiemelt) h3,.fo-racs .fo-hir.kis h3{font-size:1.18rem}}
 /* a dobozokból kiszorult friss hírek sávja a rovat alján */
