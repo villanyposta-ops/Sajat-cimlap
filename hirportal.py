@@ -183,8 +183,7 @@ FO_LEAD_MIN = 60          # ennél rövidebb bevezetőjű cikk csak végső eset
 KIEMELT_ABLAK = 12        # a kiemelt dobozhoz csak az ennyi óránál frissebb cikkek lapjai számítanak
 ROVAT_VALTOZATOS = True   # a rovatok kiemelt kártyája óránként sorsolt elrendezést kap (széles/magas, bal/jobb)
 HALOM = True              # a rovatok egy-egy sorában egy doboz helyére három kis, kép és bevezető nélküli kártya kerül
-HALOM_DB = 3              # ennyi kis kártya egy halomban (ha a sor alacsony, eggyel kevesebb)
-HALOM_MAGAS = 9           # a szomszéd doboz becsült magassága („sor” egységben), amelytől három kis kártya fér el
+HALOM_DB = 3              # ennyi kis kártya egy halomban, ha a sorban van több lapos téma; különben eggyel kevesebb
 SZINES_ESELY = 0.35       # ekkora eséllyel színes (a rovat színében) a kiemelt kártya; 0 = soha
 DOBOZ_HELYENKENT = 4      # a helyi rovatban helyenként ennyi kiemelt (legfrissebb) hír a bal oldalon
 
@@ -1467,15 +1466,6 @@ def halom(csoportok):
     return f'<div class="halom">{kartyak}</div>'
 
 
-def becsult_magassag(c):
-    """Egy doboz várható magassága „sor” egységben (közelítés): fejléc, cím sorai (nagyobb betű),
-    a legfeljebb háromsoros bevezető és a több lapos témák plusz sorai (lefedettség, Erről írt, lapozó)."""
-    h = c["fo"]
-    cim = math.ceil(len(h["cim"]) / 38)
-    lead = min(3, math.ceil(len(h["lead"] or "") / 52))
-    return 1 + 1.5 * cim + lead + (3 if len(c["forrasok"]) > 1 else 0)
-
-
 def halom_helyek(dobozok, lista, sorok, sors):
     """A megadott sorokban (a rács dobozainak indexei szerint) egy-egy sorsolt doboz helyére halom kerül.
     Csak egy lapos, nem összevont hír kerülhet halomba: a helyén álló dobozé és a lista elejéről még kettő.
@@ -1487,10 +1477,11 @@ def halom_helyek(dobozok, lista, sorok, sors):
         if not jo:
             continue
         i = sors.choice(jo)
-        # a sor magasságát a szomszéd dobozok adják: ha azok rövidek (rövid bevezető, egy lap),
-        # csak két kis kártya fér el szépen, különben három
-        szomszed = [becsult_magassag(dobozok[k]) for k in sor if k != i and k < len(dobozok)]
-        db = HALOM_DB if szomszed and max(szomszed) >= HALOM_MAGAS else HALOM_DB - 1
+        # a sor magasságát a szomszéd dobozok adják: ha köztük van több lapos (összevont) téma, annak doboza
+        # a lefedettség, az „Erről írt” sor, a lapozó és a kis kép miatt magas, így három kis kártya fér mellé;
+        # ha nincs, a szomszédok alacsonyabbak, és kettő kerül ide
+        magas = any(len(dobozok[k]["forrasok"]) > 1 for k in sor if k != i and k < len(dobozok))
+        db = HALOM_DB if magas else HALOM_DB - 1
         tobbi = [c for c in lista if egyszeru(c)]
         if len(tobbi) < db - 1:
             continue
