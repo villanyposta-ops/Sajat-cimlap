@@ -1459,9 +1459,10 @@ def friss_racs(lista):
     if not lista:
         return ""
     cellak = [
-        f'<article class="fs" data-srcs="{" ".join(c["forrasok"])}"><div class="meta">{forras_nev(c["fo"]["forras"])}'
-        f'<time>{ido_szoveg(c["fo"]["ido"])}</time></div>'
-        f'<h4><a href="{e(c["fo"]["link"])}" target="_blank" rel="noopener">{e(c["fo"]["cim"])}</a></h4>'
+        # a lap neve színesen közvetlenül a cím előtt (sortörés nélkül), az idő kicsiben a cím végén
+        f'<article class="fs" data-srcs="{" ".join(c["forrasok"])}"><h4>{forras_nev(c["fo"]["forras"])}'
+        f'<a href="{e(c["fo"]["link"])}" target="_blank" rel="noopener">{e(c["fo"]["cim"])}</a></h4>'
+        f'<time class="fs-ido">{ido_szoveg(c["fo"]["ido"])}</time>'
         + (f' {cikklista(c)}' if len(c["hirek"]) > 1 else "") + "</article>"
         for c in lista]
     cellak += ['<div class="fs ures"></div>'] * (-len(cellak) % 3)   # az utolsó sor is teli legyen (vonalak)
@@ -2071,7 +2072,8 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .fs-racs .fs{padding:.7rem 1.2rem .75rem;border-top:1px solid var(--vonal);border-left:1px solid var(--vonal);min-width:0}
 .fs-racs .fs:nth-child(3n+1){border-left:0}
 .fs-racs .fs.rejtett{display:none}
-.fs-racs .meta{font-size:.76rem;margin-bottom:.15rem}
+.fs-racs h4 .forras{font:inherit;margin-right:.3rem}
+.fs-racs .fs-ido{font-size:.76rem;color:var(--halvany);margin-left:.4rem;white-space:nowrap}
 .fs-racs h4{margin:0;font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);font-weight:var(--cim-suly,700);
   letter-spacing:var(--cim-ter,0);font-size:.95rem;line-height:1.3;display:inline}
 .fs-racs h4 a{color:var(--tinta);text-decoration:none}.fs-racs h4 a:hover{text-decoration:underline}
