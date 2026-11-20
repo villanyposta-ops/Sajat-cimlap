@@ -1453,6 +1453,21 @@ def sor(cs, csak_ora=False, rovid=False):
             f'{forras_nev(h["forras"])}{cikklista(cs)}</span></li>')
 
 
+def friss_racs(lista):
+    """Újságos rovatokban a dobozokból kiszorult friss hírek a rács folytatásaként: három hasáb, halvány
+    vonalak, felül lap és idő, alatta a cím a címbetűvel, de a folyószöveg méretében (bevezető nélkül)."""
+    if not lista:
+        return ""
+    cellak = [
+        f'<article class="fs" data-srcs="{" ".join(c["forrasok"])}"><div class="meta">{forras_nev(c["fo"]["forras"])}'
+        f'<time>{ido_szoveg(c["fo"]["ido"])}</time></div>'
+        f'<h4><a href="{e(c["fo"]["link"])}" target="_blank" rel="noopener">{e(c["fo"]["cim"])}</a></h4>'
+        + (f' {cikklista(c)}' if len(c["hirek"]) > 1 else "") + "</article>"
+        for c in lista]
+    cellak += ['<div class="fs ures"></div>'] * (-len(cellak) % 3)   # az utolsó sor is teli legyen (vonalak)
+    return f'<div class="fs-racs">{"".join(cellak)}</div>'
+
+
 def kis_kartyak(csoportok):
     """Az Egyéb rovat friss hírei: három hasábos rácsban kis kártyák (lap, idő, cím, kétsoros bevezető)."""
     if not csoportok:
@@ -1735,7 +1750,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
   {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else "")) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
-  {kis_kartyak(sav) if r.get("egyszeru") else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav)}
+  {kis_kartyak(sav) if r.get("egyszeru") else friss_racs(sav) if r.get("ujsag") and dobozok else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav)}
   </div>
 </section>''')
         if r["id"] == HELYI_UTAN:
@@ -2049,6 +2064,21 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.ujsag .halom{gap:0;border-bottom:1px solid var(--vonal)}
 .rovat.ujsag .halom .mini{background:transparent;border:0;border-radius:0;border-top:1px solid var(--vonal);padding:.8rem 1.2rem}
 @media (max-width:640px){.rovat.ujsag .halom .mini{padding-left:1rem;padding-right:1rem}}
+/* újságos rovatok: a friss rövidhírek a rács folytatásaként, ugyanabban a keretben */
+.rovat.ujsag .racs:has(+ .fs-racs){border-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0}
+.fs-racs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--vonal);border-top:0;
+  border-radius:0 0 6px 6px;background:var(--felulet);margin:0 0 .6rem;overflow:hidden}
+.fs-racs .fs{padding:.7rem 1.2rem .75rem;border-top:1px solid var(--vonal);border-left:1px solid var(--vonal);min-width:0}
+.fs-racs .fs:nth-child(3n+1){border-left:0}
+.fs-racs .fs.rejtett{display:none}
+.fs-racs .meta{font-size:.76rem;margin-bottom:.15rem}
+.fs-racs h4{margin:0;font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);font-weight:var(--cim-suly,700);
+  letter-spacing:var(--cim-ter,0);font-size:.95rem;line-height:1.3;display:inline}
+.fs-racs h4 a{color:var(--tinta);text-decoration:none}.fs-racs h4 a:hover{text-decoration:underline}
+.fs-racs .cikkek-gomb{vertical-align:1px}
+.fs-racs .cikkek{font-family:var(--listabetu,inherit);font-weight:var(--lista-suly,400);font-size:.84rem;line-height:1.35;list-style:none;padding:0;margin:.45rem 0 0}
+.fs-racs .cikkek li{display:flex;gap:.5rem;padding:.2rem 0}.fs-racs .cikkek time{color:var(--halvany);flex:none}.fs-racs .cikkek .forras{margin-right:.3rem}
+@media (max-width:640px){.fs-racs{grid-template-columns:1fr}.fs-racs .fs{border-left:0;padding-left:1rem;padding-right:1rem}.fs-racs .fs.ures{display:none}}
 /* az Egyéb rovat friss hírei kis kártyákon, három hasábban */
 .kis-kartyak{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;margin:.2rem 0 .6rem}
 .kis-kartyak .mini{background:var(--felulet);border:1px solid var(--vonal);border-radius:6px;padding:.75rem 1rem .85rem}
