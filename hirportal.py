@@ -2032,7 +2032,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 @media (max-width:640px){.rovat .doboz:not(.kiemelt) h3,.fo-racs .fo-hir.kis h3{font-size:1.18rem}}
 /* halom: egy doboz helyén három kis kártya (lap, idő, cím) */
 .halom{display:flex;flex-direction:column;gap:.7rem;min-width:0}
-.halom .mini{flex:1;background:var(--felulet);border:1px solid var(--vonal);border-radius:8px;padding:.7rem 1rem .75rem;display:flex;flex-direction:column;justify-content:center}
+.halom .mini{flex:1;background:var(--felulet);border:1px solid var(--vonal);border-radius:6px;padding:.7rem 1rem .75rem;display:flex;flex-direction:column;justify-content:center}
 .halom .mini.rejtett{display:none}
 .halom .mini .meta{font-size:.76rem;margin-bottom:.25rem}
 .halom .mini h4{margin:0;font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);font-weight:var(--cim-suly,600);letter-spacing:var(--cim-ter,0);font-size:1.04rem;line-height:1.22;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -2042,7 +2042,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 @media (max-width:640px){.rovat.ujsag .halom .mini{padding-left:1rem;padding-right:1rem}}
 /* az Egyéb rovat friss hírei kis kártyákon, három hasábban */
 .kis-kartyak{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;margin:.2rem 0 .6rem}
-.kis-kartyak .mini{background:var(--felulet);border:1px solid var(--vonal);border-radius:8px;padding:.75rem 1rem .85rem}
+.kis-kartyak .mini{background:var(--felulet);border:1px solid var(--vonal);border-radius:6px;padding:.75rem 1rem .85rem}
 .kis-kartyak .mini.rejtett{display:none}
 .kis-kartyak .mini .meta{font-size:.76rem;margin-bottom:.25rem}
 .kis-kartyak .mini h4{margin:0;font-weight:var(--cim-suly,600);letter-spacing:var(--cim-ter,0);font-size:1.06rem;line-height:1.22}
@@ -2051,7 +2051,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 @media (max-width:1000px){.kis-kartyak{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.kis-kartyak{grid-template-columns:1fr}}
 /* a dobozokból kiszorult friss hírek sávja a rovat alján */
-.friss-sav{margin:1.2rem 0 .5rem;background:var(--felulet);border-radius:8px;padding:.35rem 1.2rem .5rem}
+.friss-sav{margin:1.2rem 0 .5rem;background:var(--felulet);border:1px solid var(--vonal);border-radius:6px;padding:.35rem 1.2rem .5rem}
 .friss-sav .lista{margin:0}
 .friss-sav .lista time{min-width:2.9rem;white-space:nowrap}
 .friss-sav .sor-cim>a{font-weight:600}
