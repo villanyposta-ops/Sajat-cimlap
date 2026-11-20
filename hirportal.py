@@ -1890,7 +1890,7 @@ h1,h2,h3,h4{font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);margin
 .forrasmenu summary{list-style:none;cursor:pointer;font-size:.86rem;font-weight:600;padding:.3rem .8rem;border:1px solid var(--vonal);border-radius:5px;background:var(--felulet)}
 .forrasmenu summary::-webkit-details-marker{display:none}
 .forrasmenu summary::after{content:" ▾";color:var(--halvany)}
-.panel{position:absolute;right:0;top:calc(100% + .2rem);width:min(22rem,90vw);background:var(--felulet);border:1px solid var(--vonal);border-radius:8px;padding:1rem;box-shadow:0 12px 32px rgb(15 23 42/.18)}
+.panel{position:absolute;right:0;top:calc(100% + .2rem);width:min(22rem,90vw);background:var(--felulet);border:1px solid var(--vonal);border-radius:6px;padding:1rem;box-shadow:0 12px 32px rgb(15 23 42/.18)}
 .panel p{margin:0 0 .8rem;font-size:.82rem;color:var(--halvany)}
 .panel h4{font-size:.85rem;margin:.6rem 0 .4rem}
 .szurok{display:flex;flex-wrap:wrap;gap:.35rem}
@@ -2214,7 +2214,7 @@ summary:hover{color:var(--tinta)}
 @media (max-width:760px){.ido-meres{grid-column:auto}.meres-lista{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}}
 .ido-ikon{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .i-nap{stroke:#f59e0b}.i-hold{stroke:#94a3b8;fill:rgb(148 163 184/.18)}.i-felho{stroke:var(--halvany)}.i-csepp{stroke:#3b82f6}.i-ho{stroke:#38bdf8;stroke-width:2.6}.i-villam{stroke:#eab308}
-.ido-hirek{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:8px;padding:1rem 1.1rem}
+.ido-hirek{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:6px;padding:1rem 1.1rem}
 .ido-hirek h3{font-size:1.05rem;font-weight:700;color:var(--r);margin-bottom:.4rem}
 .ido-hirek ul{list-style:none;margin:0;padding:0}
 .ido-hirek li{font-family:var(--listabetu,inherit);font-stretch:var(--lista-nyujt,100%);font-weight:var(--lista-suly,400);padding:.45rem 0;border-bottom:1px solid var(--vonal);font-size:.9rem;line-height:1.35}
@@ -2233,7 +2233,7 @@ summary:hover{color:var(--tinta)}
 @media (max-width:1199px){.hatter-hasabok{grid-template-columns:repeat(2,1fr)}}
 .hely-fulek.hatter-fulek{display:none}
 @media (max-width:640px){.hatter-hasabok{grid-template-columns:1fr}.hely-fulek.hatter-fulek{display:flex}.hatter-hasab:not(.aktiv){display:none}}
-.hatter-hasab{background:color-mix(in srgb,var(--r) 7%,var(--lap));border-radius:8px;padding:1.1rem;display:flex;flex-direction:column;gap:.7rem}
+.hatter-hasab{background:color-mix(in srgb,var(--r) 7%,var(--lap));border-radius:6px;padding:1.1rem;display:flex;flex-direction:column;gap:.7rem}
 .hatter-hasab .lista{columns:1;margin:0}
 .hatter-hasab .lista time{min-width:3.4rem;font-size:.78rem;white-space:nowrap}
 .hatter-rov{font-size:.74rem;color:var(--halvany,#888);margin-left:.35rem;white-space:nowrap}
@@ -2248,7 +2248,7 @@ summary:hover{color:var(--tinta)}
 .hely-kiemelt{display:flex;flex-direction:column;gap:.7rem}
 .hely-lista .lista{columns:1;margin:0}
 .hely-lista details{margin-top:.6rem}
-.hely{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:8px;padding:1.1rem}
+.hely{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:6px;padding:1.1rem}
 .helynev{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;color:var(--r)}
 .hely .lista{columns:1;margin:0}
 .hely details{margin-top:0}
