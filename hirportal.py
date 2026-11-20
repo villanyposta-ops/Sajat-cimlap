@@ -1454,7 +1454,8 @@ def sor(cs, csak_ora=False, rovid=False):
 
 
 def friss_racs(lista):
-    """Újságos rovatokban a dobozokból kiszorult friss hírek a rács folytatásaként: három hasáb, halvány
+    """Újságos rovatokban a dobozokból kiszorult friss hírek a rács folytatásaként: négy hasáb (a fenti háromtól
+    eltérő ritmus jelzi, hogy ez ideiglenes rövidhír-zóna), halvány
     vonalak, felül lap és idő, alatta a cím a címbetűvel, de a folyószöveg méretében (bevezető nélkül)."""
     if not lista:
         return ""
@@ -1465,7 +1466,7 @@ def friss_racs(lista):
         f'<time class="fs-ido">{ido_szoveg(c["fo"]["ido"])}</time>'
         + (f' {cikklista(c)}' if len(c["hirek"]) > 1 else "") + "</article>"
         for c in lista]
-    cellak += ['<div class="fs ures"></div>'] * (-len(cellak) % 3)   # az utolsó sor is teli legyen (vonalak)
+    cellak += ['<div class="fs ures"></div>'] * (-len(cellak) % 4)   # az utolsó sor is teli legyen (vonalak)
     return f'<div class="fs-racs">{"".join(cellak)}</div>'
 
 
@@ -2067,10 +2068,10 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 @media (max-width:640px){.rovat.ujsag .halom .mini{padding-left:1rem;padding-right:1rem}}
 /* újságos rovatok: a friss rövidhírek a rács folytatásaként, ugyanabban a keretben */
 .rovat.ujsag .racs:has(+ .fs-racs){border-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0}
-.fs-racs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--vonal);border-top:0;
+.fs-racs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--vonal);border-top:0;
   border-radius:0 0 6px 6px;background:var(--felulet);margin:0 0 .6rem;overflow:hidden}
 .fs-racs .fs{padding:.7rem 1.2rem .75rem;border-top:1px solid var(--vonal);border-left:1px solid var(--vonal);min-width:0}
-.fs-racs .fs:nth-child(3n+1){border-left:0}
+.fs-racs .fs:nth-child(4n+1){border-left:0}
 .fs-racs .fs.rejtett{display:none}
 .fs-racs h4 .forras{font:inherit;margin-right:.3rem}
 .fs-racs .fs-ido{font-size:.76rem;color:var(--halvany);margin-left:.4rem;white-space:nowrap}
@@ -2080,6 +2081,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .fs-racs .cikkek-gomb{vertical-align:1px}
 .fs-racs .cikkek{font-family:var(--listabetu,inherit);font-weight:var(--lista-suly,400);font-size:.84rem;line-height:1.35;list-style:none;padding:0;margin:.45rem 0 0}
 .fs-racs .cikkek li{display:flex;gap:.5rem;padding:.2rem 0}.fs-racs .cikkek time{color:var(--halvany);flex:none}.fs-racs .cikkek .forras{margin-right:.3rem}
+@media (max-width:1000px) and (min-width:641px){.fs-racs{grid-template-columns:repeat(2,minmax(0,1fr))}.fs-racs .fs{border-left:1px solid var(--vonal)}.fs-racs .fs:nth-child(2n+1){border-left:0}}
 @media (max-width:640px){.fs-racs{grid-template-columns:1fr}.fs-racs .fs{border-left:0;padding-left:1rem;padding-right:1rem}.fs-racs .fs.ures{display:none}}
 /* az Egyéb rovat friss hírei kis kártyákon, három hasábban */
 .kis-kartyak{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;margin:.2rem 0 .6rem}
