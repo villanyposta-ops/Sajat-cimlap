@@ -48,8 +48,8 @@ NAPSZAK_SZINEK = [
 FEJLEC_SZIN = None
 # A címek betűtípusa a fejléchez igazodik (Google Fonts; csak a kiválasztott töltődik le)
 CIMBETUK = {
-    "hirlap": {"csalad": "Oswald", "url": "Oswald:wght@400..700", "suly": 500, "nagy": 600, "ter": ".005em",
-               "lista": "Barlow Semi Condensed", "lista_url": "Barlow+Semi+Condensed:wght@400;500;600",
+    "hirlap": {"csalad": "Barlow Semi Condensed", "url": "Barlow+Semi+Condensed:wght@500;600;700;800", "suly": 700, "nagy": 800, "ter": "0",
+               "lista": "Barlow Semi Condensed", "lista_url": "",   # a címbetűvel azonos család: egy letöltés
                "lista_tartalek": "'Arial Narrow',ui-sans-serif,system-ui,sans-serif", "lista_suly": 500},
     "nemzeti": {"csalad": "Playfair Display", "url": "Playfair+Display:wght@400..900", "suly": 700, "nagy": 800, "ter": "0",
                 "tartalek": "Georgia,'Times New Roman',serif",
@@ -1942,7 +1942,7 @@ h1,h2,h3,h4{font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);margin
 .fo-hir.kis .szoveg{flex:1;min-width:0}
 .fo-hir.kis .belyeg{margin:1rem 1.1rem 0 -.2rem}
 .belyeg .kep-helyett .logo{width:80%;max-height:60%}
-.kis h3{font-size:1.05rem;line-height:1.25;font-weight:650}
+.kis h3{font-size:1.05rem;line-height:1.25}
 .kis .lead{display:none}   /* a Top két alsó sora szikár: cím és adatok, bevezető nélkül */
 .kep{background:#2b384c;overflow:hidden}.kep img{width:100%;height:100%;object-fit:cover;display:block}
 
