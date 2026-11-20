@@ -751,7 +751,9 @@ def osszevon(hirek, kulcs=None):
     – az ablakon belüli tagokhoz mért átlagos hasonlósága is eléri az OSSZEVON_ATLAG értéket
       (ez akadályozza meg, hogy a csoport láncszerűen átcsússzon más témákra);
     több jelölt közül az átlagosan leghasonlóbb csoport nyer.
-    Ha kulcs is adott (cikk → érték), csak az azonos kulcsú cikkek kerülhetnek egy csoportba (helyi hírek: hely)."""
+    Ha kulcs is adott (cikk → érték), csak az azonos kulcsú cikkek kerülhetnek egy csoportba (helyi hírek: hely).
+    Sportcikk és nem sportcikk sosem kerül egy csoportba, ha mindkettőnek biztos a rovata (a lap jelölte):
+    a közös országnév vagy szófordulat (pl. „az Egyesült Államokban”) ott nem jelent közös témát."""
     import math
     hirek = sorted(hirek, key=lambda h: h["ido"])
     N = len(hirek)
@@ -781,12 +783,15 @@ def osszevon(hirek, kulcs=None):
     ablak = OSSZEVON_ABLAK_ORA * 3600
     # hasonlóságok a fordított indexszel: csak a közös darabot tartalmazó, időben közeli párokat számoljuk
     K = [kulcs(h) for h in hirek] if kulcs else None
+    # biztos rovatú cikkeknél: sport-e (None, ha a rovat csak tippelt)
+    S = [(h.get("rovat") == "sport") if h.get("rovat_suly", 0) >= 2 else None for h in hirek]
     index, hason = {}, {}
     for i, v in enumerate(V):
         acc = {}
         for g, x in v.items():
             for j in index.get(g, ()):
-                if T[i] - T[j] <= ablak and (kulcs is None or K[i] == K[j]):
+                if T[i] - T[j] <= ablak and (kulcs is None or K[i] == K[j]) and not (
+                        S[i] is not None and S[j] is not None and S[i] != S[j]):
                     acc[j] = acc.get(j, 0) + x * V[j][g]
             index.setdefault(g, []).append(i)
         hason[i] = acc
