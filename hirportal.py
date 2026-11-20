@@ -49,9 +49,10 @@ FEJLEC_SZIN = None
 # A címek betűtípusa a fejléchez igazodik (Google Fonts; csak a kiválasztott töltődik le)
 CIMBETUK = {
     "hirlap": {"csalad": "Barlow Semi Condensed", "url": "Barlow+Semi+Condensed:wght@500;600;700;800", "suly": 700, "nagy": 800, "ter": "0",
+               "suly_kis_felbontas": 600,   # hagyományos (nem retina) kijelzőn a 700-as kis méretben „bedugul”
                "lista": "Barlow Semi Condensed", "lista_url": "",   # a címbetűvel azonos család: egy letöltés
                "lista_tartalek": "'Arial Narrow',ui-sans-serif,system-ui,sans-serif", "lista_suly": 500},
-    "nemzeti": {"csalad": "Playfair Display", "url": "Playfair+Display:wght@400..900", "suly": 700, "nagy": 800, "ter": "0",
+    "nemzeti": {"csalad": "Merriweather", "url": "Merriweather:wght@400;700;900", "suly": 700, "nagy": 900, "ter": "-.005em",
                 "tartalek": "Georgia,'Times New Roman',serif",
                 "lista": "Source Serif 4", "lista_url": "Source+Serif+4:opsz,wght@8..60,400..700",
                 "lista_tartalek": "Georgia,'Times New Roman',serif"},
@@ -2497,7 +2498,8 @@ FEJ_JS = r"""(function(){
   if (bt) {
     var gy = document.documentElement.style;
     gy.setProperty('--cimbetu', '"' + bt.csalad + '",' + (bt.tartalek || 'ui-sans-serif,system-ui,sans-serif'));
-    gy.setProperty('--cim-suly', bt.suly); gy.setProperty('--cim-suly-nagy', bt.nagy); gy.setProperty('--cim-ter', bt.ter); gy.setProperty('--cim-nyujt', bt.nyujt || '100%');
+    var suly = (bt.suly_kis_felbontas && (window.devicePixelRatio || 1) < 1.5) ? bt.suly_kis_felbontas : bt.suly;
+    gy.setProperty('--cim-suly', suly); gy.setProperty('--cim-suly-nagy', bt.nagy); gy.setProperty('--cim-ter', bt.ter); gy.setProperty('--cim-nyujt', bt.nyujt || '100%');
     // a listák (friss sáv, További hírek, Egyéb) a címbetűhöz illő, kicsiben is jól olvasható betűt kapnak
     if (bt.lista) { gy.setProperty('--listabetu', '"' + bt.lista + '",' + (bt.lista_tartalek || 'system-ui,sans-serif'));
       gy.setProperty('--lista-nyujt', bt.lista_nyujt || '100%'); gy.setProperty('--lista-suly', bt.lista_suly || 400); }
