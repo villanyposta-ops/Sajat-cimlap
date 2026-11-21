@@ -75,7 +75,8 @@ FORRASOK = [
     {"id": "hvg",    "nev": "HVG",           "szin": "#7c3aed", "feeds": ["https://hvg.hu/rss"]},
     {"id": "mhang",  "nev": "Magyar Hang",   "szin": "#0d9488", "feeds": ["https://hang.hu/rss/"],
      # csak ezek a rovatok (a webcím első tagja) mennek a „Háttér”-be: hetilapos riportok, interjúk, publicisztikák
-     "hatter_rovatok": {"magyar-hang-plusz": "Plusz", "vendegoldal": "Vendégoldal", "budaihang": "Budai Hang"}},
+     "hatter_rovatok": {"magyar-hang-plusz": "Plusz", "vendegoldal": "Vendégoldal", "budaihang": "Budai Hang",
+                        "publicisztika": "Publicisztika"}},
     {"id": "atlatszo", "nev": "Átlátszó",    "szin": "#65a30d", "feeds": ["https://atlatszo.hu/feed/"],
      "hatter": True},            # a „Háttér” rovatba kerül, kimarad a hírversenyből és az összevonásból
     {"id": "valasz", "nev": "Válasz Online", "rovid": "Válasz", "szin": "#a16207", "feeds": ["https://www.valaszonline.hu/feed/"],
