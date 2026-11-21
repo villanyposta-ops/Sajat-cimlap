@@ -1746,7 +1746,13 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
             sav = sorted([c for c in lista if datetime.fromisoformat(c["fo"]["ido"]) >= hatar],
                          key=lambda c: datetime.fromisoformat(c["fo"]["ido"]), reverse=True)[:FRISS_SAV_MAX] \
                 if dobozok or r.get("egyszeru") else []
-            lista = [c for c in lista if c not in sav]
+            # az újságos rovatok négyhasábos rövidhír-sora ne maradjon csonka: ha megjelenik, a következő
+            # legfrissebb hírekkel (akár 3 óránál régebbiekkel) négyesével teli sorokra egészül ki
+            if sav and r.get("ujsag") and dobozok and len(sav) % 4:
+                tobbi = sorted((c for c in lista if not any(c is x for x in sav)),
+                               key=lambda c: datetime.fromisoformat(c["fo"]["ido"]), reverse=True)
+                sav = sav + tobbi[:-len(sav) % 4]
+            lista = [c for c in lista if not any(c is x for x in sav)]
             extra = (" kiemelt-magas" if elr.endswith("magas") else "") + (" szines" if szines else "")
             nav.append(f'<a href="#{r["id"]}" style="--r:{r["szin"]}">{e(r["nev"])}</a>')
             reszek.append(f'''<section class="rovat{' ujsag' if r.get('ujsag') else ''}{' egyszeru' if r.get('egyszeru') else ''}{' stadion' if r.get('stadion') else ''}" id="{r["id"]}" style="--r:{r["szin"]}">
