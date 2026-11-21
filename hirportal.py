@@ -163,6 +163,9 @@ NYITO_MAX_ORA = 3         # a nyitóhír ennél frissebb legyen; ha nincs ilyen,
 FO_TARTALEK_ORA = 12      # ha (pl. hajnalban) nincs elég 8 óránál frissebb hír, legfeljebb eddig nyúl vissza
 FO_STILUS = "arnyalt"     # a kiemelt rész háttere: "arnyalt" (a fejléc színének halvány árnyalata), "vilagos", "sotet"
 FRISS_SAV_ORA = 3         # a dobozokból kiszorult, ennél frissebb hírek a rovat alján, nyitott sávban látszanak
+FRISS_SAV_SZELES = ("belfold", "kulfold")   # ezekben a rovatokban …
+FRISS_SAV_SZELES_ORA = 6  # … ennyi óránál frissebb kiszorult hír látszik nyitva a rovat alján …
+FRISS_SAV_SZELES_MAX = 12 # … legfeljebb ennyi (három négyes sor)
 FRISS_SAV_MAX = 30        # biztonsági felső korlát, rendes napon nem éri el; a többi a „További hírek” közé kerül
 FRISS_ORA = 24            # ennél frissebb hír dobozban, régebbi listában jelenik meg
 HELYI_LISTA = 8           # a helyi oszlopokban a kiemeltek alatt ennyi friss hír látszik; a többi a napokra bontott listában
@@ -1472,7 +1475,10 @@ def friss_racs(lista):
         + (f' {cikklista(c)}' if len(c["hirek"]) > 1 else "") + "</article>"
         for c in lista]
     cellak += ['<div class="fs ures"></div>'] * (-len(cellak) % 4)   # az utolsó sor is teli legyen (vonalak)
-    return f'<div class="fs-racs">{"".join(cellak)}</div>'
+    # telefonon az első négy látszik, a többi egy gomb mögött (asztali gépen minden látszik)
+    gomb = (f'<button type="button" class="fs-tobb" onclick="this.parentNode.classList.add(\'nyitva\');this.remove()">'
+            f'még {len(lista) - 4} friss hír ▾</button>' if len(lista) > 4 else "")
+    return f'<div class="fs-blokk"><div class="fs-racs">{"".join(cellak)}</div>{gomb}</div>'
 
 
 def kis_kartyak(csoportok):
@@ -1573,7 +1579,7 @@ def nap_cimke(nap):
     return f"{HONAPOK[nap.month-1]} {nap.day}., {NAPOK[nap.weekday()]}"
 
 
-def korabban(lista, nyitva=False):
+def korabban(lista, nyitva=False, cimke="További hírek"):
     """A „További hírek” napokra bontva; minden nap külön lenyitható, a legfrissebb nap nyitva."""
     if not lista:
         return ""
@@ -1585,7 +1591,7 @@ def korabban(lista, nyitva=False):
         f'<details class="nap-csoport"{" open" if i == 0 else ""}><summary>{nap_cimke(nap)} ({len(cs)})</summary>'
         f'<ul class="lista">{"".join(sor(c, csak_ora=True) for c in cs)}</ul></details>'
         for i, (nap, cs) in enumerate(napok.items()))
-    return (f'<details class="tovabbi-hirek"{" open" if nyitva else ""}><summary>További hírek ({len(lista)})</summary>'
+    return (f'<details class="tovabbi-hirek"{" open" if nyitva else ""}><summary>{cimke} ({len(lista)})</summary>'
             f'{csoportok}</details>')
 
 
@@ -1746,9 +1752,13 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
             # a dobozokból kiszorult, néhány óránál frissebb hírek ne tűnjenek el a lenyíló listában
             # (a kiírt cikk saját ideje számít, nem a téma legutóbbi frissülése)
             # (az Egyéb rovatnak nincsenek dobozai: ott az utóbbi egy nap hírei kerülnek a sávba)
-            hatar = MOST - timedelta(hours=FRISS_ORA if r.get("egyszeru") else FRISS_SAV_ORA)
+            # a forgalmas rovatokban (Belföld, Külföld) hosszabb az ablak, de legfeljebb három teli sor
+            szeles = r["id"] in FRISS_SAV_SZELES
+            hatar = MOST - timedelta(hours=FRISS_ORA if r.get("egyszeru") else
+                                     FRISS_SAV_SZELES_ORA if szeles else FRISS_SAV_ORA)
             sav = sorted([c for c in lista if datetime.fromisoformat(c["fo"]["ido"]) >= hatar],
-                         key=lambda c: datetime.fromisoformat(c["fo"]["ido"]), reverse=True)[:FRISS_SAV_MAX] \
+                         key=lambda c: datetime.fromisoformat(c["fo"]["ido"]),
+                         reverse=True)[:FRISS_SAV_SZELES_MAX if szeles else FRISS_SAV_MAX] \
                 if dobozok or r.get("egyszeru") else []
             # az újságos rovatok négyhasábos rövidhír-sora ne maradjon csonka: ha megjelenik, a következő
             # legfrissebb hírekkel (akár 3 óránál régebbiekkel) négyesével teli sorokra egészül ki
@@ -1763,7 +1773,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
   {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else "")) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
-  {kis_kartyak(sav) if r.get("egyszeru") else friss_racs(sav) if r.get("ujsag") and dobozok else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav)}
+  {kis_kartyak(sav) if r.get("egyszeru") else friss_racs(sav) if r.get("ujsag") and dobozok else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav, cimke="Korábbi hírek" if sav and r.get("ujsag") else "További hírek")}
   </div>
 </section>''')
         if r["id"] == HELYI_UTAN:
@@ -2077,23 +2087,34 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.ujsag .halom{gap:0;border-bottom:1px solid var(--vonal)}
 .rovat.ujsag .halom .mini{background:transparent;border:0;border-radius:0;border-top:1px solid var(--vonal);padding:.8rem 1.2rem}
 @media (max-width:640px){.rovat.ujsag .halom .mini{padding-left:1rem;padding-right:1rem}}
-/* újságos rovatok: a friss rövidhírek a rács folytatásaként, ugyanabban a keretben */
-.rovat.ujsag .racs:has(+ .fs-racs){border-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0}
-.fs-racs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--vonal);border-top:0;
-  border-radius:0 0 6px 6px;background:var(--felulet);margin:0 0 .6rem;overflow:hidden}
-.fs-racs .fs{padding:.7rem 1.2rem .75rem;border-top:1px solid var(--vonal);border-left:1px solid var(--vonal);min-width:0}
-.fs-racs .fs:nth-child(4n+1){border-left:0}
+/* újságos rovatok: a dobozokból kiszorult friss rövidhírek a fehér panel alatt, a szürke háttéren
+   (jelzi, hogy ideiglenesek); négy hasáb, köztük csak rövid, halvány függőleges elválasztók */
+.fs-blokk{margin:.9rem 0 .6rem}
+.fs-racs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));row-gap:1rem}
+.fs-racs .fs{position:relative;padding:.2rem 1.2rem .4rem;min-width:0}
+.fs-racs .fs:nth-child(4n+1){padding-left:0}
+.fs-racs .fs:not(:nth-child(4n+1))::before{content:"";position:absolute;left:0;top:.3rem;height:2.6rem;
+  border-left:1px solid color-mix(in srgb,var(--halvany) 45%,transparent)}
+.fs-racs .fs.ures{display:none}
 .fs-racs .fs.rejtett{display:none}
-.fs-racs h4 .forras{font:inherit;margin-right:.3rem}
-.fs-racs .fs-ido{font-size:.76rem;color:var(--halvany);margin-left:.4rem;white-space:nowrap}
 .fs-racs h4{margin:0;font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);font-weight:var(--cim-suly,700);
   letter-spacing:var(--cim-ter,0);font-size:.95rem;line-height:1.3;display:inline}
+.fs-racs h4 .forras{font:inherit;margin-right:.3rem}
+.fs-racs .fs-ido{font-size:.76rem;color:var(--halvany);margin-left:.4rem;white-space:nowrap}
 .fs-racs h4 a{color:var(--tinta);text-decoration:none}.fs-racs h4 a:hover{text-decoration:underline}
 .fs-racs .cikkek-gomb{vertical-align:1px}
 .fs-racs .cikkek{font-family:var(--listabetu,inherit);font-weight:var(--lista-suly,400);font-size:.84rem;line-height:1.35;list-style:none;padding:0;margin:.45rem 0 0}
 .fs-racs .cikkek li{display:flex;gap:.5rem;padding:.2rem 0}.fs-racs .cikkek time{color:var(--halvany);flex:none}.fs-racs .cikkek .forras{margin-right:.3rem}
-@media (max-width:1000px) and (min-width:641px){.fs-racs{grid-template-columns:repeat(2,minmax(0,1fr))}.fs-racs .fs{border-left:1px solid var(--vonal)}.fs-racs .fs:nth-child(2n+1){border-left:0}}
-@media (max-width:640px){.fs-racs{grid-template-columns:1fr}.fs-racs .fs{border-left:0;padding-left:1rem;padding-right:1rem}.fs-racs .fs.ures{display:none}}
+.fs-tobb{display:none}
+@media (max-width:1000px) and (min-width:641px){.fs-racs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fs-racs .fs:nth-child(4n+1){padding-left:1.2rem}.fs-racs .fs:nth-child(2n+1){padding-left:0}
+  .fs-racs .fs::before{display:block}.fs-racs .fs:nth-child(2n+1)::before{display:none}}
+@media (max-width:640px){.fs-racs{grid-template-columns:1fr;row-gap:0}
+  .fs-racs .fs{padding:.6rem 0;border-top:1px solid color-mix(in srgb,var(--halvany) 30%,transparent)}
+  .fs-racs .fs:first-child{border-top:0}.fs-racs .fs::before{display:none!important}
+  .fs-blokk:not(.nyitva) .fs-racs .fs:nth-child(n+5){display:none}
+  .fs-tobb{display:inline-block;margin:.4rem 0 0;background:none;border:1px solid var(--vonal);border-radius:5px;
+    padding:.3rem .8rem;font:inherit;font-size:.85rem;color:var(--halvany);cursor:pointer}}
 /* az Egyéb rovat friss hírei kis kártyákon, három hasábban */
 .kis-kartyak{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;margin:.2rem 0 .6rem}
 .kis-kartyak .mini{background:var(--felulet);border:1px solid var(--vonal);border-radius:6px;padding:.75rem 1rem .85rem}
