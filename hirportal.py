@@ -630,6 +630,10 @@ def rovat(h):
     # szponzorált/közlemény al-oldal bárhol a webcímben elsőbbséget kap (pl. telex.hu/g7/tamogatott-tartalom/…)
     if any(sz in r["utvonal"] for r in ROVATOK if r["id"] == "egyeb" for sz in szakaszok[:3]):
         return ki("egyeb", 3)
+    # podcastadások beharangozói (pl. 444 Borízű hang, Belpol): az adás témáinak címkéi (futball, közmédia…)
+    # félrevinnék, ezért ha a lap „podcast” címkét tett rá, Egyéb
+    if any(k.lower() == "podcast" for k in h["kategoriak"]):
+        return ki("egyeb", 3)
     # a HVG napi nemzetközi lapszemléje (a külföldi sajtó Magyarországról és a világról): mindig Külföld.
     # A webcím vége nem mindig „nemzetkozi-lapszemle”, de a lap „lapszemle” címkéje mindig rajta van.
     if h["forras"] == "hvg" and ("lapszemle" in h["link"] or any(k.lower() == "lapszemle" for k in h["kategoriak"])):
