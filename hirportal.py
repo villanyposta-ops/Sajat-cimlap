@@ -2221,6 +2221,9 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat .racs .doboz.kiemelt.magazin.magazin .tovabbi,.rovat .racs .doboz.kiemelt.magazin.magazin .tovabbi a{color:rgb(255 255 255/.8)}
 .rovat .racs .doboz.kiemelt.magazin.magazin .tovabbi a.mutatott{color:#fff}
 .rovat .racs .doboz.kiemelt.magazin.magazin .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
+@media (max-width:1000px){.rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .kb::after{content:"";position:absolute;
+  left:0;right:0;bottom:0;height:55%;pointer-events:none;background:linear-gradient(to bottom,transparent,var(--mp))}
+  .rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .szoveg{margin-top:-1.2rem;position:relative;z-index:1}}
 @media (max-width:640px){.rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas){flex-direction:column}
   .rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .kb{width:100%;flex:none;aspect-ratio:16/10;min-height:0}}
 /* a Helyi rovat dobozaiban nincs kép, a több lapos témáknál sem */
