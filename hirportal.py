@@ -2085,8 +2085,12 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .doboz.kiemelt h3{font-size:1.32rem;line-height:1.22;letter-spacing:-.015em}
 /* rovatszínű sáv a nem színes kiemelt kártya tetején */
 .doboz.kiemelt:not(.szines){border-top:4px solid var(--r);padding-top:calc(1rem - 3px)}
-/* több lap írta: rövid, rovatszínű felvezető vonal a lapnév fölött (nem ér a doboz széléhez) */
-.doboz.tobblap>.szoveg::before{content:"";display:block;width:2.4rem;height:3px;background:var(--r);border-radius:2px;margin:.15rem 0 .55rem}
+/* több lap írta: halvány rovatszínű „sarokvas” – kis levágott sarok és 2 px-es vonal a felső és a bal szélen */
+.doboz.tobblap{position:relative;--tl:color-mix(in srgb,var(--r) 60%,var(--felulet))}
+.doboz.tobblap::before{content:"";position:absolute;inset:0;border-top:2px solid var(--tl);border-left:2px solid var(--tl);
+  border-radius:inherit;pointer-events:none;z-index:2}
+.doboz.tobblap::after{content:"";position:absolute;top:0;left:0;width:18px;height:18px;background:var(--tl);
+  clip-path:polygon(0 0,100% 0,0 100%);pointer-events:none;z-index:2}
 /* „vezércikk”: kép nélküli kiemelt kártya nagy, dőlt címmel */
 .doboz.vezer .kiemelt-kep{display:none}
 .doboz.vezer h3{font-size:1.75rem;line-height:1.15;font-style:italic;letter-spacing:-.02em}
@@ -2235,7 +2239,16 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim .meta{color:rgb(255 255 255/.82)}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .szoveg{padding:.7rem 1.2rem 1rem}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .lead{margin-top:0;-webkit-line-clamp:2}
-.elso .top-keret .fo-racs .nyito.nyito{background:var(--felulet)}
+/* a nyitóhír szövegpanelje a fejléc (napszakonként váltakozó) színében, fehér betűkkel */
+.elso .top-keret .fo-racs .nyito.nyito{background:var(--fejszin,#16202f)}
+.elso .top-keret .fo-racs .nyito.nyito h3 a,.elso .top-keret .fo-racs .nyito.nyito .lefed{color:#fff}
+.elso .top-keret .fo-racs .nyito.nyito .forras{color:color-mix(in srgb,var(--c) 40%,#fff)}
+.elso .top-keret .fo-racs .nyito.nyito .meta{color:rgb(255 255 255/.75)}
+.elso .top-keret .fo-racs .nyito.nyito .lead{color:rgb(255 255 255/.88)}
+.elso .top-keret .fo-racs .nyito.nyito .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.3)}
+.elso .top-keret .fo-racs .nyito.nyito .tovabbi,.elso .top-keret .fo-racs .nyito.nyito .tovabbi a{color:rgb(255 255 255/.75)}
+.elso .top-keret .fo-racs .nyito.nyito .tovabbi a.mutatott{color:#fff}
+.elso .top-keret .fo-racs .nyito.nyito .lapoz{background:rgb(255 255 255/.1);border-color:rgb(255 255 255/.4);color:#fff}
 /* lapszéli hasáb: hat téma tömören, rövid vonallal elválasztva, egyenletesen elosztva */
 .top-szel{display:flex;flex-direction:column;justify-content:space-between;padding:.4rem 1.2rem .5rem}
 .elso .top-szel .fo-hir.kis{display:block;background:none;border:0;border-radius:0;padding:.8rem 0 .7rem;position:relative;overflow:visible}
