@@ -610,7 +610,8 @@ def hatter_rovat_nev(h):
 BALESET = re.compile(r"\b(baleset|karambol|gázol|elgázol|ütköz|felborul|árokba|ámokfut|rendőr|üldöz|"
                      r"halálos|meghalt|életét vesztette|sérült|ittas|részeg|cserbenhagy|száguld|lopott|lopás|"
                      r"büntetőfék|börtön|bíróság)", re.I)
-BALESET_CIMKE = re.compile(r"baleset|bűnügy|rendőr|karambol|gázolás|ittas|lopás|bíróság", re.I)
+BALESET_CIMKE = re.compile(r"baleset|bűnügy|rendőr|karambol|gázolás|ittas|lopás|bíróság|törvényszék|"
+                           r"gyilkos|emberölés|letartóztat", re.I)
 
 
 def rovat(h):
@@ -642,6 +643,14 @@ def rovat(h):
     # A webcím vége nem mindig „nemzetkozi-lapszemle”, de a lap „lapszemle” címkéje mindig rajta van.
     if h["forras"] == "hvg" and ("lapszemle" in h["link"] or any(k.lower() == "lapszemle" for k in h["kategoriak"])):
         return ki("kulfold", 3)
+    # a Népszabadság „Mozaik” rovata a mi Egyéb rovatunk megfelelője (lottó, érdekességek, celebhírek).
+    # Ide teszi a lap a bűnügyi és bírósági híreket is: ha a címkéi erre utalnak, azok a kulcsszavak
+    # szerint Belföldre vagy Külföldre kerülnek, mint a HVG Cégautó baleseti hírei.
+    if h["forras"] == "nszo" and ("/mozaik/" in h["link"] or any(k.lower() == "mozaik" for k in h["kategoriak"])):
+        if any(BALESET_CIMKE.search(k) for k in h["kategoriak"]):
+            baleset = True
+        else:
+            return ki("egyeb", 3)
     for sz in szakaszok[:3]:
         if baleset:
             break
