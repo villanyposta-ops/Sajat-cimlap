@@ -2208,6 +2208,10 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat .doboz.kiemelt.magazin.magazin .rcim h3 a,.rovat .doboz.kiemelt.magazin.magazin .rcim .forras{color:#fff}
 .rovat .doboz.kiemelt.magazin.magazin .rcim .meta{color:rgb(255 255 255/.82)}
 .rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas .lead{margin-top:0}
+/* álló kiemelés: a kép alja átmenet nélküli törés helyett a panel rovatszínébe olvad */
+.rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas .rcim{padding-bottom:.6rem;
+  background:linear-gradient(to bottom,transparent 0,color-mix(in srgb,var(--mp) 55%,transparent) 40%,var(--mp) 100%)}
+.rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas .rcim h3{text-shadow:0 1px 8px rgb(0 0 0/.35)}
 /* a Sport zöld pályáján fehér marad a doboz */
 .rovat .racs .doboz.kiemelt.magazin.magazin .szoveg h3,.rovat .racs .doboz.kiemelt.magazin.magazin .szoveg h3 a,.rovat .racs .doboz.kiemelt.magazin.magazin .szoveg .forras{color:#fff}
 .rovat .racs .doboz.kiemelt.magazin.magazin .szoveg .meta{color:rgb(255 255 255/.8)}
@@ -2224,9 +2228,10 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 /* Top nyitóhír: a cím a képre írva */
 @media (max-width:640px){
 .fo-racs .fo-hir.rairt-kicsi{position:relative;min-height:21rem;overflow:hidden}
-.fo-racs .fo-hir.rairt-kicsi .kep{position:absolute;inset:0;flex:none;min-height:0}
+.fo-racs .fo-hir.rairt-kicsi .kep{position:absolute;inset:0;flex:none;min-height:0;height:auto;aspect-ratio:auto}
+.fo-racs .fo-hir.rairt-kicsi .kep img{width:100%;height:100%;object-fit:cover}
 .fo-racs .fo-hir.rairt-kicsi .szoveg{position:relative;z-index:1;margin-top:auto;align-self:flex-end;width:100%;justify-content:flex-end;
-  padding:3.5rem 1.1rem 1.1rem;color:#fff;background:linear-gradient(to top,rgb(0 0 0/.86) 0%,rgb(0 0 0/.66) 55%,rgb(0 0 0/0) 100%)}
+  padding:3.5rem 1.1rem 1.1rem;color:#fff;background:linear-gradient(to top,var(--fejszin,#16202f) 0%,color-mix(in srgb,var(--fejszin,#16202f) 75%,transparent) 55%,transparent 100%)}
 .fo-racs .fo-hir.rairt-kicsi h3{max-width:46rem;font-size:clamp(1.55rem,2.4vw,2.2rem);text-shadow:0 1px 8px rgb(0 0 0/.35)}
 .fo-racs .fo-hir.rairt-kicsi h3 a,.fo-racs .fo-hir.rairt-kicsi .forras,.fo-racs .fo-hir.rairt-kicsi .lefed,.fo-racs .fo-hir.rairt-kicsi .tovabbi a,.fo-racs .fo-hir.rairt-kicsi .tovabbi a.mutatott{color:#fff}
 .fo-racs .fo-hir.rairt-kicsi .meta,.fo-racs .fo-hir.rairt-kicsi .lead,.fo-racs .fo-hir.rairt-kicsi .tovabbi{color:rgb(255 255 255/.85)}
