@@ -544,6 +544,7 @@ def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
     return db
 
 
+MAGAZIN_ROVATOK = ("kultura", "eletmod", "sport")   # kiemelt hírük képre írt címmel, rovatszínű panellel
 TOBBLAP = 2               # a rovatokban ennyi lapnál felső csíkot kap a sima doboz is
 KOTEG_LAP = 5             # ennyi lap felett a doboz mögött „lapköteg” látszik…
 KOTEG_NAGY = 7            # …ennyi felett vastagabb köteg
@@ -1447,8 +1448,18 @@ def koteg(cs):
     return " koteg koteg-nagy" if n >= KOTEG_NAGY else (" koteg" if n >= KOTEG_LAP else "")
 
 
-def doboz(cs, lead=True, kiemelt=False, extra=""):
+def doboz(cs, lead=True, kiemelt=False, extra="", magazin=False):
     h = cs["fo"]
+    if kiemelt and magazin and h["kep"]:
+        # magazinos kiemelt: a képen a lap, az idő és a cím; mellette (fekvő) vagy alatta (álló)
+        # rovatszínű panelen alulra igazítva a bevezető, a lapok és a lapozó
+        extra = extra.replace(" szines", "")
+        return f'''<article class="doboz kiemelt magazin{extra}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=lead)}>
+  <div class="kb">{kep_html(h, "kiemelt-kep")}<div class="rcim">
+  <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
+  <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3></div></div>
+  <div class="szoveg">{f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and lead else ''}{lefedettseg(cs)}{tovabbi(cs)}</div>
+</article>'''
     # több lap írta: ugyanaz a rovatszínű felső csík, mint a kiemelt dobozon (a köteg helyett)
     extra += " tobblap" if len(cs["forrasok"]) >= TOBBLAP and not kiemelt else ""
     if kiemelt and not h["kep"] and (h.get("lead") or "").strip():
@@ -1786,7 +1797,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
             reszek.append(f'''<section class="rovat{' ujsag' if r.get('ujsag') else ''}{' egyszeru' if r.get('egyszeru') else ''}{' stadion' if r.get('stadion') else ''}" id="{r["id"]}" style="--r:{r["szin"]}">
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
-  {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else "")) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
+  {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else ""), magazin=r["id"] in MAGAZIN_ROVATOK) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
   {kis_kartyak(sav) if r.get("egyszeru") else friss_racs(sav) if r.get("ujsag") and dobozok else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav, cimke="Korábbi hírek" if sav and r.get("ujsag") else "További hírek")}
   </div>
 </section>''')
@@ -2148,6 +2159,31 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.stadion .friss-sav .lista time{color:var(--halvany)}.rovat.stadion .friss-sav .lista li{border-color:var(--vonal)}
 .rovat.stadion .friss-sav .lista .forras{color:var(--c)}
 .rovat.stadion .friss-sav .cikkek-gomb{color:var(--halvany);border-color:var(--vonal)}.rovat.stadion .friss-sav .cikkek-gomb .db{font-weight:400}.rovat.stadion .friss-sav .cikkek-gomb:hover{color:var(--tinta);border-color:var(--halvany)}
+/* magazinos kiemelt (Kultúra, Életmód, Sport) */
+.rovat .doboz.kiemelt.magazin.magazin{--mp:color-mix(in srgb,var(--r) 70%,#0b0f17);padding:0;gap:0;display:flex;overflow:hidden;
+  background:var(--mp);border:0;color:#fff}
+.rovat .doboz.kiemelt.magazin.magazin .kb{position:relative;overflow:hidden;background:var(--mp)}
+.rovat .doboz.kiemelt.magazin.magazin .kiemelt-kep{position:absolute;inset:0;width:auto;aspect-ratio:auto;border-radius:0;margin:0;order:0}
+.rovat .doboz.kiemelt.magazin.magazin .kiemelt-kep img{width:100%;height:100%;object-fit:cover}
+.rovat .doboz.kiemelt.magazin.magazin .rcim{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:3rem 1.2rem .9rem;
+  background:linear-gradient(to bottom,transparent,rgb(0 0 0/.72) 55%)}
+.rovat .doboz.kiemelt.magazin.magazin .rcim h3{margin:0;text-shadow:0 1px 6px rgb(0 0 0/.45)}
+.rovat .doboz.kiemelt.magazin.magazin .rcim h3 a,.rovat .doboz.kiemelt.magazin.magazin .rcim .forras{color:#fff}
+.rovat .doboz.kiemelt.magazin.magazin .rcim .meta{color:rgb(255 255 255/.82)}
+.rovat .doboz.kiemelt.magazin.magazin .szoveg{flex:1;align-self:stretch;display:flex;flex-direction:column;justify-content:flex-end;padding:1rem 1.2rem .95rem}
+.rovat .racs .doboz.kiemelt.magazin.magazin{padding:0!important;border-top:0!important}
+.rovat .doboz.kiemelt.magazin.magazin .lead{margin-top:0;color:rgb(255 255 255/.9);-webkit-line-clamp:5}
+.rovat .doboz.kiemelt.magazin.magazin .lefed{color:#fff}
+.rovat .doboz.kiemelt.magazin.magazin .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.35)}
+.rovat .doboz.kiemelt.magazin.magazin .tovabbi,.rovat .doboz.kiemelt.magazin.magazin .tovabbi a{color:rgb(255 255 255/.8)}
+.rovat .doboz.kiemelt.magazin.magazin .tovabbi a.mutatott{color:#fff}
+.rovat .doboz.kiemelt.magazin.magazin .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
+.rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas){flex-direction:row}
+.rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .kb{flex:0 0 55%;min-height:17rem}
+.rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas{flex-direction:column}
+.rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas .kb{width:100%;flex:none;aspect-ratio:4/3}
+@media (max-width:640px){.rovat .doboz.kiemelt.magazin.magazin{flex-direction:column}
+  .rovat .doboz.kiemelt.magazin.magazin .kb{width:100%;flex:none;aspect-ratio:16/10;min-height:0}}
 /* a Helyi rovat dobozaiban nincs kép, a több lapos témáknál sem */
 .rovat.helyi .doboz .belyeg{display:none}
 /* Top nyitóhír: a cím a képre írva */
