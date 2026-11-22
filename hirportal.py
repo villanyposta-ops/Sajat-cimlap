@@ -2172,6 +2172,22 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.stadion .friss-sav .lista time{color:var(--halvany)}.rovat.stadion .friss-sav .lista li{border-color:var(--vonal)}
 .rovat.stadion .friss-sav .lista .forras{color:var(--c)}
 .rovat.stadion .friss-sav .cikkek-gomb{color:var(--halvany);border-color:var(--vonal)}.rovat.stadion .friss-sav .cikkek-gomb .db{font-weight:400}.rovat.stadion .friss-sav .cikkek-gomb:hover{color:var(--tinta);border-color:var(--halvany)}
+/* fekvő kiemelések (Top nyitóhír, magazinos rovatok): balra a szöveg tömör színen, jobbra a kép vízszintes átmenettel */
+@media (min-width:1001px){
+.elso .top-keret .fo-racs .nyito.nyito{position:relative;display:block;min-height:19rem;overflow:hidden}
+.elso .top-keret .fo-racs .nyito.nyito .kep{position:absolute;inset:0 0 0 30%;margin:0;flex:none;width:auto;border-radius:0}
+.elso .top-keret .fo-racs .nyito.nyito .kep img{width:100%;height:100%;object-fit:cover;object-position:center right}
+.elso .top-keret .fo-racs .nyito.nyito::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,var(--fejszin,#16202f) 0,var(--fejszin,#16202f) 42%,color-mix(in srgb,var(--fejszin,#16202f) 70%,transparent) 54%,transparent 72%)}
+.elso .top-keret .fo-racs .nyito.nyito .szoveg{position:relative;z-index:2;width:50%;padding:1.6rem 1.8rem 1.4rem}
+.rovat .racs .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas){position:relative;display:block;min-height:17rem}
+.rovat .racs .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .kb{position:absolute;inset:0 0 0 30%;flex:none;min-height:0}
+.rovat .racs .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .kiemelt-kep img{object-position:center right}
+.rovat .racs .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas)::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(90deg,var(--mp) 0,var(--mp) 40%,color-mix(in srgb,var(--mp) 70%,transparent) 52%,transparent 72%)}
+.rovat .racs .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .szoveg{position:relative;z-index:2;width:52%;min-height:17rem;
+  display:flex;flex-direction:column;justify-content:flex-end}
+}
 /* magazinos kiemelt (Kultúra, Életmód, Sport): sötét rovatszínű panel fehér betűkkel;
    fekvőnél balra a kép a doboz teljes magasságában, jobbra a cím és a szöveg; állónál a kép kitölti a dobozt, a cím a képre írva */
 .rovat .racs .doboz.kiemelt.magazin.magazin{--mp:color-mix(in srgb,var(--r) 70%,#0b0f17);padding:0!important;gap:0;display:flex;overflow:hidden;border-top:0!important;background:var(--mp);color:#fff}
@@ -2224,8 +2240,6 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .elso .top-keret .fo-racs{grid-template-columns:repeat(2,minmax(0,1fr));border:0;border-radius:0;border-right:1px solid var(--vonal)}
 .elso .top-keret .nyito{grid-column:1 / -1}
 .elso .top-keret .masod{grid-column:auto}
-/* a nyitóhír képe pontosan a 2×2-es rács középvonaláig ér (az oszlopok közti 1 px-es vonallal számolva) */
-@media (min-width:1001px){.elso .top-keret .fo-racs .nyito .kep{flex:0 0 calc((100% - 1px) / 2);margin:0;border-radius:0}}
 /* 2×2: a képen (alsó részén, sötét átmenettel) a lap, az idő és a cím; alatta fehéren a bevezető, a lapok, a lapozó */
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt{background:var(--felulet)}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .kep-blokk{position:relative;aspect-ratio:2/1;overflow:hidden;
