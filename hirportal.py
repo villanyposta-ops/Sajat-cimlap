@@ -2163,6 +2163,8 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .elso .top-keret .fo-racs{grid-template-columns:repeat(2,minmax(0,1fr));border:0;border-radius:0;border-right:1px solid var(--vonal)}
 .elso .top-keret .nyito{grid-column:1 / -1}
 .elso .top-keret .masod{grid-column:auto}
+/* a nyitóhír képe pontosan a 2×2-es rács középvonaláig ér (az oszlopok közti 1 px-es vonallal számolva) */
+@media (min-width:1001px){.elso .top-keret .fo-racs .nyito .kep{flex:0 0 calc((100% - 1px) / 2);margin:0;border-radius:0}}
 /* 2×2: a cím a képre írva (világos és sötét módban is a fotón, sötét átmenettel) */
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt{position:relative;min-height:19rem;overflow:hidden;justify-content:flex-end;
   background:color-mix(in srgb,var(--r) 45%,#0b0f17)}
