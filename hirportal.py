@@ -2085,12 +2085,13 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .doboz.kiemelt h3{font-size:1.32rem;line-height:1.22;letter-spacing:-.015em}
 /* rovatszínű sáv a nem színes kiemelt kártya tetején */
 .doboz.kiemelt:not(.szines){border-top:4px solid var(--r);padding-top:calc(1rem - 3px)}
-/* több lap írta: halvány rovatszínű „sarokvas” – kis levágott sarok és 2 px-es vonal a felső és a bal szélen */
-.doboz.tobblap{position:relative;--tl:color-mix(in srgb,var(--r) 60%,var(--felulet))}
-.doboz.tobblap::before{content:"";position:absolute;inset:0;border-top:2px solid var(--tl);border-left:2px solid var(--tl);
-  border-radius:inherit;pointer-events:none;z-index:2}
-.doboz.tobblap::after{content:"";position:absolute;top:0;left:0;width:18px;height:18px;background:var(--tl);
-  clip-path:polygon(0 0,100% 0,0 100%);pointer-events:none;z-index:2}
+/* több lap írta: erős rovatszínű felső vonal, a doboz margóján belül – nem ér a doboz széléhez,
+   így nem olvad össze a fölötte lévő kiemelt dobozzal, és a lekerekített kártyákon is jól ül */
+.doboz{--bp:1rem}
+.rovat.ujsag .doboz{--bp:1.2rem}
+.doboz.tobblap{position:relative}
+.doboz.tobblap::before{content:"";position:absolute;top:7px;left:var(--bp);right:var(--bp);height:4px;
+  background:var(--r);border-radius:2px;pointer-events:none;z-index:2}
 /* „vezércikk”: kép nélküli kiemelt kártya nagy, dőlt címmel */
 .doboz.vezer .kiemelt-kep{display:none}
 .doboz.vezer h3{font-size:1.75rem;line-height:1.15;font-style:italic;letter-spacing:-.02em}
@@ -2500,7 +2501,7 @@ footer{text-align:center;color:var(--halvany);font-size:.8rem;padding:1rem 1.5re
   .forrasmenu{padding:0}
   .nav-belso,main,.elso-belso{padding-left:1rem;padding-right:1rem}
   .fo-racs{grid-template-columns:1fr}.nyito,.masod,.kis{grid-column:auto}
-  .rovat.ujsag .racs{background-image:none}.rovat.ujsag .doboz{padding-left:1rem;padding-right:1rem}
+  .rovat.ujsag .racs{background-image:none}.rovat.ujsag .doboz{padding-left:1rem;padding-right:1rem;--bp:1rem}
 
   .nyito .szoveg{padding:1.1rem}
   .belyeg{width:64px;height:64px}
