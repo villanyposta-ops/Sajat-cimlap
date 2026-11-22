@@ -631,6 +631,9 @@ def rovat(h):
     if h.get("elotag_rovat"):
         return ki(h["elotag_rovat"], 3)
     szakaszok = [ekezet_nelkul(s.lower()) for s in urlparse(h["link"]).path.split("/") if s]
+    # a dátummal kezdődő webcímeknél (pl. nszo.hu/2026/11/22/belfold/…) a dátum utáni tag a rovat
+    while szakaszok and szakaszok[0].isdigit():
+        szakaszok.pop(0)
     baleset = False
     # szponzorált/közlemény al-oldal bárhol a webcímben elsőbbséget kap (pl. telex.hu/g7/tamogatott-tartalom/…)
     if any(sz in r["utvonal"] for r in ROVATOK if r["id"] == "egyeb" for sz in szakaszok[:3]):
