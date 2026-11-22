@@ -610,6 +610,7 @@ def hatter_rovat_nev(h):
 BALESET = re.compile(r"\b(baleset|karambol|gázol|elgázol|ütköz|felborul|árokba|ámokfut|rendőr|üldöz|"
                      r"halálos|meghalt|életét vesztette|sérült|ittas|részeg|cserbenhagy|száguld|lopott|lopás|"
                      r"büntetőfék|börtön|bíróság)", re.I)
+SZERENCSE = re.compile(r"lott[óo]|nyerőszám|szerencsejáték|kenó|puttó|eurojackpot", re.I)
 BALESET_CIMKE = re.compile(r"baleset|bűnügy|rendőr|karambol|gázolás|ittas|lopás|bíróság|törvényszék|"
                            r"gyilkos|emberölés|letartóztat", re.I)
 
@@ -641,6 +642,11 @@ def rovat(h):
     # podcastadások beharangozói (pl. 444 Borízű hang, Belpol): az adás témáinak címkéi (futball, közmédia…)
     # félrevinnék, ezért ha a lap „podcast” címkét tett rá, Egyéb
     if any(k.lower() == "podcast" for k in h["kategoriak"]):
+        return ki("egyeb", 3)
+    # lottó, nyerőszámok, szerencsejáték: mindig Egyéb, bárhová tette a lap (a 24.hu pl. a Tech rovatban
+    # közli a lottószámokat). Kivétel, ha a lap a Gazdaság rovatba tette (pl. a Szerencsejáték Zrt. eredményei).
+    if (SZERENCSE.search(h["cim"]) or any(SZERENCSE.search(k) for k in h["kategoriak"])) and not any(
+            sz in r["utvonal"] for r in ROVATOK if r["id"] == "gazdasag" for sz in szakaszok[:2]):
         return ki("egyeb", 3)
     # a HVG napi nemzetközi lapszemléje (a külföldi sajtó Magyarországról és a világról): mindig Külföld.
     # A webcím vége nem mindig „nemzetkozi-lapszemle”, de a lap „lapszemle” címkéje mindig rajta van.
@@ -2273,7 +2279,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim .meta{color:rgb(255 255 255/.82)}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .szoveg{padding:.7rem 1.2rem 1rem}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .lead{margin-top:0;-webkit-line-clamp:2}
-/* a nyitóhír szövegpanelje a fejléc (napszakonként váltakozó) színében, fehér betűkkel */
+/* a nyitóhír szövegpanelje: mobilon a képre írt cím alatt a fejléc (napszakonként váltakozó) színe, fehér betűkkel */
 .elso .top-keret .fo-racs .nyito.nyito{background:var(--fejszin,#16202f)}
 .elso .top-keret .fo-racs .nyito.nyito h3,.elso .top-keret .fo-racs .nyito.nyito h3 a,.elso .top-keret .fo-racs .nyito.nyito .lefed{color:#fff}
 .elso .top-keret .fo-racs .nyito.nyito .forras{color:#fff}   /* a lapnév fehér, mint a képre írt címeknél; csak a pöttyök színesek */
@@ -2283,6 +2289,21 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .elso .top-keret .fo-racs .nyito.nyito .tovabbi,.elso .top-keret .fo-racs .nyito.nyito .tovabbi a{color:rgb(255 255 255/.75)}
 .elso .top-keret .fo-racs .nyito.nyito .tovabbi a.mutatott{color:#fff}
 .elso .top-keret .fo-racs .nyito.nyito .lapoz{background:rgb(255 255 255/.1);border-color:rgb(255 255 255/.4);color:#fff}
+/* asztali nézetben (ahol a szöveg nem a képen ül) a fejlécszín halvány árnyalata, sötét betűkkel: napszakonként
+   finoman változik, de nem nehéz. Mobilon a képre írt változat marad, ott a fenti fehér betűk kellenek. */
+@media (min-width:641px){
+.elso .top-keret .fo-racs .nyito.nyito.nyito{background:color-mix(in srgb,var(--fejszin,#16202f) 11%,var(--felulet))}
+.elso .top-keret .fo-racs .nyito.nyito.nyito h3,.elso .top-keret .fo-racs .nyito.nyito.nyito h3 a,.elso .top-keret .fo-racs .nyito.nyito.nyito .lefed{color:var(--tinta)}
+.elso .top-keret .fo-racs .nyito.nyito.nyito .forras{color:var(--c)}
+.elso .top-keret .fo-racs .nyito.nyito.nyito .meta{color:var(--halvany)}
+.elso .top-keret .fo-racs .nyito.nyito.nyito .lead{color:var(--lead)}
+.elso .top-keret .fo-racs .nyito.nyito.nyito .lefed i{box-shadow:none}
+.elso .top-keret .fo-racs .nyito.nyito.nyito .tovabbi,.elso .top-keret .fo-racs .nyito.nyito.nyito .tovabbi a{color:var(--halvany)}
+.elso .top-keret .fo-racs .nyito.nyito.nyito .tovabbi a.mutatott{color:var(--tinta)}
+.elso .top-keret .fo-racs .nyito.nyito.nyito .lapoz{background:var(--felulet);border-color:var(--vonal);color:var(--tinta)}
+}
+@media (min-width:641px) and (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .elso .top-keret .fo-racs .nyito.nyito.nyito{background:color-mix(in srgb,var(--fejszin,#16202f) 38%,var(--felulet))}}
+@media (min-width:641px){:root[data-tema="sotet"] .elso .top-keret .fo-racs .nyito.nyito.nyito{background:color-mix(in srgb,var(--fejszin,#16202f) 38%,var(--felulet))}}
 /* lapszéli hasáb: hat téma tömören, rövid vonallal elválasztva, egyenletesen elosztva */
 .top-szel{display:flex;flex-direction:column;justify-content:space-between;padding:.4rem 1.2rem .5rem}
 .elso .top-szel .fo-hir.kis{display:block;background:none;border:0;border-radius:0;padding:.8rem 0 .7rem;position:relative;overflow:visible}
