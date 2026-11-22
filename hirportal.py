@@ -48,10 +48,10 @@ NAPSZAK_SZINEK = [
 FEJLEC_SZIN = None
 # A címek betűtípusa a fejléchez igazodik (Google Fonts; csak a kiválasztott töltődik le)
 CIMBETUK = {
-    "hirlap": {"csalad": "Barlow Semi Condensed", "url": "Barlow+Semi+Condensed:wght@500;600;700;800", "suly": 700, "nagy": 800, "ter": "0",
-               "suly_kis_felbontas": 600,   # hagyományos (nem retina) kijelzőn a 700-as kis méretben „bedugul”
-               "lista": "Barlow Semi Condensed", "lista_url": "",   # a címbetűvel azonos család: egy letöltés
-               "lista_tartalek": "'Arial Narrow',ui-sans-serif,system-ui,sans-serif", "lista_suly": 500},
+    "hirlap": {"csalad": "Barlow", "url": "Barlow:wght@500;600;700", "suly": 600, "nagy": 700, "ter": "0",
+               # normál szélességű Barlow: a keskenyített változat kis méretben, hagyományos kijelzőn nehezen olvasható
+               "lista": "Barlow", "lista_url": "",   # a címbetűvel azonos család: egy letöltés
+               "lista_tartalek": "ui-sans-serif,system-ui,sans-serif", "lista_suly": 500},
     "nemzeti": {"csalad": "Merriweather", "url": "Merriweather:wght@400;700;900", "suly": 700, "nagy": 900, "ter": "-.005em",
                 "tartalek": "Georgia,'Times New Roman',serif",
                 "lista": "Source Serif 4", "lista_url": "Source+Serif+4:opsz,wght@8..60,400..700",
