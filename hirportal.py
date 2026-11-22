@@ -1426,7 +1426,13 @@ def fo_doboz(cs, i):
   <div class="szel-alja">{lefedettseg(cs)}{tovabbi(cs)}</div></div>
 </article>'''
     if tipus == "masod":
-        osztaly += " rairt"   # a 2×2-es rácsban a cím a képre írva
+        # a 2×2-es rácsban: a képen a lap, az idő és a cím; alatta fehéren a bevezető, a lapok és a lapozó
+        return f'''<article class="fo-hir masod rairt" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs)}>
+  <div class="kep-blokk">{kep}<div class="rcim">
+  <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
+  <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3></div></div>
+  <div class="szoveg">{lead}{lefedettseg(cs)}{tovabbi(cs)}</div>
+</article>'''
     return f'''<article class="fo-hir {osztaly}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs)}>
   {kep}<div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
@@ -2165,20 +2171,20 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .elso .top-keret .masod{grid-column:auto}
 /* a nyitóhír képe pontosan a 2×2-es rács középvonaláig ér (az oszlopok közti 1 px-es vonallal számolva) */
 @media (min-width:1001px){.elso .top-keret .fo-racs .nyito .kep{flex:0 0 calc((100% - 1px) / 2);margin:0;border-radius:0}}
-/* 2×2: a cím a képre írva (világos és sötét módban is a fotón, sötét átmenettel) */
-.elso .top-keret .fo-racs .fo-hir.rairt.rairt{position:relative;min-height:19rem;overflow:hidden;justify-content:flex-end;
+/* 2×2: a képen (alsó részén, sötét átmenettel) a lap, az idő és a cím; alatta fehéren a bevezető, a lapok, a lapozó */
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt{background:var(--felulet)}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .kep-blokk{position:relative;aspect-ratio:2/1;overflow:hidden;
   background:color-mix(in srgb,var(--r) 45%,#0b0f17)}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .kep{position:absolute;inset:0;margin:0;border-radius:0;aspect-ratio:auto}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .kep img{width:100%;height:100%;object-fit:cover}
-.elso .top-keret .fo-racs .fo-hir.rairt.rairt .szoveg{position:relative;z-index:1;padding:4.5rem 1.2rem 1rem;
-  background:linear-gradient(to bottom,transparent,rgb(0 0 0/.55) 32%,rgb(0 0 0/.86))}
-.elso .top-keret .fo-racs .fo-hir.rairt.rairt h3 a,.elso .top-keret .fo-racs .fo-hir.rairt.rairt .forras,.elso .top-keret .fo-racs .fo-hir.rairt.rairt .lefed,
-.elso .top-keret .fo-racs .fo-hir.rairt.rairt .tovabbi a,.elso .top-keret .fo-racs .fo-hir.rairt.rairt .tovabbi a.mutatott{color:#fff}
-.elso .top-keret .fo-racs .fo-hir.rairt.rairt h3{text-shadow:0 1px 6px rgb(0 0 0/.45)}
-.elso .top-keret .fo-racs .fo-hir.rairt.rairt .meta,.elso .top-keret .fo-racs .fo-hir.rairt.rairt .tovabbi{color:rgb(255 255 255/.8)}
-.elso .top-keret .fo-racs .fo-hir.rairt.rairt .lead{display:none}
-.elso .top-keret .fo-racs .fo-hir.rairt.rairt .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.55)}
-.elso .top-keret .fo-racs .fo-hir.rairt.rairt .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:3rem 1.2rem .8rem;
+  background:linear-gradient(to bottom,transparent,rgb(0 0 0/.75) 55%)}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim h3 a,.elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim .forras{color:#fff}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim h3{text-shadow:0 1px 6px rgb(0 0 0/.45);margin:0}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim .meta{color:rgb(255 255 255/.82)}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .szoveg{padding:.7rem 1.2rem 1rem}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .lead{margin-top:0;-webkit-line-clamp:2}
+.elso .top-keret .fo-racs .nyito.nyito{background:var(--felulet)}
 /* lapszéli hasáb: hat téma tömören, rövid vonallal elválasztva, egyenletesen elosztva */
 .top-szel{display:flex;flex-direction:column;justify-content:space-between;padding:.4rem 1.2rem .5rem}
 .elso .top-szel .fo-hir.kis{display:block;background:none;border:0;border-radius:0;padding:.8rem 0 .7rem;position:relative;overflow:visible}
