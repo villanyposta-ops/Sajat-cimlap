@@ -544,7 +544,7 @@ def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
     return db
 
 
-MAGAZIN_ROVATOK = ("kultura", "eletmod", "sport")   # kiemelt hírük képre írt címmel, rovatszínű panellel
+MAGAZIN_ROVATOK = ("kultura", "tech", "eletmod", "sport")   # kiemelt hírük képre írt címmel, rovatszínű panellel
 TOBBLAP = 2               # a rovatokban ennyi lapnál felső csíkot kap a sima doboz is
 KOTEG_LAP = 5             # ennyi lap felett a doboz mögött „lapköteg” látszik…
 KOTEG_NAGY = 7            # …ennyi felett vastagabb köteg
