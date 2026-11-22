@@ -1419,6 +1419,14 @@ def fo_doboz(cs, i):
     # képre írt cím: csak a nyitóhírnél, és csak keskeny képernyőn (telefonon)
     rairt = " rairt-kicsi" if i == 0 and h["kep"] else ""
     osztaly = tipus + rairt   # a Topban nincs köteg: ott eleve csak sokat megírt témák vannak
+    if tipus == "kis":
+        # lapszéli hasáb: színes lapnév a cím előtt, idő a végén; alatta a pöttyök és kicsiben a lapozó
+        return f'''<article class="fo-hir kis" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs)}>
+  <div class="szoveg"><h3><span class="meta">{forras_nev(h["forras"])}</span><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a> <span class="meta ido"><time>{ido_szoveg(h["ido"])}</time></span></h3>
+  <div class="szel-alja">{lefedettseg(cs)}{tovabbi(cs)}</div></div>
+</article>'''
+    if tipus == "masod":
+        osztaly += " rairt"   # a 2×2-es rácsban a cím a képre írva
     return f'''<article class="fo-hir {osztaly}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs)}>
   {kep}<div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
@@ -1841,7 +1849,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
 <nav class="rovatnav"><div class="nav-belso">{"".join(nav)}</div></nav>
 <section class="elso elso-{e(FO_STILUS)}" aria-label="A legfontosabb hírek">
   <div class="elso-belso">{hiba_html}
-  <div class="fo-racs">{"".join(fo_doboz(c, i) for i, c in enumerate(fo))}</div></div>
+  <div class="top-keret"><div class="fo-racs">{"".join(fo_doboz(c, i) for i, c in enumerate(fo[:5]))}</div><aside class="top-szel">{"".join(fo_doboz(c, i + 5) for i, c in enumerate(fo[5:]))}</aside></div></div>
 </section>
 <main>{"".join(reszek)}</main>
 <footer>A lap tetején azok a friss hírek állnak, amelyekről a legtöbb lap írt. Forrás: a lapok RSS-csatornái.
@@ -2150,6 +2158,50 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .fo-racs .fo-hir.rairt-kicsi .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
 .fo-racs .fo-hir.rairt-kicsi .kep-helyett{background:color-mix(in srgb,var(--r) 35%,#111)}}
 
+/* Top: egy közös fehér panel – balra a nyitóhír és alatta 2×2 képre írt című hír, jobbra a lapszéli hasáb */
+.top-keret{display:grid;grid-template-columns:3fr 1fr;background:var(--felulet);border:1px solid var(--vonal);border-radius:6px;overflow:hidden}
+.elso .top-keret .fo-racs{grid-template-columns:repeat(2,minmax(0,1fr));border:0;border-radius:0;border-right:1px solid var(--vonal)}
+.elso .top-keret .nyito{grid-column:1 / -1}
+.elso .top-keret .masod{grid-column:auto}
+/* 2×2: a cím a képre írva (világos és sötét módban is a fotón, sötét átmenettel) */
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt{position:relative;min-height:19rem;overflow:hidden;justify-content:flex-end;
+  background:color-mix(in srgb,var(--r) 45%,#0b0f17)}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .kep{position:absolute;inset:0;margin:0;border-radius:0;aspect-ratio:auto}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .kep img{width:100%;height:100%;object-fit:cover}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .szoveg{position:relative;z-index:1;padding:4.5rem 1.2rem 1rem;
+  background:linear-gradient(to bottom,transparent,rgb(0 0 0/.55) 32%,rgb(0 0 0/.86))}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt h3 a,.elso .top-keret .fo-racs .fo-hir.rairt.rairt .forras,.elso .top-keret .fo-racs .fo-hir.rairt.rairt .lefed,
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .tovabbi a,.elso .top-keret .fo-racs .fo-hir.rairt.rairt .tovabbi a.mutatott{color:#fff}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt h3{text-shadow:0 1px 6px rgb(0 0 0/.45)}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .meta,.elso .top-keret .fo-racs .fo-hir.rairt.rairt .tovabbi{color:rgb(255 255 255/.8)}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .lead{display:none}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.55)}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
+/* lapszéli hasáb: hat téma tömören, rövid vonallal elválasztva, egyenletesen elosztva */
+.top-szel{display:flex;flex-direction:column;justify-content:space-between;padding:.4rem 1.2rem .5rem}
+.elso .top-szel .fo-hir.kis{display:block;background:none;border:0;border-radius:0;padding:.8rem 0 .7rem;position:relative;overflow:visible}
+.elso .top-szel .fo-hir.kis+.fo-hir.kis::before{content:"";position:absolute;top:0;left:0;width:40%;border-top:1px solid var(--vonal)}
+.elso .top-szel .fo-hir.kis .szoveg{padding:0;display:block}
+.elso .top-szel .fo-hir.kis h3{display:block;margin:0;font-size:.98rem;line-height:1.32}
+.elso .top-szel .fo-hir.kis h3 a{color:var(--tinta)}
+.elso .top-szel .fo-hir.kis h3 .meta{display:inline;margin:0;font:inherit;height:auto}
+.elso .top-szel .fo-hir.kis h3 .forras{font:inherit;color:var(--c);margin-right:.3rem}
+.elso .top-szel .fo-hir.kis h3 .ido{font-family:var(--listabetu,inherit);font-weight:400;font-size:.74rem;color:var(--halvany);margin-left:.2rem;white-space:nowrap}
+.top-szel .szel-alja{display:grid;grid-template-columns:1fr auto;grid-template-areas:"lefed lapozo" "lapok lapok";align-items:center;column-gap:.5rem;margin-top:.45rem}
+.top-szel .szel-alja .lefed{grid-area:lefed}
+.elso .top-szel .fo-hir.kis .lefed{margin:0;font-size:.72rem;font-weight:500;color:var(--halvany)}
+.elso .top-szel .fo-hir.kis .lefed i{width:.5rem;height:.5rem}
+.elso .top-szel .fo-hir.kis .tovabbi{display:contents}
+.elso .top-szel .fo-hir.kis .lapozo{grid-area:lapozo;margin:0;position:static;align-self:center}
+.elso .top-szel .fo-hir.kis .tovabbi-lapok{grid-area:lapok;font-size:.74rem;line-height:1.4;color:var(--halvany);padding:0;margin-top:.25rem}
+.elso .top-szel .fo-hir.kis .tovabbi-lapok a{color:var(--halvany)}.elso .top-szel .fo-hir.kis .tovabbi-lapok a.mutatott{color:var(--tinta)}
+.elso .top-szel .fo-hir.kis .lapozo{gap:.25rem}
+.elso .top-szel .fo-hir.kis .lapoz{width:1.3rem;height:1.3rem;min-width:0;padding:0;font-size:.8rem;line-height:1;border-radius:4px}
+@media (max-width:1000px){.top-keret{grid-template-columns:1fr}.elso .top-keret .fo-racs{border-right:0;border-bottom:1px solid var(--vonal)}
+  .top-szel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:1.4rem}
+  .top-szel .fo-hir.kis:nth-child(2)::before{display:none}}
+@media (max-width:640px){.elso .top-keret .fo-racs{grid-template-columns:1fr}.top-szel{grid-template-columns:1fr}
+  .top-szel .fo-hir.kis:nth-child(2)::before{display:block}.elso .fo-racs .fo-hir.rairt{min-height:15rem}}
 /* KÍSÉRLET: a Top is újságoldal – egy fehér lap, a hírek között vékony vonalak (a rács 1 px-es hézaga) */
 .elso .fo-racs{gap:1px;background:var(--vonal);border:1px solid var(--vonal);border-radius:6px;overflow:hidden}
 .elso .fo-racs .fo-hir{background:var(--felulet);border:0;border-radius:0;box-shadow:none}
@@ -2400,7 +2452,7 @@ function csere(el){
 // annyi sort foglal, amennyit az eredeti
 const lathatoLapok=el=>{const a=JSON.parse(el.dataset.alt);const l=a.filter(x=>!rejtettForras.has(x.f));return l.length?l:a;};
 function mutat(el,u){
-  if(!el.dataset.rogzitve){
+  if(!el.dataset.rogzitve && !el.closest('.top-szel')){
     // a dobozt magát nem rögzítjük (az a rácsban a szomszédait is átméretezhetné), csak a belső részeit:
     // a cím és a bevezető legfeljebb az eredeti sorszámot foglalhatja, a fejléc és a lapsor magassága fix
     el.dataset.rogzitve='1';
