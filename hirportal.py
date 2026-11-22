@@ -1454,6 +1454,14 @@ def doboz(cs, lead=True, kiemelt=False, extra="", magazin=False):
         # magazinos kiemelt: a képen a lap, az idő és a cím; mellette (fekvő) vagy alatta (álló)
         # rovatszínű panelen alulra igazítva a bevezető, a lapok és a lapozó
         extra = extra.replace(" szines", "")
+        fej = (f'<div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>'
+               f'<h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>')
+        if "kiemelt-magas" not in extra:
+            # fekvő: balra a kép (a doboz teljes magasságában), jobbra a cím, a bevezető, a lapok, a lapozó
+            return f'''<article class="doboz kiemelt magazin{extra}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=lead)}>
+  <div class="kb">{kep_html(h, "kiemelt-kep")}</div>
+  <div class="szoveg">{fej}{f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and lead else ''}{lefedettseg(cs)}{tovabbi(cs)}</div>
+</article>'''
         return f'''<article class="doboz kiemelt magazin{extra}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=lead)}>
   <div class="kb">{kep_html(h, "kiemelt-kep")}<div class="rcim">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
@@ -2159,31 +2167,28 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.stadion .friss-sav .lista time{color:var(--halvany)}.rovat.stadion .friss-sav .lista li{border-color:var(--vonal)}
 .rovat.stadion .friss-sav .lista .forras{color:var(--c)}
 .rovat.stadion .friss-sav .cikkek-gomb{color:var(--halvany);border-color:var(--vonal)}.rovat.stadion .friss-sav .cikkek-gomb .db{font-weight:400}.rovat.stadion .friss-sav .cikkek-gomb:hover{color:var(--tinta);border-color:var(--halvany)}
-/* magazinos kiemelt (Kultúra, Életmód, Sport) */
-.rovat .doboz.kiemelt.magazin.magazin{--mp:color-mix(in srgb,var(--r) 70%,#0b0f17);padding:0;gap:0;display:flex;overflow:hidden;
-  background:var(--mp);border:0;color:#fff}
-.rovat .doboz.kiemelt.magazin.magazin .kb{position:relative;overflow:hidden;background:var(--mp)}
+/* magazinos kiemelt (Kultúra, Életmód, Sport): a szokásos halvány rovatszínű háttér;
+   fekvőnél balra a kép a doboz teljes magasságában, jobbra a cím és a szöveg; állónál a cím a képre írva */
+.rovat .racs .doboz.kiemelt.magazin.magazin{padding:0!important;gap:0;display:flex;overflow:hidden;border-top:0!important}
+.rovat .doboz.kiemelt.magazin.magazin .kb{position:relative;overflow:hidden;background:color-mix(in srgb,var(--r) 25%,var(--felulet))}
 .rovat .doboz.kiemelt.magazin.magazin .kiemelt-kep{position:absolute;inset:0;width:auto;aspect-ratio:auto;border-radius:0;margin:0;order:0}
 .rovat .doboz.kiemelt.magazin.magazin .kiemelt-kep img{width:100%;height:100%;object-fit:cover}
+.rovat .doboz.kiemelt.magazin.magazin .szoveg{flex:1;padding:1rem 1.2rem 1rem}
+.rovat .doboz.kiemelt.magazin.magazin .lead{-webkit-line-clamp:6}
+.rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas){flex-direction:row;align-items:stretch}
+.rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .kb{flex:0 0 52%;min-height:16rem;align-self:stretch}
+.rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas{flex-direction:column}
+.rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas .kb{width:100%;flex:none;aspect-ratio:4/3}
 .rovat .doboz.kiemelt.magazin.magazin .rcim{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:3rem 1.2rem .9rem;
   background:linear-gradient(to bottom,transparent,rgb(0 0 0/.72) 55%)}
 .rovat .doboz.kiemelt.magazin.magazin .rcim h3{margin:0;text-shadow:0 1px 6px rgb(0 0 0/.45)}
 .rovat .doboz.kiemelt.magazin.magazin .rcim h3 a,.rovat .doboz.kiemelt.magazin.magazin .rcim .forras{color:#fff}
 .rovat .doboz.kiemelt.magazin.magazin .rcim .meta{color:rgb(255 255 255/.82)}
-.rovat .doboz.kiemelt.magazin.magazin .szoveg{flex:1;align-self:stretch;display:flex;flex-direction:column;justify-content:flex-end;padding:1rem 1.2rem .95rem}
-.rovat .racs .doboz.kiemelt.magazin.magazin{padding:0!important;border-top:0!important}
-.rovat .doboz.kiemelt.magazin.magazin .lead{margin-top:0;color:rgb(255 255 255/.9);-webkit-line-clamp:5}
-.rovat .doboz.kiemelt.magazin.magazin .lefed{color:#fff}
-.rovat .doboz.kiemelt.magazin.magazin .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.35)}
-.rovat .doboz.kiemelt.magazin.magazin .tovabbi,.rovat .doboz.kiemelt.magazin.magazin .tovabbi a{color:rgb(255 255 255/.8)}
-.rovat .doboz.kiemelt.magazin.magazin .tovabbi a.mutatott{color:#fff}
-.rovat .doboz.kiemelt.magazin.magazin .lapoz{background:rgb(255 255 255/.12);border-color:rgb(255 255 255/.45);color:#fff}
-.rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas){flex-direction:row}
-.rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .kb{flex:0 0 55%;min-height:17rem}
-.rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas{flex-direction:column}
-.rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas .kb{width:100%;flex:none;aspect-ratio:4/3}
-@media (max-width:640px){.rovat .doboz.kiemelt.magazin.magazin{flex-direction:column}
-  .rovat .doboz.kiemelt.magazin.magazin .kb{width:100%;flex:none;aspect-ratio:16/10;min-height:0}}
+.rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas .lead{margin-top:0}
+/* a Sport zöld pályáján fehér marad a doboz */
+.rovat.stadion .doboz.kiemelt.magazin.magazin{background:var(--felulet)}
+@media (max-width:640px){.rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas){flex-direction:column}
+  .rovat .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .kb{width:100%;flex:none;aspect-ratio:16/10;min-height:0}}
 /* a Helyi rovat dobozaiban nincs kép, a több lapos témáknál sem */
 .rovat.helyi .doboz .belyeg{display:none}
 /* Top nyitóhír: a cím a képre írva */
