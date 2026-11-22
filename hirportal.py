@@ -2188,12 +2188,12 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas .lead{-webkit-line-clamp:4}
 .rovat .doboz.kiemelt.magazin.magazin .rcim{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:3rem 1.2rem .9rem;
   background:linear-gradient(to bottom,transparent,rgb(0 0 0/.72) 55%)}
-.rovat .doboz.kiemelt.magazin.magazin .rcim h3{margin:0;text-shadow:0 1px 6px rgb(0 0 0/.45)}
+.rovat .doboz.kiemelt.magazin.magazin .rcim h3{color:#fff;margin:0;text-shadow:0 1px 6px rgb(0 0 0/.45)}
 .rovat .doboz.kiemelt.magazin.magazin .rcim h3 a,.rovat .doboz.kiemelt.magazin.magazin .rcim .forras{color:#fff}
 .rovat .doboz.kiemelt.magazin.magazin .rcim .meta{color:rgb(255 255 255/.82)}
 .rovat .doboz.kiemelt.magazin.magazin.kiemelt-magas .lead{margin-top:0}
 /* a Sport zöld pályáján fehér marad a doboz */
-.rovat .racs .doboz.kiemelt.magazin.magazin .szoveg h3 a,.rovat .racs .doboz.kiemelt.magazin.magazin .szoveg .forras{color:#fff}
+.rovat .racs .doboz.kiemelt.magazin.magazin .szoveg h3,.rovat .racs .doboz.kiemelt.magazin.magazin .szoveg h3 a,.rovat .racs .doboz.kiemelt.magazin.magazin .szoveg .forras{color:#fff}
 .rovat .racs .doboz.kiemelt.magazin.magazin .szoveg .meta{color:rgb(255 255 255/.8)}
 .rovat .racs .doboz.kiemelt.magazin.magazin .lead{color:rgb(255 255 255/.9)}
 .rovat .racs .doboz.kiemelt.magazin.magazin .lefed{color:#fff}
@@ -2235,14 +2235,14 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:3rem 1.2rem .8rem;
   background:linear-gradient(to bottom,transparent,rgb(0 0 0/.75) 55%)}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim h3 a,.elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim .forras{color:#fff}
-.elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim h3{text-shadow:0 1px 6px rgb(0 0 0/.45);margin:0}
+.elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim h3{color:#fff;text-shadow:0 1px 6px rgb(0 0 0/.45);margin:0}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .rcim .meta{color:rgb(255 255 255/.82)}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .szoveg{padding:.7rem 1.2rem 1rem}
 .elso .top-keret .fo-racs .fo-hir.rairt.rairt .lead{margin-top:0;-webkit-line-clamp:2}
 /* a nyitóhír szövegpanelje a fejléc (napszakonként váltakozó) színében, fehér betűkkel */
 .elso .top-keret .fo-racs .nyito.nyito{background:var(--fejszin,#16202f)}
-.elso .top-keret .fo-racs .nyito.nyito h3 a,.elso .top-keret .fo-racs .nyito.nyito .lefed{color:#fff}
-.elso .top-keret .fo-racs .nyito.nyito .forras{color:color-mix(in srgb,var(--c) 40%,#fff)}
+.elso .top-keret .fo-racs .nyito.nyito h3,.elso .top-keret .fo-racs .nyito.nyito h3 a,.elso .top-keret .fo-racs .nyito.nyito .lefed{color:#fff}
+.elso .top-keret .fo-racs .nyito.nyito .forras{color:#fff}   /* a lapnév fehér, mint a képre írt címeknél; csak a pöttyök színesek */
 .elso .top-keret .fo-racs .nyito.nyito .meta{color:rgb(255 255 255/.75)}
 .elso .top-keret .fo-racs .nyito.nyito .lead{color:rgb(255 255 255/.88)}
 .elso .top-keret .fo-racs .nyito.nyito .lefed i{box-shadow:0 0 0 1.5px rgb(0 0 0/.3)}
