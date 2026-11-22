@@ -2175,11 +2175,11 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 /* fekvő kiemelések (Top nyitóhír, magazinos rovatok): balra a szöveg tömör színen, jobbra a kép vízszintes átmenettel */
 @media (min-width:1001px){
 .elso .top-keret .fo-racs .nyito.nyito{position:relative;display:block;min-height:19rem;overflow:hidden}
-.elso .top-keret .fo-racs .nyito.nyito .kep{position:absolute;inset:0 0 0 30%;margin:0;flex:none;width:auto;border-radius:0}
+.elso .top-keret .fo-racs .nyito.nyito .kep{position:absolute;inset:0 0 0 40%;margin:0;flex:none;width:auto;border-radius:0}
 .elso .top-keret .fo-racs .nyito.nyito .kep img{width:100%;height:100%;object-fit:cover;object-position:center right}
 .elso .top-keret .fo-racs .nyito.nyito::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:linear-gradient(90deg,var(--fejszin,#16202f) 0,var(--fejszin,#16202f) 42%,color-mix(in srgb,var(--fejszin,#16202f) 70%,transparent) 54%,transparent 72%)}
-.elso .top-keret .fo-racs .nyito.nyito .szoveg{position:relative;z-index:2;width:50%;padding:1.6rem 1.8rem 1.4rem}
+  background:linear-gradient(90deg,var(--fejszin,#16202f) 0,var(--fejszin,#16202f) 45%,color-mix(in srgb,var(--fejszin,#16202f) 55%,transparent) 51%,transparent 58%)}
+.elso .top-keret .fo-racs .nyito.nyito .szoveg{position:relative;z-index:2;width:44%;padding:1.6rem 1.6rem 1.4rem 1.8rem}   /* a szöveg csak a tömör színen */
 .rovat .racs .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas){position:relative;display:block;min-height:17rem}
 .rovat .racs .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .kb{position:absolute;inset:0 0 0 30%;flex:none;min-height:0}
 .rovat .racs .doboz.kiemelt.magazin.magazin:not(.kiemelt-magas) .kiemelt-kep img{object-position:center right}
