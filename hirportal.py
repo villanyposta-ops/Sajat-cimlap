@@ -2085,13 +2085,13 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .doboz.kiemelt h3{font-size:1.32rem;line-height:1.22;letter-spacing:-.015em}
 /* rovatszínű sáv a nem színes kiemelt kártya tetején */
 .doboz.kiemelt:not(.szines){border-top:4px solid var(--r);padding-top:calc(1rem - 3px)}
-/* több lap írta: erős rovatszínű felső vonal, a doboz margóján belül – nem ér a doboz széléhez,
+/* több lap írta: erős rovatszínű felső vonal (kétharmadig teljes, utána átlátszóba fut ki), a doboz margóján belül – nem ér a doboz széléhez,
    így nem olvad össze a fölötte lévő kiemelt dobozzal, és a lekerekített kártyákon is jól ül */
 .doboz{--bp:1rem}
 .rovat.ujsag .doboz{--bp:1.2rem}
 .doboz.tobblap{position:relative}
 .doboz.tobblap::before{content:"";position:absolute;top:7px;left:var(--bp);right:var(--bp);height:4px;
-  background:var(--r);border-radius:2px;pointer-events:none;z-index:2}
+  background:linear-gradient(to right,var(--r) 0,var(--r) 66%,transparent);border-radius:2px;pointer-events:none;z-index:2}
 /* „vezércikk”: kép nélküli kiemelt kártya nagy, dőlt címmel */
 .doboz.vezer .kiemelt-kep{display:none}
 .doboz.vezer h3{font-size:1.75rem;line-height:1.15;font-style:italic;letter-spacing:-.02em}
