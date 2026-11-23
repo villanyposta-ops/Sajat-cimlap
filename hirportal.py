@@ -773,6 +773,68 @@ def egyesit(csoportok, hason, T, ablak, V):
         csoportok[b]["idx"], csoportok[b]["hirek"] = [], []
 
 
+ELO_MIN_RESZ = 3        # ennyi azonos címkéjű cikk egy lapnál már élő sorozat
+ELO_RES_PERC = 90       # két egymást követő rész között legfeljebb ennyi perc telhet el
+ELO_CIMKE_MIN = 3       # csak legalább ennyi címkés cikkeknél (az egycímkés lapoknál, pl. „Belföld”, ez semmit sem jelent)
+ELO_JEL = re.compile(r"élőben|\bélő\b|-elo/|percről percre", re.I)
+
+
+def elo_sorozatok(hirek):
+    """Élő tudósítás felismerése: ha egy lap rövid időn belül legalább ELO_MIN_RESZ cikket ad ki pontosan
+    ugyanazzal a (legalább ELO_CIMKE_MIN elemű) címkekészlettel (a 24.hu élő tudósításainak minden része
+    ilyen), azokat egyetlen hírré vonjuk össze: elöl a legfrissebb rész, a többi a „Korábbi részek” alatt."""
+    from collections import defaultdict
+    ido = lambda h: datetime.fromisoformat(h["ido"])
+    csop = defaultdict(list)
+    for h in hirek:
+        k = frozenset(x.strip().lower() for x in h["kategoriak"] if x.strip())
+        if len(k) >= ELO_CIMKE_MIN:
+            csop[(h["forras"], k)].append(h)
+    ki, uj = set(), []
+    for lista in csop.values():
+        if len(lista) < ELO_MIN_RESZ:
+            continue
+        lista.sort(key=ido)
+        lancok = [[lista[0]]]
+        for h in lista[1:]:
+            if ido(h) - ido(lancok[-1][-1]) <= timedelta(minutes=ELO_RES_PERC):
+                lancok[-1].append(h)
+            else:
+                lancok.append([h])
+        for r in lancok:
+            if len(r) < ELO_MIN_RESZ:
+                continue
+            r = sorted(r, key=ido, reverse=True)
+            fo = dict(r[0])
+            if not fo["kep"]:
+                fo["kep"] = next((h["kep"] for h in r if h["kep"]), "")
+            gyujto = next((h for h in r if ELO_JEL.search(h["cim"] + " " + h["link"])), None)
+            fo["sorozat"] = [{"c": h["cim"], "l": h["link"], "t": h["ido"]} for h in r[1:]]
+            fo["elo_link"] = gyujto["link"] if gyujto else ""
+            ki.update(id(h) for h in r)
+            uj.append(fo)
+    return [h for h in hirek if id(h) not in ki] + uj
+
+
+def elo_jel(h):
+    s = h.get("sorozat")
+    if not s:
+        return ""
+    friss = (MOST - datetime.fromisoformat(h["ido"])) <= timedelta(hours=1)
+    return f'<span class="elo-jel{" elo-most" if friss else ""}">{"Élő" if friss else "Tudósítás"} · {len(s) + 1} rész</span>'
+
+
+def sorozat_html(h):
+    s = h.get("sorozat")
+    if not s:
+        return ""
+    sorok = "".join(f'<li><time>{bp(datetime.fromisoformat(x["t"])).strftime("%H:%M")}</time>'
+                    f'<a href="{e(x["l"])}" target="_blank" rel="noopener">{e(x["c"])}</a></li>' for x in s)
+    gy = (f'<a class="elo-gyujto" href="{e(h["elo_link"])}" target="_blank" rel="noopener">Az egész tudósítás ›</a>'
+          if h.get("elo_link") else "")
+    return f'<details class="sorozat"><summary>Korábbi részek ({len(s)})</summary><ul>{sorok}</ul>{gy}</details>'
+
+
 def osszevon(hirek, kulcs=None):
     """Ugyanarról szóló cikkek csoportosítása betű-n-gramos TF-IDF hasonlósággal.
     Minden cikkből súlyozott vektor készül a cím és a bevezető 4 betűs darabjaiból; a ritka darabok többet
@@ -1441,22 +1503,22 @@ def fo_doboz(cs, i):
     if tipus == "kis":
         # lapszéli hasáb: színes lapnév a cím előtt, idő a végén; alatta a pöttyök és kicsiben a lapozó
         return f'''<article class="fo-hir kis" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs)}>
-  <div class="szoveg"><h3><span class="meta">{forras_nev(h["forras"])}</span><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a> <span class="meta ido"><time>{ido_szoveg(h["ido"])}</time></span></h3>
+  <div class="szoveg"><h3><span class="meta">{elo_jel(h)}{forras_nev(h["forras"])}</span><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a> <span class="meta ido"><time>{ido_szoveg(h["ido"])}</time></span></h3>
   <div class="szel-alja">{lefedettseg(cs)}{tovabbi(cs)}</div></div>
 </article>'''
     if tipus == "masod":
         # a 2×2-es rácsban: a képen a lap, az idő és a cím; alatta fehéren a bevezető, a lapok és a lapozó
         return f'''<article class="fo-hir masod rairt" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs)}>
   <div class="kep-blokk">{kep}<div class="rcim">
-  <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
+  <div class="meta">{elo_jel(h)}{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3></div></div>
-  <div class="szoveg">{lead}{lefedettseg(cs)}{tovabbi(cs)}</div>
+  <div class="szoveg">{lead}{sorozat_html(h)}{lefedettseg(cs)}{tovabbi(cs)}</div>
 </article>'''
     return f'''<article class="fo-hir {osztaly}" style="--r:{rszin}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs)}>
   {kep}<div class="szoveg">
   <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
-  {lead}{lefedettseg(cs)}{tovabbi(cs)}</div>
+  {lead}{sorozat_html(h)}{lefedettseg(cs)}{tovabbi(cs)}</div>
 </article>'''
 
 
@@ -1472,7 +1534,7 @@ def doboz(cs, lead=True, kiemelt=False, extra="", magazin=False):
         # magazinos kiemelt: a képen a lap, az idő és a cím; mellette (fekvő) vagy alatta (álló)
         # rovatszínű panelen alulra igazítva a bevezető, a lapok és a lapozó
         extra = extra.replace(" szines", "")
-        fej = (f'<div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>'
+        fej = (f'<div class="meta">{elo_jel(h)}{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>'
                f'<h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>')
         if "kiemelt-magas" not in extra:
             # fekvő: balra a kép (a doboz teljes magasságában), jobbra a cím, a bevezető, a lapok, a lapozó
@@ -1482,7 +1544,7 @@ def doboz(cs, lead=True, kiemelt=False, extra="", magazin=False):
 </article>'''
         return f'''<article class="doboz kiemelt magazin{extra}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=lead)}>
   <div class="kb">{kep_html(h, "kiemelt-kep")}<div class="rcim">
-  <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
+  <div class="meta">{elo_jel(h)}{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3></div></div>
   <div class="szoveg">{f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and lead else ''}{lefedettseg(cs)}{tovabbi(cs)}</div>
 </article>'''
@@ -1493,10 +1555,10 @@ def doboz(cs, lead=True, kiemelt=False, extra="", magazin=False):
     kep = kep_html(h, "kiemelt-kep") if kiemelt else kep_html(h, "belyeg")
     return f'''<article class="doboz{' kiemelt' if kiemelt else ''}{extra}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=lead)}>
   <div class="szoveg">
-  <div class="meta">{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
+  <div class="meta">{elo_jel(h)}{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3>
   {f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and lead else ''}
-  {lefedettseg(cs)}{tovabbi(cs)}</div>
+  {sorozat_html(h)}{lefedettseg(cs)}{tovabbi(cs)}</div>
   {kep}
 </article>'''
 
@@ -2304,6 +2366,23 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 }
 @media (min-width:641px) and (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .elso .top-keret .fo-racs .nyito.nyito.nyito{background:color-mix(in srgb,var(--fejszin,#16202f) 38%,var(--felulet))}}
 @media (min-width:641px){:root[data-tema="sotet"] .elso .top-keret .fo-racs .nyito.nyito.nyito{background:color-mix(in srgb,var(--fejszin,#16202f) 38%,var(--felulet))}}
+/* élő tudósítás: piros jelzés a lapnév előtt, a korábbi részek lenyitható listában */
+.elo-jel{display:inline-flex;align-items:center;gap:.32rem;font-size:.68rem;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:#dc2626;margin-right:.55rem;white-space:nowrap}
+.elo-jel::before{content:"";width:.48rem;height:.48rem;border-radius:50%;background:currentColor}
+.elo-jel.elo-most::before{animation:elo-pulzus 1.6s ease-in-out infinite}
+@keyframes elo-pulzus{0%,100%{box-shadow:0 0 0 0 rgb(220 38 38/.55)}60%{box-shadow:0 0 0 .38rem rgb(220 38 38/0)}}
+@media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .elo-jel{color:#f87171}}
+:root[data-tema="sotet"] .elo-jel{color:#f87171}
+.sorozat{margin-top:.6rem;font-size:.84rem;font-family:var(--listabetu,inherit)}
+.sorozat summary{cursor:pointer;color:var(--halvany);font-weight:600;list-style:none}
+.sorozat summary::-webkit-details-marker{display:none}
+.sorozat summary::after{content:" ▾"}.sorozat[open] summary::after{content:" ▴"}
+.sorozat ul{list-style:none;margin:.45rem 0 .3rem;padding:0 0 0 .75rem;border-left:2px solid color-mix(in srgb,#dc2626 45%,var(--vonal))}
+.sorozat li{margin:.3rem 0;line-height:1.35}
+.sorozat time{color:var(--halvany);margin-right:.45rem;font-variant-numeric:tabular-nums;font-size:.78rem}
+.sorozat a{color:var(--tinta);text-decoration:none}.sorozat a:hover{text-decoration:underline}
+.sorozat .elo-gyujto{display:inline-block;margin:.15rem 0 0 .75rem;font-weight:700;color:#dc2626}
 /* lapszéli hasáb: hat téma tömören, rövid vonallal elválasztva, egyenletesen elosztva */
 .top-szel{display:flex;flex-direction:column;justify-content:space-between;padding:.4rem 1.2rem .5rem}
 .elso .top-szel .fo-hir.kis{display:block;background:none;border:0;border-radius:0;padding:.8rem 0 .7rem;position:relative;overflow:visible}
@@ -2973,7 +3052,7 @@ def main():
     tanulo_besorolas(ervenyes)
 
     allapot_ut.write_text(json.dumps(ervenyes + emlek, ensure_ascii=False), "utf-8")
-    orszagos = osszevon([h for h in ervenyes if h["rovat"] not in ("helyi", "idojaras", "hatter")])
+    orszagos = osszevon(elo_sorozatok([h for h in ervenyes if h["rovat"] not in ("helyi", "idojaras", "hatter")]))
     # a háttéranyagokat nem vonjuk össze: mindegyik önálló „sztori”
     hatter_cs = [osszevon([h])[0] for h in ervenyes if h["rovat"] == "hatter"]
     # a helyi híreket helyenként külön vonjuk össze: pécsi és somogyi cikk akkor se kerüljön egy témába,
