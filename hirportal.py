@@ -1876,7 +1876,8 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
                 if dobozok or r.get("egyszeru") else []
             # az újságos rovatok négyhasábos rövidhír-sora ne maradjon csonka: ha megjelenik, a következő
             # legfrissebb hírekkel (akár 3 óránál régebbiekkel) négyesével teli sorokra egészül ki
-            if sav and r.get("ujsag") and dobozok and len(sav) % 4:
+            rovidhir = (r.get("ujsag") or r.get("stadion")) and dobozok   # négyhasábos rövidhír-sor (a Sportban is)
+            if sav and rovidhir and len(sav) % 4:
                 tobbi = sorted((c for c in lista if not any(c is x for x in sav)),
                                key=lambda c: datetime.fromisoformat(c["fo"]["ido"]), reverse=True)
                 sav = sav + tobbi[:-len(sav) % 4]
@@ -1887,7 +1888,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
   {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else ""), magazin=r["id"] in MAGAZIN_ROVATOK) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
-  {kis_kartyak(sav) if r.get("egyszeru") else friss_racs(sav) if r.get("ujsag") and dobozok else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav, cimke="Korábbi hírek" if sav and r.get("ujsag") else "További hírek")}
+  {kis_kartyak(sav) if r.get("egyszeru") else friss_racs(sav) if rovidhir else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav, cimke="Korábbi hírek" if sav and rovidhir else "További hírek")}
   </div>
 </section>''')
         if r["id"] == HELYI_UTAN:
@@ -2227,6 +2228,13 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .fs-racs .cikkek{font-family:var(--listabetu,inherit);font-weight:var(--lista-suly,400);font-size:.84rem;line-height:1.35;list-style:none;padding:0;margin:.45rem 0 0}
 .fs-racs .cikkek li{display:flex;gap:.5rem;padding:.2rem 0}.fs-racs .cikkek time{color:var(--halvany);flex:none}.fs-racs .cikkek .forras{margin-right:.3rem}
 .fs-tobb{display:none}
+/* a Sport zöld hátterén a rövidhír-sor fehér lapon ül */
+.rovat.stadion .fs-blokk{background:var(--felulet);border:1px solid var(--vonal);border-radius:6px;padding:.9rem 1.2rem .8rem;margin-top:1.2rem}
+.rovat.stadion .fs-racs h4 a,.rovat.stadion .fs-racs .cikkek a,.rovat.stadion .fs-racs .cikkek li{color:var(--tinta)}
+.rovat.stadion .fs-racs .fs-ido,.rovat.stadion .fs-racs .cikkek time{color:var(--halvany)}
+.rovat.stadion .fs-racs .forras{color:var(--c)}
+.rovat.stadion .fs-racs .cikkek-gomb{color:var(--halvany);border-color:var(--vonal)}.rovat.stadion .fs-racs .cikkek-gomb .db{font-weight:400}
+.rovat.stadion .fs-tobb{color:var(--tinta)}
 @media (max-width:1000px) and (min-width:641px){.fs-racs{grid-template-columns:repeat(2,minmax(0,1fr))}
   .fs-racs .fs:nth-child(4n+1){padding-left:1.2rem}.fs-racs .fs:nth-child(2n+1){padding-left:0}
   .fs-racs .fs::before{display:block}.fs-racs .fs:nth-child(2n+1)::before{display:none}}
