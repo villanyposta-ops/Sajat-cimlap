@@ -1571,7 +1571,7 @@ def sor(cs, csak_ora=False, rovid=False):
         ido = bp(datetime.fromisoformat(h["ido"])).strftime("%H:%M") if csak_ora else ido_szoveg(h["ido"])
     return (f'<li data-srcs="{" ".join(cs["forrasok"])}"{alt_adat(cs, csak_ora, lead=False, kep=False)}><time>{ido}</time>'
             f'<span class="sor-cim"><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a> '
-            f'{forras_nev(h["forras"])}{cikklista(cs)}</span></li>')
+            f'{elo_jel(h)}{forras_nev(h["forras"])}{cikklista(cs)}</span></li>')
 
 
 def friss_racs(lista):
@@ -1582,7 +1582,7 @@ def friss_racs(lista):
         return ""
     cellak = [
         # a lap neve színesen közvetlenül a cím előtt (sortörés nélkül), az idő kicsiben a cím végén
-        f'<article class="fs" data-srcs="{" ".join(c["forrasok"])}"><h4>{forras_nev(c["fo"]["forras"])}'
+        f'<article class="fs" data-srcs="{" ".join(c["forrasok"])}"><h4>{elo_jel(c["fo"])}{forras_nev(c["fo"]["forras"])}'
         f'<a href="{e(c["fo"]["link"])}" target="_blank" rel="noopener">{e(c["fo"]["cim"])}</a></h4>'
         f'<time class="fs-ido">{ido_szoveg(c["fo"]["ido"])}</time>'
         + (f' {cikklista(c)}' if len(c["hirek"]) > 1 else "") + "</article>"
@@ -1599,7 +1599,7 @@ def kis_kartyak(csoportok):
     if not csoportok:
         return ""
     kartyak = "".join(
-        f'<article class="mini" data-srcs="{" ".join(c["forrasok"])}"><div class="meta">{forras_nev(c["fo"]["forras"])}'
+        f'<article class="mini" data-srcs="{" ".join(c["forrasok"])}"><div class="meta">{elo_jel(c["fo"])}{forras_nev(c["fo"]["forras"])}'
         f'<time>{ido_szoveg(c["fo"]["ido"])}</time></div>'
         f'<h4><a href="{e(c["fo"]["link"])}" target="_blank" rel="noopener">{e(c["fo"]["cim"])}</a></h4>'
         + (f'<p class="lead">{e(c["fo"]["lead"])}</p>' if c["fo"]["lead"] else "") + "</article>"
@@ -1610,7 +1610,7 @@ def kis_kartyak(csoportok):
 def halom(csoportok):
     """Egy doboz helyén több kis kártya: lap, idő és cím (bevezető és kép nélkül) – egy lapos, régebbi hírekhez."""
     kartyak = "".join(
-        f'<article class="mini" data-srcs="{c["fo"]["forras"]}"><div class="meta">{forras_nev(c["fo"]["forras"])}'
+        f'<article class="mini" data-srcs="{c["fo"]["forras"]}"><div class="meta">{elo_jel(c["fo"])}{forras_nev(c["fo"]["forras"])}'
         f'<time>{ido_szoveg(c["fo"]["ido"])}</time></div>'
         f'<h4><a href="{e(c["fo"]["link"])}" target="_blank" rel="noopener">{e(c["fo"]["cim"])}</a></h4></article>'
         for c in csoportok)
@@ -1621,7 +1621,8 @@ def halom_helyek(dobozok, lista, sorok, sors):
     """A megadott sorokban (a rács dobozainak indexei szerint) egy-egy sorsolt doboz helyére halom kerül.
     Csak egy lapos, nem összevont hír kerülhet halomba: a helyén álló dobozé és a lista elejéről még kettő.
     Visszaad: {doboz index: [csoportok]} és a megmaradt lista."""
-    egyszeru = lambda c: len(c["hirek"]) == 1
+    # az élő tudósítás (sorozat) sem: annak a dobozában kell a „Korábbi részek” lista
+    egyszeru = lambda c: len(c["hirek"]) == 1 and not c["fo"].get("sorozat")
     helyek = {}
     for sor in sorok:
         jo = [i for i in sor if i < len(dobozok) and egyszeru(dobozok[i])]
@@ -2035,7 +2036,7 @@ h1,h2,h3,h4{font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);margin
 .fej-elrejtve .nav-logo{max-width:14rem;opacity:1;margin-right:.7rem}
 @media (prefers-reduced-motion:reduce){.nav-logo{transition:none}}
 /* rovatgombok: enyhén lekerekített sarok, mint a Források gombon, elöl a rovat színes pöttyével */
-.nav-belso a:not(.nav-logo){flex-shrink:0;font-size:.86rem;font-weight:600;padding:.22rem .7rem;border-radius:5px;color:#fff;background:rgb(255 255 255/.1);border:1px solid rgb(255 255 255/.24);display:flex;align-items:center;gap:.45rem;transition:background .15s}
+.nav-belso a:not(.nav-logo){flex-shrink:0;font-family:var(--cimbetu);font-size:.9rem;font-weight:var(--cim-suly,700);letter-spacing:-.005em;padding:.22rem .7rem;border-radius:5px;color:#fff;background:rgb(255 255 255/.1);border:1px solid rgb(255 255 255/.24);display:flex;align-items:center;gap:.45rem;transition:background .15s}
 .nav-belso a:not(.nav-logo)::before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:var(--r);box-shadow:0 0 0 1.5px rgb(255 255 255/.9)}
 .nav-belso a:not(.nav-logo):hover{background:rgb(255 255 255/.2);border-color:rgb(255 255 255/.45)}
 .nav-belso a:not(.nav-logo):focus-visible{outline-color:#fff}
@@ -2140,7 +2141,8 @@ article[data-alt] .tovabbi-lapok{padding-right:4.6rem}
 main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat{margin-top:2.4rem}
 .rovatfej{display:flex;align-items:center;gap:.8rem;margin-bottom:1rem}
-.rovatfej::after{content:"";flex:1;height:2px;background:var(--r);opacity:.35;order:3}
+/* a rovatfej vonala a több lap írta dobozok jeléhez hasonlóan kétharmadig teljes, utána kifut (de vékonyabb) */
+.rovatfej::after{content:"";flex:1;height:3px;border-radius:2px;background:linear-gradient(to right,var(--r) 0,var(--r) 66%,transparent);order:3}
 .csuk{all:unset;cursor:pointer;font:var(--cim-suly-nagy,750) 1.25rem/1 var(--cimbetu);color:#fff;background:var(--r);padding:.42rem .9rem .48rem;border-radius:5px;letter-spacing:-.01em}
 .csuk::after{content:"";display:inline-block;width:.42rem;height:.42rem;border-right:2px solid;border-bottom:2px solid;transform:translateY(-.2rem) rotate(45deg);margin-left:.6rem;opacity:.8}
 .rovat.csukva .csuk::after{transform:translateY(-.05rem) rotate(-45deg)}
@@ -2435,7 +2437,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
   box-shadow:0 0 0 100vmax var(--pa);clip-path:inset(0 -100vmax)}
 @media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .rovat.stadion{--pa:#0d331c}}
 :root[data-tema="sotet"] .rovat.stadion{--pa:#0d331c}
-.rovat.stadion .rovatfej::after{background:#fff;opacity:.3}
+.rovat.stadion .rovatfej::after{background:linear-gradient(to right,#fff 0,#fff 66%,transparent);opacity:.75}
 .rovat.stadion .rovatfej .csuk{background:#fff;color:var(--pa)}
 .rovat.stadion .rovatfej .db{color:rgb(255 255 255/.7)}
 .rovat.stadion .doboz{border-color:transparent;box-shadow:0 2px 10px rgb(0 0 0/.25)}
@@ -2462,7 +2464,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
   box-shadow:0 0 0 100vmax var(--eg);clip-path:inset(0 -100vmax)}
 @media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .rovat.idojaras{--eg:#082f49}}
 :root[data-tema="sotet"] .rovat.idojaras{--eg:#082f49}
-.rovat.idojaras .rovatfej::after{background:#fff;opacity:.3}
+.rovat.idojaras .rovatfej::after{background:linear-gradient(to right,#fff 0,#fff 66%,transparent);opacity:.75}
 .rovat.idojaras .rovatfej .csuk{background:#fff;color:var(--eg)}
 .rovat.idojaras .rovatfej .db{color:rgb(255 255 255/.7)}
 .rovat.idojaras .ido-hely,.rovat.idojaras .ido-hirek,.rovat.idojaras .doboz{border-color:transparent;box-shadow:0 2px 10px rgb(0 0 0/.25)}
