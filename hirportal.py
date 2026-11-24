@@ -2404,6 +2404,8 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .elso .top-szel .fo-hir.kis+.fo-hir.kis::before{content:"";position:absolute;top:0;left:0;width:40%;border-top:1px solid var(--vonal)}
 .elso .top-szel .fo-hir.kis .szoveg{padding:0;display:block}
 .elso .top-szel .fo-hir.kis h3{display:block;margin:0;font-size:.98rem;line-height:1.32}
+/* széles képernyőn a lapszéli hasábban van hely: nagyobb, jobban olvasható címek (keskenyebb ablakban a hasáb már így is teli) */
+@media (min-width:1200px){.elso .top-szel .fo-hir.kis h3{font-size:1.12rem;line-height:1.3}}
 .elso .top-szel .fo-hir.kis h3 a{color:var(--tinta)}
 .elso .top-szel .fo-hir.kis h3 .meta{display:inline;margin:0;font:inherit;height:auto}
 .elso .top-szel .fo-hir.kis h3 .forras{font:inherit;color:var(--c);margin-right:.3rem}
