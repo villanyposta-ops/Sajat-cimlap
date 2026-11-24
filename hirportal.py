@@ -2028,16 +2028,21 @@ h1,h2,h3,h4{font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);margin
 .frissitve{color:var(--halvany);font-size:.85rem}
 /* menüsáv: a fejléc színének sötétebb árnyalata (kétszínű, újságos fejléc) */
 .rovatnav{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--fejszin,#16202f) 68%,#000);box-shadow:0 1px 0 rgb(0 0 0/.25)}
-.nav-belso{max-width:1280px;margin:0 auto;padding:.55rem 1.5rem;display:flex;align-items:center;gap:.4rem;overflow-x:auto;scrollbar-width:none}
+.nav-belso{max-width:1280px;margin:0 auto;padding:.55rem 1.5rem;display:flex;align-items:center;gap:.3rem;overflow-x:auto;scrollbar-width:none}
 /* görgetéskor a menüsáv elején megjelenik a lap neve kicsiben (az éppen kisorsolt fejléc stílusában) */
 .nav-logo{display:flex;align-items:center;flex-shrink:0;color:#fff;max-width:0;opacity:0;overflow:hidden;margin-right:0;
   transition:max-width .3s ease,opacity .25s ease,margin .3s ease;line-height:0}
 .nav-logo svg{height:1.45rem;width:auto;display:block}
 .nav-logo .logo-nepszava{height:1.5rem}
 .fej-elrejtve .nav-logo{max-width:14rem;opacity:1;margin-right:.7rem}
+/* ha a logó is megjelenik, a gombok kicsit kisebbek; ha így sem férnek el (széles betű, nagyítás), a „szuk” osztály
+   tovább tömörít: elmarad a színes pötty, kisebb a betű */
+.fej-elrejtve .nav-belso a:not(.nav-logo){font-size:.84rem}
+.nav-belso.szuk a:not(.nav-logo){font-size:.8rem;padding:.2rem .45rem}
+.nav-belso.szuk a:not(.nav-logo)::before{display:none}
 @media (prefers-reduced-motion:reduce){.nav-logo{transition:none}}
 /* rovatgombok: enyhén lekerekített sarok, mint a Források gombon, elöl a rovat színes pöttyével */
-.nav-belso a:not(.nav-logo){flex-shrink:0;font-family:var(--cimbetu);font-size:.9rem;font-weight:var(--cim-suly,700);letter-spacing:-.005em;padding:.22rem .7rem;border-radius:5px;color:#fff;background:rgb(255 255 255/.1);border:1px solid rgb(255 255 255/.24);display:flex;align-items:center;gap:.45rem;transition:background .15s}
+.nav-belso a:not(.nav-logo){flex-shrink:0;font-family:var(--cimbetu);font-stretch:var(--cim-nyujt,100%);font-size:.9rem;font-weight:var(--cim-suly,700);letter-spacing:-.005em;padding:.22rem .55rem;border-radius:5px;color:#fff;background:rgb(255 255 255/.1);border:1px solid rgb(255 255 255/.24);display:flex;align-items:center;gap:.38rem;transition:background .15s}
 .nav-belso a:not(.nav-logo)::before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:var(--r);box-shadow:0 0 0 1.5px rgb(255 255 255/.9)}
 .nav-belso a:not(.nav-logo):hover{background:rgb(255 255 255/.2);border-color:rgb(255 255 255/.45)}
 .nav-belso a:not(.nav-logo):focus-visible{outline-color:#fff}
@@ -2144,7 +2149,7 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovatfej{display:flex;align-items:center;gap:.8rem;margin-bottom:1rem}
 /* a rovatfej vonala a több lap írta dobozok jeléhez hasonlóan kétharmadig teljes, utána kifut (de vékonyabb) */
 .rovatfej::after{content:"";flex:1;height:3px;border-radius:2px;background:linear-gradient(to right,var(--r) 0,var(--r) 66%,transparent);order:3}
-.csuk{all:unset;cursor:pointer;font:var(--cim-suly-nagy,750) 1.25rem/1 var(--cimbetu);color:#fff;background:var(--r);padding:.42rem .9rem .48rem;border-radius:5px;letter-spacing:-.01em}
+.csuk{all:unset;cursor:pointer;font:var(--cim-suly-nagy,750) 1.25rem/1 var(--cimbetu);font-stretch:var(--cim-nyujt,100%);color:#fff;background:var(--r);padding:.42rem .9rem .48rem;border-radius:5px;letter-spacing:-.01em}
 .csuk::after{content:"";display:inline-block;width:.42rem;height:.42rem;border-right:2px solid;border-bottom:2px solid;transform:translateY(-.2rem) rotate(45deg);margin-left:.6rem;opacity:.8}
 .rovat.csukva .csuk::after{transform:translateY(-.05rem) rotate(-45deg)}
 .rovat.csukva .tartalom{display:none}
@@ -2768,9 +2773,14 @@ if(temaGomb){temaFelirat();temaGomb.addEventListener('click',()=>{
   const a=document.createElement('a'); a.className='nav-logo'; a.href='#'; a.setAttribute('aria-label','Vissza az oldal tetejére');
   a.tabIndex=-1; a.appendChild(logo.cloneNode(true)); nav.insertBefore(a, nav.firstChild);
   if('IntersectionObserver' in window){
-    new IntersectionObserver(ev=>{const rejt=!ev[0].isIntersecting; document.body.classList.toggle('fej-elrejtve',rejt); a.tabIndex=rejt?0:-1;})
+    new IntersectionObserver(ev=>{const rejt=!ev[0].isIntersecting; document.body.classList.toggle('fej-elrejtve',rejt); a.tabIndex=rejt?0:-1;
+      setTimeout(fer,30); setTimeout(fer,400);})
       .observe(fej);
   }
+  // ha a menügombok nem férnek el egy sorban, tömörebb forma (csak asztali szélességen; mobilon görgethető marad)
+  function fer(){ nav.classList.remove('szuk'); if(innerWidth>900 && nav.scrollWidth>nav.clientWidth+1) nav.classList.add('szuk'); }
+  addEventListener('resize',fer); a.addEventListener('transitionend',fer);
+  if(document.fonts){ document.fonts.ready.then(fer); document.fonts.addEventListener('loadingdone',fer); } fer();
 })();
 const menu=document.querySelector('.forrasmenu');
 document.addEventListener('click',ev=>{if(menu.open&&!menu.contains(ev.target))menu.open=false;});
