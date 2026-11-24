@@ -2257,6 +2257,8 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .kis-kartyak .mini h4{margin:0;font-weight:var(--cim-suly,600);letter-spacing:var(--cim-ter,0);font-size:1.06rem;line-height:1.22}
 .kis-kartyak .mini h4 a{color:var(--tinta);text-decoration:none}.kis-kartyak .mini h4 a:hover{text-decoration:underline}
 .kis-kartyak .mini .lead{margin-top:.3rem;font-size:.86rem;-webkit-line-clamp:2}
+/* széles képernyőn a kis kártyák címe nagyobb (van rá hely); keskenyebb ablakban csonkulnának, ott marad a régi méret */
+@media (min-width:1200px){.halom .mini h4,.kis-kartyak .mini h4{font-size:1.14rem;line-height:1.22}}
 @media (max-width:1000px){.kis-kartyak{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:640px){.kis-kartyak{grid-template-columns:1fr}}
 /* a dobozokból kiszorult friss hírek sávja a rovat alján */
