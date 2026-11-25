@@ -147,7 +147,7 @@ MERES_ALLOMASOK = [
     ("Miskolc", 52744),       # Diósgyőr
     ("Nagykanizsa", 17809),
     ("Paks", 37402),
-    ("Pécs", 38528),          # Egyetem
+    ("Pécs", 39115),          # Pogány repülőtér (az Egyetem állomás 2026 novemberében elhallgatott)
     ("Siófok", 36100),
     ("Szeged", 58116),        # külterület
     ("Szombathely", 15310),
