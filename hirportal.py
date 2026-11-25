@@ -154,6 +154,10 @@ MERES_ALLOMASOK = [
     ("Szeged", 58116),        # külterület
     ("Szombathely", 15310),
 ]
+# csapadékradar: a HungaroMet kompozit radarképei (ötpercenként, PNG); az oszlopmaximum („refl2D”, CMax) változat
+RADAR_MAPPA = "https://odp.met.hu/weather/radar/composite/"
+RADAR_TIPUS = "refl2D"
+RADAR_KEPEK = 12          # ennyi képből áll az animáció (12 × 5 perc = az elmúlt óra)
 MERES_10P_URL = "https://odp.met.hu/weather/weather_reports/synoptic/hungary/10_minutes/csv/HABP_10M_SYNOP_LATEST.csv.zip"
 MERES_ORAS_URL = "https://odp.met.hu/weather/weather_reports/synoptic/hungary/hourly/csv/HABP_1H_SYNOP_LATEST.csv.zip"
 
@@ -1242,12 +1246,87 @@ def ido_kartya(h):
             f'<ul class="ido-napok">{napok}</ul></div>')
 
 
+def radar_letolt():
+    """A legfrissebb radarképek helye: (mappa URL, [időbélyegek ÉÉÉÉHHNN_ÓÓPP, UTC, növekvő]) vagy None.
+    A mappaszerkezetet a szerver könyvtárlistájából derítjük fel (legfeljebb két szint mélyen)."""
+    minta = re.compile(r'href="(?:[^"]*/)?radar_composite-' + re.escape(RADAR_TIPUS) + r'-(\d{8}_\d{4})\.png"')
+    sor, lekert = [RADAR_MAPPA], 0
+    while sor and lekert < 8:
+        url = sor.pop(0)
+        try:
+            lap = letolt(url, probalkozas=2).decode("utf-8", "replace")
+        except Exception as ex:
+            print(f"  radar ({url}): {ex}")
+            lekert += 1
+            continue
+        lekert += 1
+        idok = sorted(set(minta.findall(lap)))
+        if idok:
+            return url, idok[-RADAR_KEPEK:]
+        # almappák: előbb azok, amelyek nevében a típus vagy a „png” szerepel
+        al = [h for h in re.findall(r'href="([^"?#/][^"?#]*/)"', lap) if not h.startswith(("..", "http"))]
+        al.sort(key=lambda h: (RADAR_TIPUS.lower() + "/" != h.lower(), "png" not in h.lower()))
+        sor += [url + h for h in al if h.count("/") == 1]
+    return None
+
+
+def radar_kartya(radar):
+    if not radar:
+        return ""
+    mappa, idok = radar
+    adat = json.dumps({"mappa": mappa, "tipus": RADAR_TIPUS, "idok": idok, "db": RADAR_KEPEK})
+    return (f'<div class="ido-hely radar" id="radar"><h3>Csapadékradar <small class="radar-ido"></small></h3>'
+            f'<div class="radar-kep"><img alt="A HungaroMet kompozit radarképe Magyarországról" decoding="async"></div>'
+            f'<div class="radar-sav"><button class="radar-gomb" type="button" aria-label="Lejátszás">▶</button>'
+            f'<span class="radar-tol"></span><span class="radar-csik"><i></i></span><span class="radar-ig"></span></div>'
+            f'<div class="radar-jel">gyenge <b></b> erős</div>'
+            f'<p class="radar-forras">Forrás: <a href="https://odp.met.hu/" target="_blank" rel="noopener">HungaroMet</a>, '
+            f'kompozit radarkép (Meteorológiai Adattár)</p></div>'
+            f'<script>' + RADAR_JS.replace("__RADAR__", adat) + '</script>')
+
+
+# A radar: az építéskor ismert legutóbbi képek után a böngésző maga is megpróbálja a frissebbeket (ötpercenként),
+# így a kép akkor is friss, ha az oldal negyedóránként épül. Lejátszáskor az utolsó óra képei pörögnek.
+RADAR_JS = r"""
+(function(){
+  var R = __RADAR__, k = document.getElementById('radar'); if (!k) return;
+  var img = k.querySelector('img'), gomb = k.querySelector('.radar-gomb'), csik = k.querySelector('.radar-csik i');
+  function url(t){ return R.mappa + 'radar_composite-' + R.tipus + '-' + t + '.png'; }
+  function datum(t){ return new Date(Date.UTC(+t.slice(0,4), +t.slice(4,6)-1, +t.slice(6,8), +t.slice(9,11), +t.slice(11,13))); }
+  function bel(t){ return datum(t).toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Budapest'}); }
+  function kov(t){ var d = new Date(datum(t).getTime() + 300000), p = function(n){ return (n<10?'0':'')+n; };
+    return d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+'_'+p(d.getUTCHours())+p(d.getUTCMinutes()); }
+  var idok = R.idok.slice(), i = idok.length - 1, fut = null;
+  function mutat(j){ i = j; img.src = url(idok[i]); k.querySelector('.radar-ido').textContent = bel(idok[i]);
+    csik.style.width = (idok.length > 1 ? 100 * i / (idok.length - 1) : 100) + '%';
+    k.querySelector('.radar-tol').textContent = bel(idok[0]); k.querySelector('.radar-ig').textContent = bel(idok[idok.length-1]); }
+  // frissebb képek keresése: ameddig a következő ötperces kép betölthető, hozzávesszük
+  function frissit(){ var t = kov(idok[idok.length-1]); if (datum(t) > new Date()) return;
+    var p = new Image(); p.onload = function(){ idok.push(t); if (idok.length > R.db) idok.shift(); if (!fut) mutat(idok.length-1); frissit(); };
+    p.src = url(t); }
+  mutat(i); frissit(); setInterval(frissit, 300000);
+  // előtöltés a lejátszáshoz
+  function eltolt(){ idok.forEach(function(t){ var p = new Image(); p.src = url(t); }); }
+  gomb.addEventListener('click', function(){
+    if (fut) { clearInterval(fut); fut = null; gomb.textContent = '▶'; gomb.setAttribute('aria-label','Lejátszás'); mutat(idok.length-1); return; }
+    eltolt(); gomb.textContent = '❚❚'; gomb.setAttribute('aria-label','Megállítás'); mutat(0);
+    fut = setInterval(function(){ mutat(i < idok.length-1 ? i+1 : 0); }, 650);
+  });
+  k.querySelector('.radar-csik').addEventListener('click', function(ev){
+    var r = this.getBoundingClientRect(), j = Math.round((ev.clientX - r.left) / r.width * (idok.length-1));
+    if (fut) gomb.click(); mutat(Math.max(0, Math.min(idok.length-1, j)));
+  });
+})();
+"""
+
+
 def idojaras_panel(helyek, panel_hirek, meresek=None):
     if not helyek and not panel_hirek and not meresek:
         return ""
     sajat = ('<div class="ido-hely ido-itt" id="ido-itt" hidden></div>' if IDOJARAS_SAJAT_HELY else "")
     kartyak = sajat + (meres_lista(meresek) if meresek else "") + "".join(ido_kartya(h) for h in helyek)
-    hirdobozok = []
+    hirdobozok = [radar_kartya(radar_letolt())]
+    hirdobozok = [x for x in hirdobozok if x]
     for f in FORRASOK:
         if f.get("panel") != "idojaras":
             continue
@@ -2530,6 +2609,21 @@ summary:hover{color:var(--tinta)}
 
 /* időjárás */
 .ido-racs{display:grid;grid-template-columns:1fr;gap:1.2rem}
+/* csapadékradar: a HungaroMet 1024×768-as képéből csak Magyarország és közvetlen környéke látszik
+   (a kép saját feliratai, jelmagyarázata kívül esnek) */
+.radar{padding:.9rem 1rem .8rem}
+.radar h3{display:flex;align-items:baseline;gap:.5rem}
+.radar h3 small{font-size:.78rem;font-weight:500;color:var(--halvany)}
+.radar-kep{position:relative;aspect-ratio:600/380;overflow:hidden;border-radius:4px;background:#cfd8d6;margin-top:.6rem}
+.radar-kep img{position:absolute;width:170.67%;left:-35.83%;top:-48.68%;max-width:none;height:auto}
+.radar-sav{display:flex;align-items:center;gap:.6rem;margin-top:.55rem;font-size:.74rem;color:var(--halvany);font-variant-numeric:tabular-nums}
+.radar-gomb{all:unset;cursor:pointer;width:1.9rem;height:1.9rem;border-radius:50%;background:var(--r);color:#fff;display:grid;place-items:center;font-size:.72rem;flex:none}
+.radar-gomb:focus-visible{outline:2px solid var(--r);outline-offset:2px}
+.radar-csik{flex:1;height:6px;border-radius:3px;background:var(--vonal);position:relative;cursor:pointer}
+.radar-csik i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--r)}
+.radar-jel{display:flex;align-items:center;gap:.35rem;margin-top:.45rem;font-size:.72rem;color:var(--halvany)}
+.radar-jel b{display:inline-block;width:7rem;height:.5rem;border-radius:2px;background:linear-gradient(90deg,#0a2fb0,#1ea0d6,#22c55e,#a3d613,#f5c400,#f07800,#e00000,#8b0000)}
+.radar-forras{font-size:.7rem;color:var(--halvany);margin:.4rem 0 0}.radar-forras a{text-decoration:underline}
 .ido-hirsor{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.2rem;align-items:start}
 .ido-itt{border-color:color-mix(in srgb,var(--r) 45%,var(--vonal));box-shadow:inset 0 3px 0 var(--r)}
 .ido-itt[hidden]{display:none}
