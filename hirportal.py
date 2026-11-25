@@ -143,12 +143,14 @@ MERES_ALLOMASOK = [
     ("Békéscsaba", 66522),    # repülőtér
     ("Debrecen", 64711),      # repülőtér
     ("Győr", 24423),          # Pér repülőtér (Győrben nincs égképet jelentő állomás)
+    ("Eger", 53215),
     ("Kékestető", 53101),     # az ország legmagasabb pontja, 1011 m
     ("Miskolc", 52744),       # Diósgyőr
     ("Nagykanizsa", 17809),
     ("Paks", 37402),
     ("Pécs", 39115),          # Pogány repülőtér (az Egyetem állomás 2026 novemberében elhallgatott)
     ("Siófok", 36100),
+    ("Szolnok", 55507),       # repülőtér (égképet nem jelent, de az Alföld közepét lefedi)
     ("Szeged", 58116),        # külterület
     ("Szombathely", 15310),
 ]
@@ -1135,6 +1137,13 @@ def meres_letolt():
     return ervenyes or None
 
 
+def allomas_utotag(allomas, nev):
+    """Az állomás nevének a megjelenített helynév utáni része („Budapest Pestszentlőrinc” → „Pestszentlőrinc”)."""
+    if allomas == nev:
+        return ""
+    return allomas[len(nev) + 1:] if allomas.startswith(nev + " ") else allomas
+
+
 def hm_ikon(kod, meret=32, ejjel=False):
     nev = HM_KODOK.get(kod, ("", ""))[1]
     if ejjel:
@@ -1172,13 +1181,15 @@ def meres_lista(meresek):
         leiras = HM_KODOK.get(kod, ("", ""))[0]
         sorok.append(
             f'<li data-ido="{a["ido"].isoformat()}"><span class="meres-nev">{e(nev)}'
-            f'<small>{e(a["nev"]) + " · " if a["nev"] != nev else ""}{bp(a["ido"]):%H:%M}</small></span>'
+            f'<small>{e(allomas_utotag(a["nev"], nev))}<i class="mi">{" · " if allomas_utotag(a["nev"], nev) else ""}{bp(a["ido"]):%H:%M}</i></small></span>'
             f'<span title="{e(leiras)}">{hm_ikon(kod, 28, a.get("lat") is not None and nap_magassag(a["lat"], a["lon"], a["ido"]) < -0.833)}</span>'
             f'<span class="meres-fok">{round(a["t"])}°</span>'
             f'<span class="meres-reszlet">{e(", ".join(reszlet))}</span></li>')
     if not sorok:
         return ""
     friss = bp(max(idok))
+    # a fejlécben álló időpont a sorokban felesleges: csak az ettől eltérő (késve jelentő) állomásnál marad meg
+    sorok = [re.sub(r'<i class="mi">(?: · )?' + f'{friss:%H:%M}' + r'</i>', '', x) for x in sorok]
     return (f'<div class="ido-hely ido-meres"><h3>Most mért <small>{friss:%H:%M}-kor</small></h3>'
             f'<ul class="meres-lista" style="--sorok:{(len(sorok) + 1) // 2}">{"".join(sorok)}</ul>'
             f'<p class="meres-forras">Forrás: <a href="https://odp.met.hu/" target="_blank" rel="noopener">'
@@ -2553,9 +2564,11 @@ summary:hover{color:var(--tinta)}
 /* két oszlop, előbb a bal telik meg fentről lefelé, így az ABC-sorrend egyben olvasható */
 .meres-lista{list-style:none;margin:.5rem 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(var(--sorok),auto);grid-auto-flow:column;column-gap:1.4rem}
 .meres-lista li{display:grid;grid-template-columns:minmax(0,1fr) 28px 3rem;grid-template-rows:auto auto;column-gap:.5rem;align-items:center;
-  padding:.45rem 0;border-bottom:1px solid var(--vonal)}
+  padding:.36rem 0;border-bottom:1px solid var(--vonal)}
 .meres-nev{font-weight:650;font-size:.95rem;line-height:1.2}
-.meres-nev small{display:block;font-weight:400;font-size:.72rem;color:var(--halvany)}
+/* az állomás neve és (ha eltér) az időpont a helynév mellett, egy sorban: így egy állomás két sor */
+.meres-nev small{display:inline;margin-left:.4rem;font-weight:400;font-size:.72rem;color:var(--halvany)}
+.meres-nev small i{font-style:normal}
 .meres-fok{font:750 1.45rem/1 var(--cimbetu);text-align:right;letter-spacing:-.02em}
 .meres-reszlet{grid-column:1/-1;font-size:.74rem;color:var(--halvany);min-height:0}
 .meres-reszlet:empty{display:none}
