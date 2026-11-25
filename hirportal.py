@@ -2670,7 +2670,10 @@ summary:hover{color:var(--tinta)}
 .meres-forras{font-size:.72rem;color:var(--halvany);margin:.6rem 0 0}.meres-forras a{text-decoration:underline}
 @media (max-width:760px){.ido-meres{grid-column:auto}.meres-lista{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}}
 .ido-ikon{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.i-nap{stroke:#f59e0b}.i-hold{stroke:#94a3b8;fill:rgb(148 163 184/.18)}.i-felho{stroke:var(--halvany)}.i-csepp{stroke:#3b82f6}.i-ho{stroke:#38bdf8;stroke-width:2.6}.i-villam{stroke:#eab308}
+.i-nap{stroke:#f59e0b}.i-hold{stroke:#94a3b8;fill:rgb(148 163 184/.18)}.i-felho{stroke:var(--halvany)}.i-csepp{stroke:#3b82f6}.i-ho{stroke:#7c8798;stroke-width:2.6}.i-villam{stroke:#eab308}
+/* hópehely: világos témán szürke, sötéten fehér (a kék esőcseppektől is jól elkülönül) */
+@media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .i-ho{stroke:#f1f5f9}}
+:root[data-tema="sotet"] .i-ho{stroke:#f1f5f9}
 .ido-hirek{background:color-mix(in srgb,var(--r) 6%,var(--lap));border-radius:6px;padding:1rem 1.1rem}
 .ido-hirek h3{font-size:1.05rem;font-weight:700;color:var(--r);margin-bottom:.4rem}
 .ido-hirek ul{list-style:none;margin:0;padding:0}
