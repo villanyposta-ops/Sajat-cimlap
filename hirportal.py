@@ -138,6 +138,7 @@ IDOJARAS_SAJAT_HELY = True
 # Ha a mérések nem érhetők el, helyettük az IDOJARAS_HELYEK Open-Meteo-kártyái jelennek meg.
 # Égképet (derült, borult, eső…) csak kb. 16 állomás jelent; ahol lehet, ezeket választottuk.
 # A lista ABC-rendben jelenik meg, a sorrend itt mindegy.
+MERES_HEGYI_M = 500        # ennél magasabban fekvő állomásnál a név mellett a magasság is látszik
 MERES_ALLOMASOK = [
     ("Budapest", 44527),      # Pestszentlőrinc
     ("Békéscsaba", 66522),    # repülőtér
@@ -146,11 +147,14 @@ MERES_ALLOMASOK = [
     ("Eger", 53215),
     ("Kékestető", 53101),     # az ország legmagasabb pontja, 1011 m
     ("Kecskemét", 46400),     # repülőtér
+    ("Baja", 48101),          # Csillagvizsgáló
     ("Miskolc", 52744),       # Diósgyőr
+    ("Nagy-Hideg-hegy", 33431),   # Börzsöny, 854 m (a hegyi állomásoknál a magasság is kiíródik)
     ("Nagykanizsa", 17809),
     ("Nyíregyháza", "Nyíregyháza repülőtér (észak)", "repülőtér"),   # szám helyett név is megadható; a 3. elem a kiírt rövid név
     ("Paks", 37402),
     ("Pécs", 39115),          # Pogány repülőtér (az Egyetem állomás 2026 novemberében elhallgatott)
+    ("Sármellék", 26514),     # repülőtér, a Balaton nyugati végénél
     ("Siófok", 36100),
     ("Szolnok", 55507),       # repülőtér (égképet nem jelent, de az Alföld közepét lefedi)
     ("Szécsény", "Szécsény"),   # Nógrád, a szlovák határ közelében (Salgótarján környékén nincs automata állomás)
@@ -1113,7 +1117,8 @@ def meres_letolt():
         except ValueError:
             continue
         a = allomasok.setdefault(szam, {"nev": r.get("stationname", ""), "lat": hm_szam(r.get("latitude")),
-                                        "lon": hm_szam(r.get("longitude")), "ido": None, "csap": {}})
+                                        "lon": hm_szam(r.get("longitude")), "mag": hm_szam(r.get("elevation")),
+                                        "ido": None, "csap": {}})
         a["csap"][ido] = hm_szam(r.get("r"))
         t = hm_szam(r.get("t"))
         if t is not None and (a["ido"] is None or ido > a["ido"]):
@@ -1183,6 +1188,8 @@ def meres_lista(meresek):
             reszlet.append(f'{str(a["csap1h"]).replace(".", ",")} mm/óra')
         leiras = HM_KODOK.get(kod, ("", ""))[0]
         utotag = rovid[0] if rovid else allomas_utotag(a["nev"], nev)
+        if a.get("mag") and a["mag"] >= MERES_HEGYI_M:   # hegyi állomás: a magasság is
+            utotag = (utotag + " · " if utotag else "") + f'{round(a["mag"])} m'
         sorok.append(
             f'<li data-ido="{a["ido"].isoformat()}"><span class="meres-nev">{e(nev)}'
             f'<small>{e(utotag)}<i class="mi">{" · " if utotag else ""}{bp(a["ido"]):%H:%M}</i></small></span>'
