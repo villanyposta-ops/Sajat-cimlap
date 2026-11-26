@@ -449,16 +449,44 @@ def webcim_korlat(link, d):
     return min(d, nap_vege)
 
 
+def xml_tisztit(adat):
+    """Gyakori hírfolyam-hibák javítása: XML-ben tiltott vezérlőkarakterek és szabálytalan „&” jelek."""
+    adat = re.sub(rb"[\x00-\x08\x0b\x0c\x0e-\x1f]", b"", adat)
+    return re.sub(rb"&(?!(?:[A-Za-z][A-Za-z0-9]{1,31}|#[0-9]{1,7}|#x[0-9A-Fa-f]{1,6});)", b"&amp;", adat)
+
+
 def xml_beolvas(adat):
-    """XML-elemzés kis hibatűréssel: ha a hírfolyam csonka (pl. hiányzik a záró </rss>), az utolsó teljes
-    cikk után lezárjuk."""
+    """XML-elemzés hibatűréssel. Sorban: az eredeti; javított karakterekkel; csonka hírfolyamnál az utolsó teljes
+    cikk után lezárva; végül cikkenként, a hibás cikkeket kihagyva (így egy rossz cikk miatt nem esik ki az egész lap)."""
+    try:
+        return ET.fromstring(adat)
+    except ET.ParseError as hiba:
+        elso_hiba = hiba
+    adat = xml_tisztit(adat)
     try:
         return ET.fromstring(adat)
     except ET.ParseError:
-        vege = adat.rfind(b"</item>")
-        if vege < 0:
-            raise
-        return ET.fromstring(adat[:vege + 7] + b"</channel></rss>")
+        pass
+    vege = adat.rfind(b"</item>")
+    if vege >= 0:
+        try:
+            return ET.fromstring(adat[:vege + 7] + b"</channel></rss>")
+        except ET.ParseError:
+            pass
+    # cikkenként: a fejlécből a névtér-deklarációkat megtartjuk, a hibás <item>-eket eldobjuk
+    fej = re.search(rb"<rss\b[^>]*>", adat)
+    gyoker = ET.fromstring((fej.group(0) if fej else b"<rss>") + b"<channel></channel></rss>")
+    csatorna = gyoker.find("channel")
+    jo = 0
+    for m in re.finditer(rb"<item\b.*?</item>", adat, re.S):
+        try:
+            csatorna.append(ET.fromstring((fej.group(0) if fej else b"<rss>") + m.group(0) + b"</rss>")[0])
+            jo += 1
+        except ET.ParseError:
+            continue
+    if not jo:
+        raise elso_hiba
+    return gyoker
 
 
 def feed_feldolgoz(forras, url):
