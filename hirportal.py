@@ -257,7 +257,7 @@ ROVATOK = [
                      "forma-1", "teniszez", "kézilabd", "vízilabd", "úszó", "nb i.", "fradi",
                      "forma–1", "forma-1", "nb i", "bajnokok ligája",
                      "ftc", "európa-liga", "európa liga", "konferencialiga", "ultrá", "szurkol"]},
-    {"id": "egyeb", "nev": "Egyéb", "szin": "#64748b", "dobozok": 0, "egyszeru": True,
+    {"id": "egyeb", "nev": "Vegyes", "szin": "#64748b", "dobozok": 0, "egyszeru": True,
      "utvonal": ["kozlemeny", "promo", "x-promo", "szponzoralt", "partner", "hirdetes", "pr", "pr-cikk",
                  "tamogatott-tartalom"], "kulcsszavak": []},
 ]
@@ -1703,6 +1703,25 @@ def friss_racs(lista):
     return f'<div class="fs-blokk"><div class="fs-racs">{"".join(cellak)}</div>{gomb}</div>'
 
 
+VEGYES_MAX = 15   # a Vegyes rovat tömör listájában legfeljebb ennyi hír (a többi a „További hírek” alatt)
+
+
+def vegyes_lista(csoportok):
+    """A Vegyes rovat: a nyomtatott lapok „Röviden” hasábjához hasonló sűrű lista három hasábban,
+    lapnév, cím és idő, bevezető nélkül, vékony elválasztókkal."""
+    if not csoportok:
+        return ""
+    sorok = "".join(
+        f'<li data-srcs="{" ".join(c["forrasok"])}">{elo_jel(c["fo"])}{forras_nev(c["fo"]["forras"])}'
+        f'<a href="{e(c["fo"]["link"])}" target="_blank" rel="noopener">{e(c["fo"]["cim"])}</a>'
+        f'<time>{ido_szoveg(c["fo"]["ido"])}</time></li>'
+        for c in csoportok)
+    # telefonon az első hat látszik, a többi egy gomb mögött
+    gomb = (f'<button type="button" class="vegyes-tobb" onclick="this.previousElementSibling.classList.add(\'nyitva\');this.remove()">'
+            f'még {len(csoportok) - 6} hír ▾</button>' if len(csoportok) > 6 else "")
+    return f'<ul class="vegyes-lista" style="--sorok:{(len(csoportok) + 2) // 3}">{sorok}</ul>{gomb}'
+
+
 def kis_kartyak(csoportok):
     """Az Egyéb rovat friss hírei: három hasábos rácsban kis kártyák (lap, idő, cím, kétsoros bevezető)."""
     if not csoportok:
@@ -1985,6 +2004,10 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
                 if dobozok or r.get("egyszeru") else []
             # az újságos rovatok négyhasábos rövidhír-sora ne maradjon csonka: ha megjelenik, a következő
             # legfrissebb hírekkel (akár 3 óránál régebbiekkel) négyesével teli sorokra egészül ki
+            if r.get("egyszeru"):   # Vegyes: a legfrissebb VEGYES_MAX hír, kortól függetlenül, három hasábra kerekítve
+                sav = sorted(lista, key=lambda c: datetime.fromisoformat(c["fo"]["ido"]), reverse=True)[:VEGYES_MAX]
+                if len(sav) > 3 and len(sav) % 3:
+                    sav = sav[:len(sav) - len(sav) % 3]
             rovidhir = (r.get("ujsag") or r.get("stadion")) and dobozok   # négyhasábos rövidhír-sor (a Sportban is)
             if sav and rovidhir and len(sav) % 4:
                 tobbi = sorted((c for c in lista if not any(c is x for x in sav)),
@@ -1997,7 +2020,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
   {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else ""), magazin=r["id"] in MAGAZIN_ROVATOK) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
-  {kis_kartyak(sav) if r.get("egyszeru") else friss_racs(sav) if rovidhir else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav, cimke="Korábbi hírek" if sav and rovidhir else "További hírek")}
+  {vegyes_lista(sav) if r.get("egyszeru") else friss_racs(sav) if rovidhir else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav, cimke="Korábbi hírek" if sav and rovidhir else "További hírek")}
   </div>
 </section>''')
         if r["id"] == HELYI_UTAN:
@@ -2005,10 +2028,18 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
         if r["id"] == HATTER_UTAN and hatter_html:
             reszek.append(hatter_html); nav.append(hatter_nav)
 
+    # a Vegyes rovat (a maradék) az oldal legvégére kerül, az Időjárás után
+    vegyes = [i for i, x in enumerate(reszek) if 'id="egyeb"' in x[:400]]
+    vegyes_resz = reszek.pop(vegyes[0]) if vegyes else ""
+    vnav = [i for i, x in enumerate(nav) if 'href="#egyeb"' in x]
+    vegyes_nav = nav.pop(vnav[0]) if vnav else ""
     ido_html = idojaras_panel(idojaras or [], idokep or [], meresek)
     if ido_html:
         reszek.append(ido_html)
         nav.append(f'<a href="#idojaras" style="--r:{IDOJARAS_SZIN}">Időjárás</a>')
+    if vegyes_resz:
+        reszek.append(vegyes_resz)
+        nav.append(vegyes_nav)
 
     stilusok = list(LOGO)
     fix = FEJLEC_STILUS if FEJLEC_STILUS in LOGO else None
@@ -2595,6 +2626,18 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.idojaras .rovatfej .db{color:rgb(255 255 255/.7)}
 .rovat.idojaras .ido-hely,.rovat.idojaras .ido-hirek,.rovat.idojaras .doboz{border-color:transparent;box-shadow:0 2px 10px rgb(0 0 0/.25)}
 /* Egyéb: egyszerű, kártyák nélküli címlista */
+/* Vegyes: sűrű, háromhasábos lista fehér lapon (oszloponként fentről lefelé olvasható) */
+.vegyes-lista{list-style:none;margin:.6rem 0 .4rem;padding:.4rem 1.2rem;background:var(--felulet);border:1px solid var(--vonal);border-radius:6px;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(var(--sorok),auto);grid-auto-flow:column;column-gap:1.6rem}
+.vegyes-lista li{padding:.55rem 0;border-bottom:1px solid var(--vonal);font-family:var(--listabetu,inherit);font-stretch:var(--lista-nyujt,100%);
+  font-weight:var(--lista-suly,500);font-size:.93rem;line-height:1.32}
+.vegyes-lista li .forras{margin-right:.35rem;font-weight:700}
+.vegyes-lista li a{color:var(--tinta)}.vegyes-lista li a:hover{text-decoration:underline}
+.vegyes-lista li time{font-size:.74rem;color:var(--halvany);margin-left:.4rem;white-space:nowrap;font-family:system-ui,sans-serif;font-weight:400}
+.vegyes-tobb{display:none}
+@media (max-width:900px){.vegyes-lista{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}
+  .vegyes-lista:not(.nyitva) li:nth-child(n+7){display:none}
+  .vegyes-tobb{all:unset;display:block;cursor:pointer;margin:.1rem 0 .3rem;font:600 .86rem system-ui,sans-serif;color:var(--halvany)}}
 .rovat.egyszeru .rovatcim{font-size:1rem;padding:.25rem .7rem}
 .rovat.egyszeru .friss-sav{background:var(--felulet);margin-top:.2rem}.rovat.egyszeru .friss-sav .lista time{min-width:5.4rem}
 .doboz.kiemelt .lead{-webkit-line-clamp:4}
@@ -3201,6 +3244,8 @@ def main():
     ervenyes = [h for h in ervenyes if not ("news.google.com" in h["link"] and nem_cikk(h["cim"]))]
     # fizetett tartalom („… (x)”) nem kell
     ervenyes = [h for h in ervenyes if not re.search(r"\(x\)\s*$", h["cim"], re.I)]
+    # a lapok angol nyelvű kiadásainak cikkei (pl. telex.hu/english/…) nem kellenek
+    ervenyes = [h for h in ervenyes if not re.search(r"/(english|en)/", urlparse(h["link"]).path)]
     # ugyanannak a lapnak azonos című cikkei közül csak egy maradjon (amelyiknek van képe/leadje)
     egyedi = {}
     for h in sorted(ervenyes, key=lambda h: (bool(h["kep"]), len(h["lead"])), reverse=True):
