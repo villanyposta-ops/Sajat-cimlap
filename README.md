@@ -13,7 +13,9 @@ Személyes hírcímlap, amely a kedvelt lapok RSS-csatornáiból rovatokba rende
   - Balaton: HírBalaton
   - Komló: 7300.hu, Komlói Újság
   - Somogy: KaposPont, Kapos-T, Atádhír
-- **Időjárás:** Időkép és HungaroMet hírek, valamint a HungaroMet automata állomásainak friss mérései (nyílt adat, odp.met.hu)
+- **Időjárás:** Időkép és HungaroMet hírek, a HungaroMet automata állomásainak friss mérései és kompozit radarképei (nyílt adat, odp.met.hu), valamint az Open-Meteo előrejelzése
+
+A lapok angol nyelvű kiadásainak cikkei (pl. `telex.hu/english/…`) kimaradnak.
 
 Ha egy lap csatornája nem érhető el, a Telexnél és a BBC-nél a program a Google Hírek keresőjéből pótolja a cikkeket. Ha más lap esik ki, az oldal tetején figyelmeztetés jelenik meg, a többi lap hírei ugyanúgy megjelennek.
 
@@ -26,15 +28,20 @@ Ha egy lap csatornája nem érhető el, a Telexnél és a BBC-nél a program a G
 
 Az összevont hírek alatt színes pöttyök mutatják, hány és melyik lap írt róluk, az „Erről írt” sorban és a lapozóval pedig a többi lap cikkei is elérhetők.
 
-**Rovatok:** Belföld, Külföld, Helyi, Gazdaság, Háttér, Kultúra, Tudomány és tech, Életmód, Sport, Egyéb, Időjárás.
+**Rovatok:** Belföld, Külföld, Helyi, Gazdaság, Háttér, Kultúra, Tudomány és tech, Életmód, Sport, Időjárás, Vegyes.
 - Minden rovat egy kiemelt hírrel nyit. A Kultúra, a Tech, az Életmód és a Sport kiemelt híre képre írt címmel, a rovat színű panelen jelenik meg.
 - A Belföld, a Külföld, a Gazdaság, a Kultúra, a Tech és az Életmód újságszerű, hasábos rácsban áll.
 - Az egyetlen lap által megírt hírek a sorok végén kis kártyákon jelennek meg.
 - Ha egy hírről legalább két lap írt, a doboz tetején rovatszínű, jobbra kifutó vonal jelzi.
-- A dobozokból kiszoruló friss hírek a rovat alján, egy négyhasábos rövidhír-sorban látszanak (a Belföldön és a Külföldön 6, máshol 3 órán belül), a régebbiek a „Korábbi hírek” lenyíló listába kerülnek. 72 óra után a hírek kiesnek.
+- A dobozokból kiszoruló friss hírek a rovat alján, egy négyhasábos rövidhír-sorban látszanak (a Belföldön és a Külföldön 6, máshol 3 órán belül; a Sportban a zöld háttéren fehér lapon), négyesével teli sorokra kiegészítve. A régebbiek a „Korábbi hírek” lenyíló listába kerülnek. 72 óra után a hírek kiesnek.
 - A **Háttér** rovat négy hasábban mutatja az Átlátszó, a BBC, a Magyar Hang és a Válasz Online elemzéseit.
 - A **Helyi** rovatban minden hely (Pécs, Balaton, Komló, Somogy) külön oszlopot kap. Ezek a hírek nem kerülnek a felső részbe és az országos rovatokba.
-- Az **Időjárás** rovat az állomások friss méréseit és, ha a böngésző engedi, a néző saját helyének időjárását mutatja.
+- Az **Időjárás** rovatban:
+  - a néző saját helyének mért adatai és előrejelzése, ha a böngésző engedi a helymeghatározást;
+  - 21 állomás friss mérése három hasábban (hőmérséklet, égkép, szél, pára, az utolsó óra csapadéka); az 500 méter fölötti hegyi állomásoknál a magasság is; a Nagy-Hideg-hegy helyén, ha nem jelent, a Dobogókő; telefonon lenyíló listában;
+  - csapadékradar: a HungaroMet ötpercenként frissülő kompozit képéből (CMax) Magyarország kivágása; a böngésző maga kéri le a legfrissebbet, az elmúlt óra képei lejátszhatók;
+  - az Időkép és a HungaroMet hírei.
+- A **Vegyes** rovat az oldal legvégén a máshová nem illő hírek legfrissebb 15 darabját mutatja tömör, háromhasábos listában (telefonon az első hatot).
 
 **Összevonás.** Az ugyanarról szóló cikkeket a program egy dobozba vonja (betű-négyesek alapján mért szövegrokonsággal). A dobozban a legfrissebb, képpel és bevezetővel rendelkező cikk áll elöl. A gyorsan fejlődő történetek, amelyekről az elmúlt órákban több lap is újat írt, előrébb kerülnek.
 
@@ -44,7 +51,7 @@ Az összevont hírek alatt színes pöttyök mutatják, hány és melyik lap ír
 - Három fejlécstílus: Hírlap, Nemzeti és Népszava. Minden megnyitáskor másikat kapsz, mindegyik saját betűtípus-családdal.
 - A fejléc színe napszakonként változik: reggel, délelőtt, délután, este és éjjel más.
 - Világos és sötét mód: a készülék beállítását követi, vagy kézzel váltható a fejlécben.
-- Görgetéskor a rovatmenü az oldal tetejére tapad, a logóval együtt.
+- A rovatmenü gombjai a stílus címbetűjével íródnak; görgetéskor a menü az oldal tetejére tapad, a logóval együtt.
 - Az oldal telefonra alkalmazásként is telepíthető.
 
 **Kezelés.**
@@ -56,14 +63,14 @@ Az összevont hírek alatt színes pöttyök mutatják, hány és melyik lap ír
 
 1. **Külön szabályok** néhány lap sajátosságaira. Például:
    - a HVG lapszemléje a Külföldbe kerül;
-   - a podcastok és a Népszabadság Mozaik rovata az Egyébbe; a Mozaikban megjelenő bűnügyi és bírósági hírek a kulcsszavaik alapján a Belföldbe vagy a Külföldbe;
-   - a lottóról és a szerencsejátékokról szóló hírek az Egyébbe, kivéve, ha a lap a Gazdaságba tette őket;
+   - a podcastok és a Népszabadság Mozaik rovata a Vegyesbe; a Mozaikban megjelenő bűnügyi és bírósági hírek a kulcsszavaik alapján a Belföldbe vagy a Külföldbe;
+   - a lottóról és a szerencsejátékokról szóló hírek a Vegyesbe, kivéve, ha a lap a Gazdaságba tette őket;
    - a Magyar Hang publicisztikái a Háttérbe.
 2. **A cikk webcíme** (pl. `telex.hu/belfold/…`). A dátummal kezdődő címeknél, mint a Népszabadságé, a dátum utáni rész számít.
 3. **A lap saját kategóriája vagy címkéi**, ahol a csatorna megadja őket.
 4. **A cím és a bevezető kulcsszavai.**
 5. **Tanuló besorolás:** a gyenge jelű cikk a szóhasználatban hozzá leghasonlóbb, biztosan besorolt cikkek rovatát kapja, ha azok elég egyértelműen egy rovat felé húznak.
-6. Ha egyik sem dönt, a lap alaprovatába kerül (Euronews, BBC → Külföld), ennek hiányában az Egyébbe.
+6. Ha egyik sem dönt, a lap alaprovatába kerül (Euronews, BBC → Külföld), ennek hiányában a Vegyesbe.
 
 Ha több lap cikkéből álló hírnél eltér a besorolás, a cikkek a besorolásuk erőssége szerint szavaznak.
 
@@ -108,4 +115,5 @@ Minden beállítás a `hirportal.py` elején található, magyarázó megjegyzé
 - `FEJLEC_STILUS`: `"veletlen"`, vagy rögzítve `"hirlap"`, `"nemzeti"`, `"nepszava"`. A `NAPSZAK_SZINEK` a fejléc napszakonkénti színeit adja meg.
 - Időzítések: `FRISS_ORA` (dobozban maradás), `MEGORZES_ORA` (meddig marad meg egy hír), `FRISS_SAV_ORA`, `FRISS_SAV_SZELES_ORA` (rövidhír-sor), `KIEMELT_ABLAK`, `FEJLEMENY_ORA`.
 - Összevonás és élő tudósítás: `OSSZEVON_…` küszöbök, `ELO_MIN_RESZ`, `ELO_RES_PERC`, `ELO_CIMKE_MIN`.
-- Időjárás: `IDOJARAS_HELYEK`, `IDOJARAS_SAJAT_HELY`.
+- Időjárás: `IDOJARAS_HELYEK`, `IDOJARAS_SAJAT_HELY`; a mért adatok állomásai: `MERES_ALLOMASOK` (állomásszámmal vagy névvel, tartalék állomással is), `MERES_HEGYI_M`; a radar: `RADAR_TIPUS`, `RADAR_KEPEK`.
+- Vegyes rovat: `VEGYES_MAX`.
