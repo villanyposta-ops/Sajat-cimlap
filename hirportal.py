@@ -149,7 +149,7 @@ MERES_ALLOMASOK = [
     ("Kecskemét", 46400),     # repülőtér
     ("Baja", 48101),          # Csillagvizsgáló
     ("Miskolc", 52744),       # Diósgyőr
-    ("Nagy-Hideg-hegy", 33431),   # Börzsöny, 854 m (a hegyi állomásoknál a magasság is kiíródik)
+    ("Nagy-Hideg-hegy", [33431, "Dobogókő"]),   # Börzsöny, 854 m; ha nem jelent, helyette a Dobogókő (Pilis) a saját nevével
     ("Nagykanizsa", 17809),
     ("Nyíregyháza", "Nyíregyháza repülőtér (észak)", "repülőtér"),   # szám helyett név is megadható; a 3. elem a kiírt rövid név
     ("Paks", 37402),
@@ -1167,8 +1167,15 @@ def meres_lista(meresek):
     """A „Most mért” kártya: soronként település, égkép, hőmérséklet, szél, csapadék."""
     sorok, idok = [], []
     for nev, szam, *rovid in sorted(MERES_ALLOMASOK, key=lambda x: ekezet_nelkul(x[0].lower())):
-        a = meresek.get(szam) if isinstance(szam, int) else next(
-            (v for v in meresek.values() if v["nev"] == szam), None)
+        # az állomás megadható számmal vagy névvel, vagy ezek listájával (az első jelentő számít; a tartalék
+        # állomás a saját nevén jelenik meg)
+        a = None
+        for i, sz in enumerate(szam if isinstance(szam, list) else [szam]):
+            a = meresek.get(sz) if isinstance(sz, int) else next((v for v in meresek.values() if v["nev"] == sz), None)
+            if a:
+                if i:
+                    nev = a["nev"]
+                break
         if not a:
             continue
         idok.append(a["ido"])
@@ -1198,6 +1205,8 @@ def meres_lista(meresek):
             f'<span class="meres-reszlet">{e(", ".join(reszlet))}</span></li>')
     if not sorok:
         return ""
+    # ábécérend a kiírt név szerint (a tartalék állomás a saját nevén áll a helyén)
+    sorok.sort(key=lambda x: ekezet_nelkul(re.search(r'class="meres-nev">([^<]*)', x).group(1).lower()))
     friss = bp(max(idok))
     # a fejlécben álló időpont a sorokban felesleges: csak az ettől eltérő (késve jelentő) állomásnál marad meg
     sorok = [re.sub(r'<i class="mi">(?: · )?' + f'{friss:%H:%M}' + r'</i>', '', x) for x in sorok]
