@@ -150,10 +150,10 @@ MERES_ALLOMASOK = [
     ("Nagykanizsa", 17809),
     ("Nyíregyháza", "Nyíregyháza repülőtér (észak)", "repülőtér"),   # szám helyett név is megadható; a 3. elem a kiírt rövid név
     ("Paks", 37402),
-    ("Pásztó", "Pásztó Hasznos"),   # Nógrád közepe (Salgótarján környékén nincs automata állomás)
     ("Pécs", 39115),          # Pogány repülőtér (az Egyetem állomás 2026 novemberében elhallgatott)
     ("Siófok", 36100),
     ("Szolnok", 55507),       # repülőtér (égképet nem jelent, de az Alföld közepét lefedi)
+    ("Szécsény", "Szécsény"),   # Nógrád, a szlovák határ közelében (Salgótarján környékén nincs automata állomás)
     ("Szeged", 58116),        # külterület
     ("Szombathely", 15310),
     ("Veszprém", "Szentkirályszabadja repülőtér", "Szentkirályszabadja"),
