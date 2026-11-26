@@ -145,14 +145,18 @@ MERES_ALLOMASOK = [
     ("Győr", 24423),          # Pér repülőtér (Győrben nincs égképet jelentő állomás)
     ("Eger", 53215),
     ("Kékestető", 53101),     # az ország legmagasabb pontja, 1011 m
+    ("Kecskemét", 46400),     # repülőtér
     ("Miskolc", 52744),       # Diósgyőr
     ("Nagykanizsa", 17809),
+    ("Nyíregyháza", "Nyíregyháza repülőtér (észak)", "repülőtér"),   # szám helyett név is megadható; a 3. elem a kiírt rövid név
     ("Paks", 37402),
+    ("Pásztó", "Pásztó Hasznos"),   # Nógrád közepe (Salgótarján környékén nincs automata állomás)
     ("Pécs", 39115),          # Pogány repülőtér (az Egyetem állomás 2026 novemberében elhallgatott)
     ("Siófok", 36100),
     ("Szolnok", 55507),       # repülőtér (égképet nem jelent, de az Alföld közepét lefedi)
     ("Szeged", 58116),        # külterület
     ("Szombathely", 15310),
+    ("Veszprém", "Szentkirályszabadja repülőtér", "Szentkirályszabadja"),
 ]
 # csapadékradar: a HungaroMet kompozit radarképei (ötpercenként, PNG); az oszlopmaximum („refl2D”, CMax) változat
 RADAR_MAPPA = "https://odp.met.hu/weather/radar/composite/"
@@ -1119,10 +1123,6 @@ def meres_letolt():
         if a["ido"]:   # csapadék az utolsó órában (az utolsó hat tízperces összeg)
             ertek = [v for k, v in a["csap"].items() if a["ido"] - timedelta(minutes=55) <= k <= a["ido"] and v is not None]
             a["csap1h"] = round(sum(ertek), 1) if ertek else None
-            # ma éjfél óta (magyar idő szerint); a tízperces értékek a mérési időpontot megelőző 10 percre vonatkoznak
-            ejfel = bp(a["ido"]).replace(hour=0, minute=0, second=0, microsecond=0)
-            mai = [v for k, v in a["csap"].items() if k > ejfel and v is not None]
-            a["csap_ma"] = round(sum(mai), 1) if mai else None
         del a["csap"]
     try:   # égkép az órás adatsorból (a tízpercesben nincs); ha nem érhető el, ikon nélkül
         for r in hm_csv(letolt(MERES_ORAS_URL)):
@@ -1161,8 +1161,9 @@ def hm_ikon(kod, meret=32, ejjel=False):
 def meres_lista(meresek):
     """A „Most mért” kártya: soronként település, égkép, hőmérséklet, szél, csapadék."""
     sorok, idok = [], []
-    for nev, szam in sorted(MERES_ALLOMASOK, key=lambda x: ekezet_nelkul(x[0].lower())):
-        a = meresek.get(szam)
+    for nev, szam, *rovid in sorted(MERES_ALLOMASOK, key=lambda x: ekezet_nelkul(x[0].lower())):
+        a = meresek.get(szam) if isinstance(szam, int) else next(
+            (v for v in meresek.values() if v["nev"] == szam), None)
         if not a:
             continue
         idok.append(a["ido"])
@@ -1179,13 +1180,12 @@ def meres_lista(meresek):
         if a.get("para") is not None:
             reszlet.append(f'pára {round(a["para"])}%')
         if a.get("csap1h"):
-            reszlet.append(f'{str(a["csap1h"]).replace(".", ",")} mm az utolsó órában')
-        if a.get("csap_ma"):
-            reszlet.append(f'ma eddig {str(a["csap_ma"]).replace(".", ",")} mm')
+            reszlet.append(f'{str(a["csap1h"]).replace(".", ",")} mm/óra')
         leiras = HM_KODOK.get(kod, ("", ""))[0]
+        utotag = rovid[0] if rovid else allomas_utotag(a["nev"], nev)
         sorok.append(
             f'<li data-ido="{a["ido"].isoformat()}"><span class="meres-nev">{e(nev)}'
-            f'<small>{e(allomas_utotag(a["nev"], nev))}<i class="mi">{" · " if allomas_utotag(a["nev"], nev) else ""}{bp(a["ido"]):%H:%M}</i></small></span>'
+            f'<small>{e(utotag)}<i class="mi">{" · " if utotag else ""}{bp(a["ido"]):%H:%M}</i></small></span>'
             f'<span title="{e(leiras)}">{hm_ikon(kod, 28, a.get("lat") is not None and nap_magassag(a["lat"], a["lon"], a["ido"]) < -0.833)}</span>'
             f'<span class="meres-fok">{round(a["t"])}°</span>'
             f'<span class="meres-reszlet">{e(", ".join(reszlet))}</span></li>')
@@ -1195,7 +1195,10 @@ def meres_lista(meresek):
     # a fejlécben álló időpont a sorokban felesleges: csak az ettől eltérő (késve jelentő) állomásnál marad meg
     sorok = [re.sub(r'<i class="mi">(?: · )?' + f'{friss:%H:%M}' + r'</i>', '', x) for x in sorok]
     return (f'<div class="ido-hely ido-meres"><h3>Most mért <small>{friss:%H:%M}-kor</small></h3>'
-            f'<ul class="meres-lista" style="--sorok:{(len(sorok) + 1) // 2}">{"".join(sorok)}</ul>'
+            f'<button class="meres-nyito" type="button" aria-expanded="false" '
+            f'onclick="var k=this.parentNode;k.classList.toggle(\'nyitva\');this.setAttribute(\'aria-expanded\',k.classList.contains(\'nyitva\'))">'
+            f'{len(sorok)} állomás mért adatai</button>'
+            f'<ul class="meres-lista" style="--sorok2:{(len(sorok) + 1) // 2};--sorok3:{(len(sorok) + 2) // 3}">{"".join(sorok)}</ul>'
             f'<p class="meres-forras">Forrás: <a href="https://odp.met.hu/" target="_blank" rel="noopener">'
             f'HungaroMet Nonprofit Zrt.</a>, automata állomások</p></div>')
 
@@ -2655,20 +2658,29 @@ summary:hover{color:var(--tinta)}
 .ido-mert{font-size:.8rem;color:var(--halvany);margin:.25rem 0 0}.ido-mert b{color:var(--szoveg,inherit)}
 .ido-meres{grid-column:span 2}
 .ido-meres h3 small{font-size:.78rem;font-weight:500;color:var(--halvany)}
-/* két oszlop, előbb a bal telik meg fentről lefelé, így az ABC-sorrend egyben olvasható */
-.meres-lista{list-style:none;margin:.5rem 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(var(--sorok),auto);grid-auto-flow:column;column-gap:1.4rem}
-.meres-lista li{display:grid;grid-template-columns:minmax(0,1fr) 28px 3rem;grid-template-rows:auto auto;column-gap:.5rem;align-items:center;
-  padding:.36rem 0;border-bottom:1px solid var(--vonal)}
-.meres-nev{font-weight:650;font-size:.95rem;line-height:1.2}
+/* széles képernyőn három, közepesen két oszlop; előbb a bal telik meg fentről lefelé, így az ABC-sorrend egyben olvasható.
+   Kompakt sorok, hogy a bal oldali kártya mellett elférjen; telefonon lenyíló lista */
+.meres-lista{list-style:none;margin:.5rem 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(var(--sorok2),auto);grid-auto-flow:column;column-gap:1.3rem}
+@media (min-width:1200px){.meres-lista{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(var(--sorok3),auto)}}
+.meres-lista li{display:grid;grid-template-columns:minmax(0,1fr) 22px 2.4rem;grid-template-rows:auto auto;column-gap:.4rem;align-items:center;
+  padding:.3rem 0;border-bottom:1px solid var(--vonal)}
+.meres-lista li svg{width:22px;height:22px}
+.meres-nyito{display:none}
+.meres-nev{font-weight:650;font-size:.86rem;line-height:1.2}
 /* az állomás neve és (ha eltér) az időpont a helynév mellett, egy sorban: így egy állomás két sor */
-.meres-nev small{display:inline;margin-left:.4rem;font-weight:400;font-size:.72rem;color:var(--halvany)}
+.meres-nev small{display:inline;margin-left:.3rem;font-weight:400;font-size:.68rem;color:var(--halvany)}
 .meres-nev small i{font-style:normal}
-.meres-fok{font:750 1.45rem/1 var(--cimbetu);text-align:right;letter-spacing:-.02em}
-.meres-reszlet{grid-column:1/-1;font-size:.74rem;color:var(--halvany);min-height:0}
+.meres-fok{font:750 1.12rem/1 var(--cimbetu);text-align:right;letter-spacing:-.02em}
+.meres-reszlet{grid-column:1/-1;font-size:.68rem;line-height:1.3;color:var(--halvany);min-height:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .meres-reszlet:empty{display:none}
 .ido-ikon-ures{display:inline-block}
 .meres-forras{font-size:.72rem;color:var(--halvany);margin:.6rem 0 0}.meres-forras a{text-decoration:underline}
-@media (max-width:760px){.ido-meres{grid-column:auto}.meres-lista{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}}
+@media (max-width:760px){.ido-meres{grid-column:auto}.meres-lista{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}
+  .meres-reszlet{white-space:normal}
+  .meres-nyito{all:unset;display:flex;justify-content:space-between;align-items:center;width:100%;box-sizing:border-box;margin-top:.5rem;cursor:pointer;
+    font:600 .88rem system-ui,sans-serif;color:var(--tinta);padding:.5rem .7rem;border:1px solid var(--vonal);border-radius:5px}
+  .meres-nyito::after{content:"▾";color:var(--halvany)}.ido-meres.nyitva .meres-nyito::after{content:"▴"}
+  .ido-meres:not(.nyitva) .meres-lista,.ido-meres:not(.nyitva) .meres-forras{display:none}}
 .ido-ikon{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .i-nap{stroke:#f59e0b}.i-hold{stroke:#94a3b8;fill:rgb(148 163 184/.18)}.i-felho{stroke:var(--halvany)}.i-csepp{stroke:#3b82f6}.i-ho{stroke:#7c8798;stroke-width:2.6}.i-villam{stroke:#eab308}
 /* hópehely: világos témán szürke, sötéten fehér (a kék esőcseppektől is jól elkülönül) */
