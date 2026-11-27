@@ -589,6 +589,7 @@ def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
 
 
 LAZA_ROVATOK = ("kultura", "tech", "eletmod")   # a lazább második fél: rács nélküli lista, az összevont hírek képre írt címmel
+KEPES_ROVATOK = LAZA_ROVATOK + ("sport",)   # ezekben az összevont hír képes doboz, a cím a képre írva (a Sport kártyái maradnak)
 MAGAZIN_ROVATOK = ("kultura", "tech", "eletmod", "sport")   # kiemelt hírük képre írt címmel, rovatszínű panellel
 TOBBLAP = 2               # a rovatokban ennyi lapnál felső csíkot kap a sima doboz is
 KOTEG_LAP = 5             # ennyi lap felett a doboz mögött „lapköteg” látszik…
@@ -2065,7 +2066,7 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
             reszek.append(f'''<section class="rovat{' ujsag' if r.get('ujsag') else ''}{' laza' if r['id'] in LAZA_ROVATOK else ''}{' egyszeru' if r.get('egyszeru') else ''}{' stadion' if r.get('stadion') else ''}" id="{r["id"]}" style="--r:{r["szin"]}">
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
-  {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else ""), magazin=r["id"] in MAGAZIN_ROVATOK, laza=r["id"] in LAZA_ROVATOK) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
+  {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else ""), magazin=r["id"] in MAGAZIN_ROVATOK, laza=r["id"] in KEPES_ROVATOK) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
   {vegyes_lista(sav) if r.get("egyszeru") else friss_racs(sav) if rovidhir else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav, cimke="Korábbi hírek" if sav and rovidhir else "További hírek")}
   </div>
 </section>''')
@@ -2639,19 +2640,24 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.laza .doboz.kiemelt{border-radius:6px;border-bottom:0}
 .rovat.laza .doboz:not(.kiemelt) .meta .forras::before,.rovat.laza .halom .forras::before{content:"";display:inline-block;width:.55rem;height:.55rem;
   border-radius:2px;background:var(--r);margin-right:.4rem;vertical-align:.05rem}
-.rovat.laza .doboz:not(.kiemelt) h3{font-weight:900;letter-spacing:-.01em}
+/* a lazább rovatok és a Sport címei stílustól függetlenül közös, keskeny, magazinos betűvel (Archivo Narrow) */
+:is(.rovat.laza,.rovat.stadion) :is(.doboz h3,.halom h4){font-family:"Archivo Narrow","Arial Narrow",var(--cimbetu);font-weight:700;
+  font-stretch:100%;letter-spacing:-.005em;line-height:1.14}
+.rovat.laza .doboz:not(.kiemelt) h3{font-size:1.36rem}
+.rovat.stadion .doboz:not(.kiemelt) h3,.rovat.stadion .doboz.tobblap:not(.kiemelt) h3{font-size:1.3rem}
+:is(.rovat.laza,.rovat.stadion) .halom h4{font-size:1.15rem}
 .rovat.laza .halom .mini{border:0;border-bottom:1px solid var(--vonal);border-radius:0;background:none}
-.rovat.laza .doboz.kepes{flex-direction:column}
-.rovat.laza .kepfej{position:relative;aspect-ratio:16/9;border-radius:5px;overflow:hidden;margin-bottom:.7rem;background:var(--vonal)}
-.rovat.laza .kepfej .kep{position:absolute;inset:0;margin:0}
-.rovat.laza .kepfej img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.rovat.laza .kepfej::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgb(0 0 0/.82),rgb(0 0 0/.35) 45%,transparent 70%);pointer-events:none}
-.rovat.laza .kepfej .ra{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:.8rem 1rem .85rem}
-.rovat.laza .kepfej .meta,.rovat.laza .kepfej .meta *{color:#fff}
-.rovat.laza .kepfej .forras::before{background:#fff}
-.rovat.laza .kepfej h3{margin:.25rem 0 0;font-size:1.3rem;line-height:1.18}
-.rovat.laza .kepfej h3 a{color:#fff}
-.rovat.laza .doboz.kepes .lead{-webkit-line-clamp:3}
+:is(.rovat.laza,.rovat.stadion) .doboz.kepes{flex-direction:column}
+:is(.rovat.laza,.rovat.stadion) .kepfej{position:relative;aspect-ratio:16/9;border-radius:5px;overflow:hidden;margin-bottom:.7rem;background:var(--vonal)}
+:is(.rovat.laza,.rovat.stadion) .kepfej .kep{position:absolute;inset:0;margin:0}
+:is(.rovat.laza,.rovat.stadion) .kepfej img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+:is(.rovat.laza,.rovat.stadion) .kepfej::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgb(0 0 0/.82),rgb(0 0 0/.35) 45%,transparent 70%);pointer-events:none}
+:is(.rovat.laza,.rovat.stadion) .kepfej .ra{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:.8rem 1rem .85rem}
+:is(.rovat.laza,.rovat.stadion) .kepfej .meta,:is(.rovat.laza,.rovat.stadion) .kepfej .meta *{color:#fff}
+:is(.rovat.laza,.rovat.stadion) .kepfej .forras::before{background:#fff}
+:is(.rovat.laza,.rovat.stadion) .kepfej h3{margin:.25rem 0 0;font-size:1.3rem;line-height:1.18}
+:is(.rovat.laza,.rovat.stadion) .kepfej h3 a{color:#fff}
+:is(.rovat.laza,.rovat.stadion) .doboz.kepes .lead{-webkit-line-clamp:3}
 @media (max-width:760px){.rovat.laza .racs{padding:.4rem 1rem}.rovat.laza .doboz:not(.kiemelt){padding:.9rem 0 1rem}}
 /* Sport: „stadion” – a rovat sötét pályazöld sávon, fűcsíkokkal, félpályavonallal és középkörrel */
 .rovat.stadion{--pa:#14532d;position:relative;padding:1.6rem 0 1.8rem;
@@ -3115,7 +3121,8 @@ FEJ_JS = r"""(function(){
     if (bt.lista) { gy.setProperty('--listabetu', '"' + bt.lista + '",' + (bt.lista_tartalek || 'system-ui,sans-serif'));
       gy.setProperty('--lista-nyujt', bt.lista_nyujt || '100%'); gy.setProperty('--lista-suly', bt.lista_suly || 400); }
     var lk = document.createElement('link'); lk.rel = 'stylesheet';
-    lk.href = 'https://fonts.googleapis.com/css2?family=' + bt.url + (bt.lista_url ? '&family=' + bt.lista_url : '') + '&display=swap';
+    // + a lazább rovatok (Kultúra, Tech, Életmód, Sport) közös, keskeny címbetűje
+    lk.href = 'https://fonts.googleapis.com/css2?family=' + bt.url + (bt.lista_url ? '&family=' + bt.lista_url : '') + '&family=Archivo+Narrow:wght@700&display=swap';
     document.head.appendChild(lk);
   }
   fej.querySelectorAll('.logo-v').forEach(function (el) { el.hidden = el.dataset.stilus !== st; });
