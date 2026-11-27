@@ -2635,10 +2635,8 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.ujsag .doboz:not(.kiemelt){border-bottom:1px solid var(--vonal)}
 .rovat.ujsag .doboz.kiemelt{background:color-mix(in srgb,var(--r) 9%,var(--felulet));border-top:0;border-bottom:1px solid var(--vonal);padding-top:1rem}
 .rovat.ujsag .lapoz{background:transparent}
-/* lazább második fél (Kultúra, Tech, Életmód): fehér lapon hasábvonalak nélkül, a hírek alatt vékony szürke vonal,
-   a lapnév előtt rovatszínű négyzet, vastagabb címek; az összevont hírek képes dobozok, a cím a képre írva */
-.rovat.laza .racs{background-image:none;border:0;gap:.4rem 2.2rem;padding:1.2rem 1.6rem}
-.rovat.laza .doboz:not(.kiemelt){border-bottom:1px solid var(--vonal);padding:.9rem 0 1rem}
+/* lazább második fél (Kultúra, Tech, Életmód): az újságos rács marad, a lapnév előtt rovatszínű négyzet,
+   keskeny címbetű; az összevont hírek képes dobozok, a cím a képre írva */
 .rovat.laza .doboz.kiemelt{border-radius:6px;border-bottom:0}
 .rovat.laza .doboz:not(.kiemelt) .meta .forras::before,.rovat.laza .halom .forras::before{content:"";display:inline-block;width:.55rem;height:.55rem;
   border-radius:2px;background:var(--r);margin-right:.4rem;vertical-align:.05rem}
@@ -2648,7 +2646,6 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.laza .doboz:not(.kiemelt) h3{font-size:1.36rem}
 .rovat.stadion .doboz:not(.kiemelt) h3,.rovat.stadion .doboz.tobblap:not(.kiemelt) h3{font-size:1.3rem}
 :is(.rovat.laza,.rovat.stadion) .halom h4{font-size:1.15rem}
-.rovat.laza .halom .mini{border:0;border-bottom:1px solid var(--vonal);border-radius:0;background:none}
 :is(.rovat.laza,.rovat.stadion) .doboz.kepes{flex-direction:column}
 :is(.rovat.laza,.rovat.stadion) .kepfej{position:relative;aspect-ratio:16/9;border-radius:5px;overflow:hidden;margin-bottom:.7rem;background:var(--vonal)}
 :is(.rovat.laza,.rovat.stadion) .kepfej .kep{position:absolute;inset:0;margin:0}
@@ -2660,7 +2657,6 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 :is(.rovat.laza,.rovat.stadion) .kepfej h3{margin:.25rem 0 0;font-size:1.3rem;line-height:1.18}
 :is(.rovat.laza,.rovat.stadion) .kepfej h3 a{color:#fff}
 :is(.rovat.laza,.rovat.stadion) .doboz.kepes .lead{-webkit-line-clamp:3}
-@media (max-width:760px){.rovat.laza .racs{padding:.4rem 1rem}.rovat.laza .doboz:not(.kiemelt){padding:.9rem 0 1rem}}
 /* Sport: „stadion” – a rovat sötét pályazöld sávon, fűcsíkokkal, félpályavonallal és középkörrel */
 .rovat.stadion{--pa:#14532d;position:relative;padding:1.6rem 0 1.8rem;
   background:radial-gradient(circle at 50% 50%,transparent 0 118px,rgb(255 255 255/.10) 119px 121px,transparent 122px),
