@@ -2367,6 +2367,8 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .doboz.tobblap{position:relative}
 .doboz.tobblap::before{content:"";position:absolute;top:7px;left:var(--bp);right:var(--bp);height:4px;
   background:linear-gradient(to right,var(--r) 0,var(--r) 66%,transparent);border-radius:2px;pointer-events:none;z-index:2}
+/* a komoly, újságos rovatokban (Belföld, Külföld, Gazdaság) a vonal a doboz tetején, teljes szélességben fut */
+.rovat.ujsag:not(.laza) .doboz.tobblap::before{top:0;left:0;right:0;border-radius:0}
 /* „vezércikk”: kép nélküli kiemelt kártya nagy, dőlt címmel */
 .doboz.vezer .kiemelt-kep{display:none}
 .doboz.vezer h3{font-size:1.75rem;line-height:1.15;font-style:italic;letter-spacing:-.02em}
