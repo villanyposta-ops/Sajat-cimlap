@@ -588,6 +588,7 @@ def kulcsszo_talalat(szoveg, kulcsszo, eredeti=None):
     return db
 
 
+LAZA_ROVATOK = ("kultura", "tech", "eletmod")   # a lazább második fél: rács nélküli lista, az összevont hírek képre írt címmel
 MAGAZIN_ROVATOK = ("kultura", "tech", "eletmod", "sport")   # kiemelt hírük képre írt címmel, rovatszínű panellel
 TOBBLAP = 2               # a rovatokban ennyi lapnál felső csíkot kap a sima doboz is
 KOTEG_LAP = 5             # ennyi lap felett a doboz mögött „lapköteg” látszik…
@@ -1673,7 +1674,7 @@ def koteg(cs):
     return " koteg koteg-nagy" if n >= KOTEG_NAGY else (" koteg" if n >= KOTEG_LAP else "")
 
 
-def doboz(cs, lead=True, kiemelt=False, extra="", magazin=False):
+def doboz(cs, lead=True, kiemelt=False, extra="", magazin=False, laza=False):
     h = cs["fo"]
     if kiemelt and magazin and h["kep"]:
         # magazinos kiemelt: a képen a lap, az idő és a cím; mellette (fekvő) vagy alatta (álló)
@@ -1692,6 +1693,15 @@ def doboz(cs, lead=True, kiemelt=False, extra="", magazin=False):
   <div class="meta">{elo_jel(h)}{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
   <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3></div></div>
   <div class="szoveg">{f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and lead else ''}{lefedettseg(cs)}{tovabbi(cs)}</div>
+</article>'''
+    if laza and not kiemelt and h["kep"] and len(cs["forrasok"]) >= TOBBLAP:
+        # a lazább rovatokban az összevont hír képes doboz, a cím a képre írva (a felső vonal helyett)
+        return f'''<article class="doboz kepes{extra}" data-srcs="{' '.join(cs['forrasok'])}"{alt_adat(cs, lead=lead)}>
+  <div class="szoveg"><div class="kepfej">{kep_html(h, "kep")}<div class="ra">
+  <div class="meta">{elo_jel(h)}{forras_nev(h["forras"])}<time>{ido_szoveg(h["ido"])}</time></div>
+  <h3><a href="{e(h["link"])}" target="_blank" rel="noopener">{e(h["cim"])}</a></h3></div></div>
+  {f'<p class="lead">{e(h["lead"])}</p>' if h["lead"] and lead else ''}
+  {sorozat_html(h)}{lefedettseg(cs)}{tovabbi(cs)}</div>
 </article>'''
     # több lap írta: ugyanaz a rovatszínű felső csík, mint a kiemelt dobozon (a köteg helyett)
     extra += " tobblap" if len(cs["forrasok"]) >= TOBBLAP and not kiemelt else ""
@@ -2052,10 +2062,10 @@ def oldal(orszagos, helyi_cs, hibak, idojaras=None, idokep=None, meresek=None, h
             lista = [c for c in lista if not any(c is x for x in sav)]
             extra = (" kiemelt-magas" if elr.endswith("magas") else "") + (" szines" if szines else "")
             nav.append(f'<a href="#{r["id"]}" style="--r:{r["szin"]}">{e(r["nev"])}</a>')
-            reszek.append(f'''<section class="rovat{' ujsag' if r.get('ujsag') else ''}{' egyszeru' if r.get('egyszeru') else ''}{' stadion' if r.get('stadion') else ''}" id="{r["id"]}" style="--r:{r["szin"]}">
+            reszek.append(f'''<section class="rovat{' ujsag' if r.get('ujsag') else ''}{' laza' if r['id'] in LAZA_ROVATOK else ''}{' egyszeru' if r.get('egyszeru') else ''}{' stadion' if r.get('stadion') else ''}" id="{r["id"]}" style="--r:{r["szin"]}">
   {rovatfej(r["id"], r["nev"], r["szin"], len(cs))}
   <div class="tartalom">
-  {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else ""), magazin=r["id"] in MAGAZIN_ROVATOK) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
+  {f'<div class="racs elr-{elr}">{"".join(halom(halmok[i]) if i in halmok else doboz(c, kiemelt=(i == 0 and kiem), extra=(extra if i == 0 and kiem else ""), magazin=r["id"] in MAGAZIN_ROVATOK, laza=r["id"] in LAZA_ROVATOK) for i, c in enumerate(dobozok))}</div>' if dobozok else ''}
   {vegyes_lista(sav) if r.get("egyszeru") else friss_racs(sav) if rovidhir else friss_sav(sav)}{korabban(lista, nyitva=not dobozok and not sav, cimke="Korábbi hírek" if sav and rovidhir else "További hírek")}
   </div>
 </section>''')
@@ -2622,6 +2632,27 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.ujsag .doboz:not(.kiemelt){border-bottom:1px solid var(--vonal)}
 .rovat.ujsag .doboz.kiemelt{background:color-mix(in srgb,var(--r) 9%,var(--felulet));border-top:0;border-bottom:1px solid var(--vonal);padding-top:1rem}
 .rovat.ujsag .lapoz{background:transparent}
+/* lazább második fél (Kultúra, Tech, Életmód): fehér lapon hasábvonalak nélkül, a hírek alatt vékony szürke vonal,
+   a lapnév előtt rovatszínű négyzet, vastagabb címek; az összevont hírek képes dobozok, a cím a képre írva */
+.rovat.laza .racs{background-image:none;border:0;gap:.4rem 2.2rem;padding:1.2rem 1.6rem}
+.rovat.laza .doboz:not(.kiemelt){border-bottom:1px solid var(--vonal);padding:.9rem 0 1rem}
+.rovat.laza .doboz.kiemelt{border-radius:6px;border-bottom:0}
+.rovat.laza .doboz:not(.kiemelt) .meta .forras::before,.rovat.laza .halom .forras::before{content:"";display:inline-block;width:.55rem;height:.55rem;
+  border-radius:2px;background:var(--r);margin-right:.4rem;vertical-align:.05rem}
+.rovat.laza .doboz:not(.kiemelt) h3{font-weight:900;letter-spacing:-.01em}
+.rovat.laza .halom .mini{border:0;border-bottom:1px solid var(--vonal);border-radius:0;background:none}
+.rovat.laza .doboz.kepes{flex-direction:column}
+.rovat.laza .kepfej{position:relative;aspect-ratio:16/9;border-radius:5px;overflow:hidden;margin-bottom:.7rem;background:var(--vonal)}
+.rovat.laza .kepfej .kep{position:absolute;inset:0;margin:0}
+.rovat.laza .kepfej img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rovat.laza .kepfej::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgb(0 0 0/.82),rgb(0 0 0/.35) 45%,transparent 70%);pointer-events:none}
+.rovat.laza .kepfej .ra{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:.8rem 1rem .85rem}
+.rovat.laza .kepfej .meta,.rovat.laza .kepfej .meta *{color:#fff}
+.rovat.laza .kepfej .forras::before{background:#fff}
+.rovat.laza .kepfej h3{margin:.25rem 0 0;font-size:1.3rem;line-height:1.18}
+.rovat.laza .kepfej h3 a{color:#fff}
+.rovat.laza .doboz.kepes .lead{-webkit-line-clamp:3}
+@media (max-width:760px){.rovat.laza .racs{padding:.4rem 1rem}.rovat.laza .doboz:not(.kiemelt){padding:.9rem 0 1rem}}
 /* Sport: „stadion” – a rovat sötét pályazöld sávon, fűcsíkokkal, félpályavonallal és középkörrel */
 .rovat.stadion{--pa:#14532d;position:relative;padding:1.6rem 0 1.8rem;
   background:radial-gradient(circle at 50% 50%,transparent 0 118px,rgb(255 255 255/.10) 119px 121px,transparent 122px),
