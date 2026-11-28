@@ -689,10 +689,11 @@ def rovat(h):
     # félrevinnék, ezért ha a lap „podcast” címkét tett rá, Egyéb
     if any(k.lower() == "podcast" for k in h["kategoriak"]):
         return ki("egyeb", 3)
-    # lottó, nyerőszámok, szerencsejáték: mindig Egyéb, bárhová tette a lap (a 24.hu pl. a Tech rovatban
-    # közli a lottószámokat). Kivétel, ha a lap a Gazdaság rovatba tette (pl. a Szerencsejáték Zrt. eredményei).
+    # lottó, nyerőszámok, szerencsejáték: Vegyes, bárhová tette a lap (a 24.hu pl. a Tech rovatban közli a
+    # lottószámokat). Kivétel, ha a lap a Belföld, a Külföld vagy a Gazdaság rovatba tette: az valódi hír
+    # (pl. a Szerencsejáték Zrt. eredményei, egy külföldi nyertes története).
     if (SZERENCSE.search(h["cim"]) or any(SZERENCSE.search(k) for k in h["kategoriak"])) and not any(
-            sz in r["utvonal"] for r in ROVATOK if r["id"] == "gazdasag" for sz in szakaszok[:2]):
+            sz in r["utvonal"] for r in ROVATOK if r["id"] in ("belfold", "kulfold", "gazdasag") for sz in szakaszok[:2]):
         return ki("egyeb", 3)
     # a HVG napi nemzetközi lapszemléje (a külföldi sajtó Magyarországról és a világról): mindig Külföld.
     # A webcím vége nem mindig „nemzetkozi-lapszemle”, de a lap „lapszemle” címkéje mindig rajta van.
