@@ -2692,6 +2692,8 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
     var(--eg);
   box-shadow:0 0 0 100vmax var(--eg);clip-path:inset(0 -100vmax)}
 @media (prefers-color-scheme:dark){:root:not([data-tema="vilagos"]) .rovat.idojaras{--eg:#082f49}}
+/* a Sport zöld és az Időjárás kék sávja közvetlenül egymáshoz illeszkedik, szürke hézag nélkül */
+.rovat.stadion + .rovat.idojaras{margin-top:0}
 :root[data-tema="sotet"] .rovat.idojaras{--eg:#082f49}
 .rovat.idojaras .rovatfej::after{background:linear-gradient(to right,#fff 0,#fff 66%,transparent);opacity:.75}
 .rovat.idojaras .rovatfej .csuk{background:#fff;color:var(--eg)}
