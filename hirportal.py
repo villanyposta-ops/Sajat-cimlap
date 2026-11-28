@@ -2640,12 +2640,13 @@ main{max-width:1280px;margin:0 auto;padding:.5rem 1.5rem 3rem}
 .rovat.laza .doboz.kiemelt{border-radius:6px;border-bottom:0}
 .rovat.laza .doboz:not(.kiemelt) .meta .forras::before,.rovat.laza .halom .forras::before{content:"";display:inline-block;width:.55rem;height:.55rem;
   border-radius:2px;background:var(--r);margin-right:.4rem;vertical-align:.05rem}
-/* a lazább rovatok és a Sport címei stílustól függetlenül közös, keskeny, magazinos betűvel (Archivo Narrow) */
-:is(.rovat.laza,.rovat.stadion) :is(.doboz h3,.halom h4){font-family:"Archivo Narrow","Arial Narrow",var(--cimbetu);font-weight:700;
-  font-stretch:100%;letter-spacing:-.005em;line-height:1.14}
-.rovat.laza .doboz:not(.kiemelt) h3{font-size:1.36rem}
-.rovat.stadion .doboz:not(.kiemelt) h3,.rovat.stadion .doboz.tobblap:not(.kiemelt) h3{font-size:1.3rem}
-:is(.rovat.laza,.rovat.stadion) .halom h4{font-size:1.15rem}
+/* a második fél (Kultúra, Tech, Életmód, Sport, Vegyes) címei stílustól függetlenül közös, keskeny, karakteres betűvel (Saira Semi Condensed) */
+:is(.rovat.laza,.rovat.stadion) :is(.doboz h3,.halom h4){font-family:"Saira Semi Condensed","Arial Narrow",var(--cimbetu);font-weight:700;
+  font-stretch:100%;letter-spacing:0;line-height:1.16}
+.vegyes-lista li a{font-family:"Saira Semi Condensed","Arial Narrow",var(--listabetu,inherit);font-weight:700;font-stretch:100%;font-size:1rem}
+.rovat.laza .doboz:not(.kiemelt) h3{font-size:1.28rem}
+.rovat.stadion .doboz:not(.kiemelt) h3,.rovat.stadion .doboz.tobblap:not(.kiemelt) h3{font-size:1.24rem}
+:is(.rovat.laza,.rovat.stadion) .halom h4{font-size:1.1rem}
 :is(.rovat.laza,.rovat.stadion) .doboz.kepes{flex-direction:column}
 :is(.rovat.laza,.rovat.stadion) .kepfej{position:relative;aspect-ratio:16/9;border-radius:5px;overflow:hidden;margin-bottom:.7rem;background:var(--vonal)}
 :is(.rovat.laza,.rovat.stadion) .kepfej .kep{position:absolute;inset:0;margin:0}
@@ -3119,8 +3120,8 @@ FEJ_JS = r"""(function(){
     if (bt.lista) { gy.setProperty('--listabetu', '"' + bt.lista + '",' + (bt.lista_tartalek || 'system-ui,sans-serif'));
       gy.setProperty('--lista-nyujt', bt.lista_nyujt || '100%'); gy.setProperty('--lista-suly', bt.lista_suly || 400); }
     var lk = document.createElement('link'); lk.rel = 'stylesheet';
-    // + a lazább rovatok (Kultúra, Tech, Életmód, Sport) közös, keskeny címbetűje
-    lk.href = 'https://fonts.googleapis.com/css2?family=' + bt.url + (bt.lista_url ? '&family=' + bt.lista_url : '') + '&family=Archivo+Narrow:wght@700&display=swap';
+    // + a második fél (Kultúra, Tech, Életmód, Sport, Vegyes) közös, keskeny, karakteres címbetűje
+    lk.href = 'https://fonts.googleapis.com/css2?family=' + bt.url + (bt.lista_url ? '&family=' + bt.lista_url : '') + '&family=Saira+Semi+Condensed:wght@700&display=swap';
     document.head.appendChild(lk);
   }
   fej.querySelectorAll('.logo-v').forEach(function (el) { el.hidden = el.dataset.stilus !== st; });
